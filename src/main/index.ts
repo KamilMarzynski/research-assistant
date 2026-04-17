@@ -26,12 +26,12 @@ function createWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   const win = createWindow();
+  // ipcMain handlers are global — register once only, not per-window
   registerIpcHandlers(win);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      const newWin = createWindow();
-      registerIpcHandlers(newWin);
+      createWindow();
     }
   });
 });
