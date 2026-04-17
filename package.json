@@ -9,7 +9,7 @@
     "preview": "electron-vite preview",
     "lint": "biome lint ./src",
     "format": "biome format --write ./src",
-    "check": "biome check --write ./src",
+    "check": "biome check --write --no-errors-on-unmatched ./src",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
