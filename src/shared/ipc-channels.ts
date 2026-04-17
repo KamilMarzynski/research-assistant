@@ -1,0 +1,18 @@
+export const IPC = {
+  // renderer → main (invoke — request/response)
+  GET_PROJECTS: "GET_PROJECTS",
+  CREATE_PROJECT: "CREATE_PROJECT",
+  GET_ARTIFACTS: "GET_ARTIFACTS",
+
+  // renderer → main (send — fire-and-forget)
+  SEND_MESSAGE: "SEND_MESSAGE",
+
+  // main → renderer (push via webContents.send)
+  MESSAGE_CHUNK: "MESSAGE_CHUNK",
+  MESSAGE_DONE: "MESSAGE_DONE",
+  NEW_MESSAGE: "NEW_MESSAGE",
+  RESEARCH_STATUS_UPDATE: "RESEARCH_STATUS_UPDATE",
+  RESEARCH_COMPLETE: "RESEARCH_COMPLETE",
+} as const
+
+export type IpcChannel = (typeof IPC)[keyof typeof IPC]
