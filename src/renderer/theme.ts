@@ -1,4 +1,4 @@
-import { createTheme, type Theme } from "@mui/material/styles"
+import { createTheme, type Theme } from "@mui/material/styles";
 
 export function createAppTheme(mode: "light" | "dark"): Theme {
   return createTheme({
@@ -14,5 +14,5 @@ export function createAppTheme(mode: "light" | "dark"): Theme {
     shape: {
       borderRadius: 12,
     },
-  })
+  });
 }

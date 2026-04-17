@@ -1,8 +1,8 @@
-import { Box } from "@mui/material"
-import ArtifactPanel from "./artifacts/ArtifactPanel"
-import ChatPanel from "./chat/ChatPanel"
-import LeftSidebar from "./LeftSidebar"
-import RightSidebar from "./RightSidebar"
+import { Box } from "@mui/material";
+import ArtifactPanel from "./artifacts/ArtifactPanel";
+import ChatPanel from "./chat/ChatPanel";
+import LeftSidebar from "./LeftSidebar";
+import RightSidebar from "./RightSidebar";
 
 export default function AppShell() {
   return (
@@ -33,5 +33,5 @@ export default function AppShell() {
         <ArtifactPanel />
       </Box>
     </Box>
-  )
+  );
 }

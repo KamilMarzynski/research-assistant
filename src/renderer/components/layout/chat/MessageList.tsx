@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material"
+import { Box, Typography } from "@mui/material";
 
 export default function MessageList() {
   return (
@@ -14,5 +14,5 @@ export default function MessageList() {
         Message List
       </Typography>
     </Box>
-  )
+  );
 }

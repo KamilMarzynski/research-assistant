@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material"
+import { Box, Typography } from "@mui/material";
 
 export default function LeftSidebar() {
   return (
@@ -15,5 +15,5 @@ export default function LeftSidebar() {
         Left Sidebar
       </Typography>
     </Box>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material"
+import { Box, Typography } from "@mui/material";
 
 export default function ResearchStatusBar() {
   return (
@@ -17,5 +17,5 @@ export default function ResearchStatusBar() {
         Research Status Bar
       </Typography>
     </Box>
-  )
+  );
 }

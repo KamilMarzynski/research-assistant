@@ -13,6 +13,6 @@ export const IPC = {
   NEW_MESSAGE: "NEW_MESSAGE",
   RESEARCH_STATUS_UPDATE: "RESEARCH_STATUS_UPDATE",
   RESEARCH_COMPLETE: "RESEARCH_COMPLETE",
-} as const
+} as const;
 
-export type IpcChannel = (typeof IPC)[keyof typeof IPC]
+export type IpcChannel = (typeof IPC)[keyof typeof IPC];

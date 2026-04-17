@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material"
+import { Box, Typography } from "@mui/material";
 
 export default function ArtifactPanel() {
   return (
@@ -15,5 +15,5 @@ export default function ArtifactPanel() {
         Artifact Panel
       </Typography>
     </Box>
-  )
+  );
 }
