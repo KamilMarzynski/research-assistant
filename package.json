@@ -10,25 +10,38 @@
     "lint": "biome lint ./src",
     "format": "biome format --write ./src",
     "check": "biome check --write --no-errors-on-unmatched ./src",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "db:generate": "drizzle-kit generate"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
+    "@swc/core": "^1.15.26",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.4",
+    "drizzle-kit": "^0.31.10",
     "electron": "^41.2.1",
     "electron-vite": "^5.0.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "unplugin-swc": "^1.5.9",
+    "vitest": "^4.1.4"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@fontsource/roboto": "^5.2.10",
+    "@libsql/client": "^0.17.2",
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
+    "drizzle-orm": "^0.45.2",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.10.0"
   }
 }
