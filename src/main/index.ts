@@ -1,5 +1,7 @@
+import "reflect-metadata";
 import { join } from "node:path";
 import { app, BrowserWindow } from "electron";
+import { bootstrap } from "./bootstrap";
 import { registerIpcHandlers } from "./ipc-handlers";
 
 function createWindow(): BrowserWindow {
@@ -24,10 +26,10 @@ function createWindow(): BrowserWindow {
   return win;
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  const appContainer = await bootstrap();
   const win = createWindow();
-  // ipcMain handlers are global — register once only, not per-window
-  registerIpcHandlers(win);
+  registerIpcHandlers(win, appContainer);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
