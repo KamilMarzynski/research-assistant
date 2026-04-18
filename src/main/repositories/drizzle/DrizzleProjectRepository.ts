@@ -6,20 +6,20 @@ import { projects } from "../../db/schema";
 import { DB_TOKEN } from "../../di/tokens";
 import type { IProjectRepository } from "../IProjectRepository";
 
-/** Returns a strictly-increasing timestamp in milliseconds. */
-let lastTimestamp = 0;
-function monotonicNow(): Date {
-  const ts = Math.max(Date.now(), lastTimestamp + 1);
-  lastTimestamp = ts;
-  return new Date(ts);
-}
-
 @injectable()
 export class DrizzleProjectRepository implements IProjectRepository {
+  private lastTimestamp = 0;
+
+  private monotonicNow(): Date {
+    const ts = Math.max(Date.now(), this.lastTimestamp + 1);
+    this.lastTimestamp = ts;
+    return new Date(ts);
+  }
+
   constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
 
   async create(data: Omit<Project, "id" | "createdAt" | "updatedAt">): Promise<Project> {
-    const now = monotonicNow();
+    const now = this.monotonicNow();
     const project: Project = {
       id: crypto.randomUUID(),
       name: data.name,
