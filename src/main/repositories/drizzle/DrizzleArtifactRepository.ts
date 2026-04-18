@@ -1,0 +1,60 @@
+import type { Artifact } from "@shared/types";
+import { desc, eq } from "drizzle-orm";
+import { inject, injectable } from "tsyringe";
+import type { DrizzleDB } from "../../db/client";
+import { artifacts } from "../../db/schema";
+import { DB_TOKEN } from "../../di/tokens";
+import type { IArtifactRepository } from "../IArtifactRepository";
+
+@injectable()
+export class DrizzleArtifactRepository implements IArtifactRepository {
+  private lastTimestamp = 0;
+
+  private monotonicNow(): Date {
+    const ts = Math.max(Date.now(), this.lastTimestamp + 1);
+    this.lastTimestamp = ts;
+    return new Date(ts);
+  }
+
+  constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
+
+  async create(data: Omit<Artifact, "id" | "createdAt">): Promise<Artifact> {
+    const artifact: Artifact = {
+      id: crypto.randomUUID(),
+      projectId: data.projectId,
+      title: data.title,
+      filePath: data.filePath,
+      createdAt: this.monotonicNow(),
+    };
+    await this.db.insert(artifacts).values({
+      id: artifact.id,
+      projectId: artifact.projectId,
+      title: artifact.title,
+      filePath: artifact.filePath,
+      createdAt: artifact.createdAt,
+    });
+    return artifact;
+  }
+
+  async listByProject(projectId: string): Promise<Artifact[]> {
+    const rows = await this.db
+      .select()
+      .from(artifacts)
+      .where(eq(artifacts.projectId, projectId))
+      .orderBy(desc(artifacts.createdAt), desc(artifacts.id));
+    return rows.map(this.rowToArtifact);
+  }
+
+  async get(id: string): Promise<Artifact | null> {
+    const rows = await this.db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1);
+    return rows[0] ? this.rowToArtifact(rows[0]) : null;
+  }
+
+  private rowToArtifact = (row: typeof artifacts.$inferSelect): Artifact => ({
+    id: row.id,
+    projectId: row.projectId,
+    title: row.title,
+    filePath: row.filePath,
+    createdAt: row.createdAt,
+  });
+}

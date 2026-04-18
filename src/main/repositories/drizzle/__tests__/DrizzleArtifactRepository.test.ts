@@ -1,0 +1,76 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { createTestDatabase } from "../../../../../tests/helpers/db";
+import type { DrizzleDB } from "../../../db/client";
+import { DrizzleArtifactRepository } from "../DrizzleArtifactRepository";
+import { DrizzleProjectRepository } from "../DrizzleProjectRepository";
+
+describe("DrizzleArtifactRepository", () => {
+  let db: DrizzleDB;
+  let repo: DrizzleArtifactRepository;
+  let projectId: string;
+
+  beforeEach(async () => {
+    db = await createTestDatabase();
+    repo = new DrizzleArtifactRepository(db);
+    const projectRepo = new DrizzleProjectRepository(db);
+    const project = await projectRepo.create({ name: "Test Project" });
+    projectId = project.id;
+  });
+
+  describe("create", () => {
+    it("returns an artifact with generated id and timestamp", async () => {
+      const artifact = await repo.create({
+        projectId,
+        title: "Research Report",
+        filePath: "/home/user/docs/report.md",
+      });
+
+      expect(artifact.id).toBeTypeOf("string");
+      expect(artifact.id).toHaveLength(36);
+      expect(artifact.projectId).toBe(projectId);
+      expect(artifact.title).toBe("Research Report");
+      expect(artifact.filePath).toBe("/home/user/docs/report.md");
+      expect(artifact.createdAt).toBeInstanceOf(Date);
+    });
+  });
+
+  describe("listByProject", () => {
+    it("returns all artifacts for a project", async () => {
+      await repo.create({ projectId, title: "A", filePath: "/a.md" });
+      await repo.create({ projectId, title: "B", filePath: "/b.md" });
+
+      const list = await repo.listByProject(projectId);
+      expect(list).toHaveLength(2);
+    });
+
+    it("returns empty array when no artifacts exist", async () => {
+      expect(await repo.listByProject(projectId)).toEqual([]);
+    });
+
+    it("only returns artifacts belonging to the given project", async () => {
+      const projectRepo = new DrizzleProjectRepository(db);
+      const other = await projectRepo.create({ name: "Other" });
+
+      await repo.create({ projectId, title: "Mine", filePath: "/mine.md" });
+      await repo.create({ projectId: other.id, title: "Theirs", filePath: "/theirs.md" });
+
+      const list = await repo.listByProject(projectId);
+      expect(list).toHaveLength(1);
+      expect(list[0].title).toBe("Mine");
+    });
+  });
+
+  describe("get", () => {
+    it("returns artifact by id", async () => {
+      const created = await repo.create({ projectId, title: "Find Me", filePath: "/x.md" });
+      const found = await repo.get(created.id);
+
+      expect(found).not.toBeNull();
+      expect(found?.id).toBe(created.id);
+    });
+
+    it("returns null for non-existent id", async () => {
+      expect(await repo.get("ghost")).toBeNull();
+    });
+  });
+});
