@@ -1,3 +1,5 @@
+// drizzle.config.ts is used ONLY for `bun run db:generate` (schema introspection during dev).
+// It is NOT used at runtime. Migrations are applied inline via src/main/db/migrate.ts.
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({

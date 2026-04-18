@@ -7,6 +7,7 @@ export const projects = sqliteTable("projects", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
+// Messages are immutable after creation — no updatedAt column.
 export const messages = sqliteTable("messages", {
   id: text("id").primaryKey(),
   projectId: text("project_id")
@@ -17,6 +18,7 @@ export const messages = sqliteTable("messages", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
+// Artifacts are immutable after creation — no updatedAt column.
 export const artifacts = sqliteTable("artifacts", {
   id: text("id").primaryKey(),
   projectId: text("project_id")

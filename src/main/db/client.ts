@@ -5,7 +5,16 @@ import * as schema from "./schema";
 export type DrizzleDB = LibSQLDatabase<typeof schema>;
 
 export async function createDatabase(dbPath: string): Promise<DrizzleDB> {
-  const client = createClient({ url: `file:${dbPath}` });
-  await client.execute("PRAGMA journal_mode=WAL");
+  let client: ReturnType<typeof createClient>;
+  try {
+    client = createClient({ url: `file:${dbPath}` });
+  } catch (err) {
+    throw new Error(`Failed to open SQLite database at ${dbPath}: ${String(err)}`);
+  }
+  const result = await client.execute("PRAGMA journal_mode=WAL");
+  const mode = result.rows[0]?.[0];
+  if (mode !== "wal") {
+    throw new Error(`SQLite WAL mode not enabled; journal_mode=${String(mode)}`);
+  }
   return drizzle(client, { schema });
 }
