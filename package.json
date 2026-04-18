@@ -43,5 +43,8 @@
     "react-dom": "^19.2.5",
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0"
-  }
+  },
+  "trustedDependencies": [
+    "@swc/core"
+  ]
 }
