@@ -8,6 +8,6 @@ export type Project = {
 export type ModelPreset = {
   id: string;
   name: string;
-  provider: 'openrouter';
+  provider: "openrouter";
   modelId: string;
 };
