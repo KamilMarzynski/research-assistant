@@ -11,6 +11,12 @@ export default defineConfig({
         transform: { legacyDecorator: true, decoratorMetadata: true },
       },
     }),
+    {
+      name: 'disable-oxc',
+      config() {
+        return { oxc: false } as never;
+      },
+    },
   ],
   resolve: {
     alias: {
@@ -27,7 +33,7 @@ export default defineConfig({
       provider: 'v8',
       thresholds: { branches: 90, functions: 90, lines: 90, statements: 90 },
       include: ['src/main/**'],
-      exclude: ['**/*.d.ts', '**/index.ts', 'src/main/index.ts'],
+      exclude: ['**/*.d.ts', 'src/main/index.ts'],
     },
   },
 });
