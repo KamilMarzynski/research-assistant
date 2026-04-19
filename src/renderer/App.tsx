@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { CssBaseline, ThemeProvider, useMediaQuery } from "@mui/material";
+import { useState } from "react";
 import AppShell from "./components/layout/AppShell";
 import SettingsModal from "./components/settings/SettingsModal";
 import { ProjectProvider } from "./contexts/ProjectContext";

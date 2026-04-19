@@ -34,7 +34,11 @@ export class AgentSession {
     });
 
     this.agent.subscribe(async (event: unknown) => {
-      const e = event as { type: string; assistantMessageEvent?: { type: string; delta: string }; messages?: unknown[] };
+      const e = event as {
+        type: string;
+        assistantMessageEvent?: { type: string; delta: string };
+        messages?: unknown[];
+      };
 
       if (e.type === "message_update") {
         const ae = e.assistantMessageEvent;

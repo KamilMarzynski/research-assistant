@@ -26,9 +26,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const [newName, setNewName] = useState("");
 
   useEffect(() => {
-    window.electronAPI
-      .invoke(IPC.GET_PROJECTS)
-      .then((p) => setProjects(p as Project[]));
+    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p as Project[]));
   }, []);
 
   const handleCreate = async () => {

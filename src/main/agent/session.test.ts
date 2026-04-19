@@ -174,4 +174,29 @@ describe("AgentSession", () => {
       expect(mockAgent.abort).toHaveBeenCalledOnce();
     });
   });
+
+  describe("Agent constructor callbacks", () => {
+    it("getApiKey returns the configured API key", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      const constructorCall = vi.mocked(Agent).mock.calls[0];
+      const options = constructorCall[0] as {
+        getApiKey: () => Promise<string>;
+        beforeToolCall: () => Promise<{ block: boolean; reason: string }>;
+      };
+      const key = await options.getApiKey();
+      expect(key).toBe("sk-or-test");
+    });
+
+    it("beforeToolCall blocks all tool calls until Run 6", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      const constructorCall = vi.mocked(Agent).mock.calls[0];
+      const options = constructorCall[0] as {
+        getApiKey: () => Promise<string>;
+        beforeToolCall: () => Promise<{ block: boolean; reason: string }>;
+      };
+      const result = await options.beforeToolCall();
+      expect(result.block).toBe(true);
+      expect(result.reason).toMatch(/Run 6/);
+    });
+  });
 });

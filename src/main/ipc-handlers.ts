@@ -56,7 +56,9 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     if (typeof payload !== "object" || payload === null) {
       throw new Error("Invalid payload");
     }
-    return settingsService.saveSettings(payload as Parameters<typeof settingsService.saveSettings>[0]);
+    return settingsService.saveSettings(
+      payload as Parameters<typeof settingsService.saveSettings>[0],
+    );
   });
 
   ipcMain.on(IPC.SEND_MESSAGE, async (_event, payload: unknown) => {
@@ -94,7 +96,8 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
       );
     }
 
-    const session = sessions.get(projectId)!;
+    const session = sessions.get(projectId);
+    if (!session) return;
     await session.send(content);
   });
 }

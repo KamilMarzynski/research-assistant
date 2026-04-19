@@ -72,4 +72,32 @@ describe("SettingsService", () => {
       expect(safeStorage.encryptString).toHaveBeenCalledWith("sk-or-test");
     });
   });
+
+  describe("safeStorage unavailable fallback", () => {
+    it("stores and retrieves API key as plain base64 when encryption is unavailable", async () => {
+      const { safeStorage } = await import("electron");
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+
+      await service.saveSettings({ openrouterApiKey: "sk-plain-key" });
+      const settings = await service.getSettings();
+
+      expect(settings.openrouterApiKey).toBe("sk-plain-key");
+
+      // Restore default
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+    });
+
+    it("emits console.warn when saving without encryption", async () => {
+      const { safeStorage } = await import("electron");
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      await service.saveSettings({ openrouterApiKey: "sk-plain-key" });
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("safeStorage unavailable"));
+
+      warnSpy.mockRestore();
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+    });
+  });
 });

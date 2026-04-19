@@ -10,9 +10,10 @@ interface MessageListProps {
 export default function MessageList({ messages, streamingContent }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when messages or streaming content changes to auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, streamingContent]);
+  }, [messages, streamingContent]);
 
   return (
     <Box
@@ -54,14 +55,8 @@ export default function MessageList({ messages, streamingContent }: MessageListP
 
       {streamingContent !== null && (
         <Box sx={{ alignSelf: "flex-start", maxWidth: "75%" }}>
-          <Paper
-            elevation={0}
-            sx={{ p: 1.5, bgcolor: "action.selected", borderRadius: 2 }}
-          >
-            <Typography
-              variant="body2"
-              sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-            >
+          <Paper elevation={0} sx={{ p: 1.5, bgcolor: "action.selected", borderRadius: 2 }}>
+            <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
               {streamingContent}
               <Box
                 component="span"

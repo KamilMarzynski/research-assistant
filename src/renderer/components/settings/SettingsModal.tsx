@@ -65,11 +65,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         />
         <FormControl fullWidth margin="normal">
           <InputLabel>Model</InputLabel>
-          <Select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            label="Model"
-          >
+          <Select value={model} onChange={(e) => setModel(e.target.value)} label="Model">
             {MODELS.map((m) => (
               <MenuItem key={m.id} value={m.id}>
                 {m.label}
