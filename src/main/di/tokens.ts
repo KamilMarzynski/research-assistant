@@ -9,3 +9,4 @@ export const PROJECT_REPO_TOKEN: InjectionToken<IProjectRepository> = Symbol("IP
 export const MESSAGE_REPO_TOKEN: InjectionToken<IMessageRepository> = Symbol("IMessageRepository");
 export const ARTIFACT_REPO_TOKEN: InjectionToken<IArtifactRepository> =
   Symbol("IArtifactRepository");
+export const USER_DATA_PATH_TOKEN: InjectionToken<string> = Symbol("userDataPath");
