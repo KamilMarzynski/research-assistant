@@ -50,54 +50,82 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     return messageService.getHistory((payload as { projectId: string }).projectId);
   });
 
-  ipcMain.handle(IPC.GET_SETTINGS, async () => settingsService.getSettings());
+  ipcMain.handle(IPC.GET_SETTINGS, async () => {
+    const settings = await settingsService.getSettings();
+    return {
+      hasApiKey: settings.openrouterApiKey !== null && settings.openrouterApiKey !== "",
+      openrouterApiKey: settings.openrouterApiKey,
+      model: settings.model,
+    };
+  });
 
   ipcMain.handle(IPC.SAVE_SETTINGS, async (_event, payload: unknown) => {
     if (typeof payload !== "object" || payload === null) {
       throw new Error("Invalid payload");
     }
-    return settingsService.saveSettings(
-      payload as Parameters<typeof settingsService.saveSettings>[0],
-    );
+    const p = payload as Record<string, unknown>;
+    if ("model" in p && typeof p.model !== "string") {
+      throw new Error("model must be a string");
+    }
+    if (
+      "openrouterApiKey" in p &&
+      p.openrouterApiKey !== null &&
+      typeof p.openrouterApiKey !== "string"
+    ) {
+      throw new Error("openrouterApiKey must be a string or null");
+    }
+    await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
+    // If model changed, clear sessions so next message creates a fresh session with the new model
+    if ("model" in p) {
+      sessions.clear();
+    }
   });
 
-  ipcMain.on(IPC.SEND_MESSAGE, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { projectId?: unknown }).projectId !== "string" ||
-      typeof (payload as { content?: unknown }).content !== "string"
-    ) {
-      console.error("[IPC] SEND_MESSAGE: invalid payload", payload);
-      return;
-    }
-    const { projectId, content } = payload as { projectId: string; content: string };
+  ipcMain.on(IPC.SEND_MESSAGE, (_event, payload: unknown) => {
+    void (async () => {
+      try {
+        if (
+          typeof payload !== "object" ||
+          payload === null ||
+          typeof (payload as { projectId?: unknown }).projectId !== "string" ||
+          typeof (payload as { content?: unknown }).content !== "string"
+        ) {
+          console.error("[IPC] SEND_MESSAGE: invalid payload", payload);
+          return;
+        }
+        const { projectId, content } = payload as { projectId: string; content: string };
 
-    const settings = await settingsService.getSettings();
-    if (!settings.openrouterApiKey) {
-      win.webContents.send(
-        IPC.MESSAGE_CHUNK,
-        "⚠️ No API key configured. Open Settings to add your OpenRouter API key.",
-      );
-      win.webContents.send(IPC.MESSAGE_DONE);
-      return;
-    }
+        const settings = await settingsService.getSettings();
+        if (!settings.openrouterApiKey) {
+          win.webContents.send(
+            IPC.MESSAGE_CHUNK,
+            "⚠️ No API key configured. Open Settings to add your OpenRouter API key.",
+          );
+          win.webContents.send(IPC.MESSAGE_DONE);
+          return;
+        }
 
-    if (!sessions.has(projectId)) {
-      sessions.set(
-        projectId,
-        new AgentSession({
-          win,
-          messageService,
-          projectId,
-          apiKey: settings.openrouterApiKey,
-          model: settings.model,
-        }),
-      );
-    }
+        if (!sessions.has(projectId)) {
+          sessions.set(
+            projectId,
+            new AgentSession({
+              win,
+              messageService,
+              projectId,
+              apiKey: settings.openrouterApiKey,
+              model: settings.model,
+            }),
+          );
+        }
 
-    const session = sessions.get(projectId);
-    if (!session) return;
-    await session.send(content);
+        const session = sessions.get(projectId);
+        if (!session) return;
+        await session.send(content);
+      } catch (err) {
+        console.error("[IPC] SEND_MESSAGE error:", err);
+        win.webContents.send(IPC.MESSAGE_CHUNK, "⚠️ An error occurred. Please try again.");
+        win.webContents.send(IPC.MESSAGE_DONE);
+      }
+    })();
   });
 }

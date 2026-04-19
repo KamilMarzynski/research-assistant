@@ -34,27 +34,32 @@ export class AgentSession {
     });
 
     this.agent.subscribe(async (event: unknown) => {
-      const e = event as {
-        type: string;
-        assistantMessageEvent?: { type: string; delta: string };
-        messages?: unknown[];
-      };
+      try {
+        const e = event as {
+          type: string;
+          assistantMessageEvent?: { type: string; delta: string };
+          messages?: unknown[];
+        };
 
-      if (e.type === "message_update") {
-        const ae = e.assistantMessageEvent;
-        if (ae?.type === "text_delta") {
-          this.assistantContent += ae.delta;
-          this.win.webContents.send(IPC.MESSAGE_CHUNK, ae.delta);
+        if (e.type === "message_update") {
+          const ae = e.assistantMessageEvent;
+          if (ae?.type === "text_delta") {
+            this.assistantContent += ae.delta;
+            this.win.webContents.send(IPC.MESSAGE_CHUNK, ae.delta);
+          }
+        } else if (e.type === "agent_end") {
+          if (this.assistantContent) {
+            await this.messageService.addMessage({
+              projectId: this.projectId,
+              role: "assistant",
+              content: this.assistantContent,
+            });
+            this.assistantContent = "";
+          }
+          this.win.webContents.send(IPC.MESSAGE_DONE);
         }
-      } else if (e.type === "agent_end") {
-        if (this.assistantContent) {
-          await this.messageService.addMessage({
-            projectId: this.projectId,
-            role: "assistant",
-            content: this.assistantContent,
-          });
-          this.assistantContent = "";
-        }
+      } catch (err) {
+        console.error("[AgentSession] subscriber error:", err);
         this.win.webContents.send(IPC.MESSAGE_DONE);
       }
     });

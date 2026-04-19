@@ -15,8 +15,8 @@ export default function ChatPanel() {
   // Check API key once on mount
   useEffect(() => {
     window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => {
-      const settings = s as { openrouterApiKey: string | null };
-      setHasApiKey(settings.openrouterApiKey !== null);
+      const settings = s as { hasApiKey: boolean };
+      setHasApiKey(settings.hasApiKey);
     });
   }, []);
 
@@ -24,8 +24,10 @@ export default function ChatPanel() {
   useEffect(() => {
     if (!activeProjectId) {
       setMessages([]);
+      setStreamingContent(null);
       return;
     }
+    setStreamingContent(null);
     window.electronAPI
       .invoke(IPC.GET_MESSAGES, { projectId: activeProjectId })
       .then((msgs) => setMessages(msgs as Message[]));
