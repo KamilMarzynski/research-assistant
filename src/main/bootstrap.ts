@@ -3,7 +3,13 @@ import { app } from "electron";
 import { container, type DependencyContainer } from "tsyringe";
 import { createDatabase } from "./db/client";
 import { runMigrations } from "./db/migrate";
-import { ARTIFACT_REPO_TOKEN, DB_TOKEN, MESSAGE_REPO_TOKEN, PROJECT_REPO_TOKEN } from "./di/tokens";
+import {
+  ARTIFACT_REPO_TOKEN,
+  DB_TOKEN,
+  MESSAGE_REPO_TOKEN,
+  PROJECT_REPO_TOKEN,
+  USER_DATA_PATH_TOKEN,
+} from "./di/tokens";
 import { EventBus } from "./event-bus";
 import { DrizzleArtifactRepository } from "./repositories/drizzle/DrizzleArtifactRepository";
 import { DrizzleMessageRepository } from "./repositories/drizzle/DrizzleMessageRepository";
@@ -13,15 +19,18 @@ import { FileService } from "./services/FileService";
 import { MessageService } from "./services/MessageService";
 import { ProjectService } from "./services/ProjectService";
 import { ResearchService } from "./services/ResearchService";
+import { SettingsService } from "./services/SettingsService";
 
 export async function bootstrap(): Promise<DependencyContainer> {
-  const dbPath = join(app.getPath("userData"), "research-assistant.db");
+  const userDataPath = app.getPath("userData");
+  const dbPath = join(userDataPath, "research-assistant.db");
   const db = await createDatabase(dbPath);
   await runMigrations(db);
 
   const appContainer = container.createChildContainer();
 
   appContainer.registerInstance(DB_TOKEN, db);
+  appContainer.registerInstance(USER_DATA_PATH_TOKEN, userDataPath);
 
   appContainer.register(PROJECT_REPO_TOKEN, { useClass: DrizzleProjectRepository });
   appContainer.register(MESSAGE_REPO_TOKEN, { useClass: DrizzleMessageRepository });
@@ -33,6 +42,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(ResearchService);
   appContainer.registerSingleton(FileService);
   appContainer.registerSingleton(EventBus);
+  appContainer.registerSingleton(SettingsService);
 
   return appContainer;
 }

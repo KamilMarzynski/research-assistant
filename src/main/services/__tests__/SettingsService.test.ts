@@ -1,7 +1,7 @@
 import "reflect-metadata";
-import { join } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock electron — safeStorage is main-process only
@@ -14,11 +14,12 @@ vi.mock("electron", () => ({
 }));
 
 // Import after mock is registered
-const { SettingsService } = await import("../SettingsService");
+const mod = await import("../SettingsService");
+const SettingsService = mod.SettingsService as typeof mod.SettingsService;
 
 describe("SettingsService", () => {
   let tmpDir: string;
-  let service: SettingsService;
+  let service: InstanceType<typeof SettingsService>;
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), "settings-test-"));
@@ -41,7 +42,10 @@ describe("SettingsService", () => {
 
   describe("saveSettings + getSettings round-trip", () => {
     it("saves and retrieves API key via safeStorage", async () => {
-      await service.saveSettings({ openrouterApiKey: "sk-or-test", model: "anthropic/claude-sonnet-4-6" });
+      await service.saveSettings({
+        openrouterApiKey: "sk-or-test",
+        model: "anthropic/claude-sonnet-4-6",
+      });
       const settings = await service.getSettings();
       expect(settings.openrouterApiKey).toBe("sk-or-test");
       expect(settings.model).toBe("anthropic/claude-sonnet-4-6");
