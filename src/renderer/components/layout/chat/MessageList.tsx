@@ -1,18 +1,87 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Paper, Typography } from "@mui/material";
+import { useEffect, useRef } from "react";
+import type { Message } from "../../../../shared/types";
 
-export default function MessageList() {
+interface MessageListProps {
+  messages: Message[];
+  streamingContent: string | null;
+}
+
+export default function MessageList({ messages, streamingContent }: MessageListProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length, streamingContent]);
+
   return (
     <Box
       sx={{
-        height: "100%",
+        flex: 1,
+        overflowY: "auto",
+        p: 2,
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        flexDirection: "column",
+        gap: 1,
       }}
     >
-      <Typography variant="body2" color="text.secondary">
-        Message List
-      </Typography>
+      {messages.map((msg) => (
+        <Box
+          key={msg.id}
+          sx={{
+            alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+            maxWidth: "75%",
+          }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1.5,
+              bgcolor: msg.role === "user" ? "primary.main" : "action.selected",
+              borderRadius: 2,
+            }}
+          >
+            <Typography
+              variant="body2"
+              color={msg.role === "user" ? "primary.contrastText" : "text.primary"}
+              sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+            >
+              {msg.content}
+            </Typography>
+          </Paper>
+        </Box>
+      ))}
+
+      {streamingContent !== null && (
+        <Box sx={{ alignSelf: "flex-start", maxWidth: "75%" }}>
+          <Paper
+            elevation={0}
+            sx={{ p: 1.5, bgcolor: "action.selected", borderRadius: 2 }}
+          >
+            <Typography
+              variant="body2"
+              sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+            >
+              {streamingContent}
+              <Box
+                component="span"
+                sx={{
+                  display: "inline-block",
+                  width: 8,
+                  height: "1em",
+                  bgcolor: "text.primary",
+                  ml: 0.5,
+                  verticalAlign: "text-bottom",
+                  animation: "blink 1s step-end infinite",
+                  "@keyframes blink": { "50%": { opacity: 0 } },
+                }}
+              />
+            </Typography>
+          </Paper>
+        </Box>
+      )}
+
+      <div ref={bottomRef} />
     </Box>
   );
 }

@@ -1,21 +1,92 @@
-import { Box, Typography } from "@mui/material";
+import SendIcon from "@mui/icons-material/Send";
+import { Box, IconButton, MenuItem, Select, TextField } from "@mui/material";
+import { useEffect, useState } from "react";
+import { IPC } from "../../../../shared/ipc-channels";
 
-export default function MessageInput() {
+const MODELS = [
+  { id: "anthropic/claude-sonnet-4-6", label: "Sonnet 4.6" },
+  { id: "anthropic/claude-opus-4-6", label: "Opus 4.6" },
+  { id: "anthropic/claude-haiku-4-5", label: "Haiku 4.5" },
+  { id: "openai/gpt-4o", label: "GPT-4o" },
+];
+
+interface MessageInputProps {
+  onSend: (content: string) => void;
+  disabled?: boolean;
+}
+
+export default function MessageInput({ onSend, disabled }: MessageInputProps) {
+  const [content, setContent] = useState("");
+  const [model, setModel] = useState("anthropic/claude-sonnet-4-6");
+
+  useEffect(() => {
+    window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => {
+      const settings = s as { model: string };
+      setModel(settings.model);
+    });
+  }, []);
+
+  const handleModelChange = async (newModel: string) => {
+    setModel(newModel);
+    await window.electronAPI.invoke(IPC.SAVE_SETTINGS, { model: newModel });
+  };
+
+  const handleSend = () => {
+    const trimmed = content.trim();
+    if (!trimmed || disabled) return;
+    onSend(trimmed);
+    setContent("");
+  };
+
   return (
     <Box
       sx={{
-        p: 2,
+        p: 1.5,
         borderTop: 1,
         borderColor: "divider",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: 64,
+        gap: 1,
+        alignItems: "flex-end",
       }}
     >
-      <Typography variant="body2" color="text.secondary">
-        Message Input
-      </Typography>
+      <Select
+        size="small"
+        value={model}
+        onChange={(e) => handleModelChange(e.target.value)}
+        sx={{ minWidth: 130, flexShrink: 0 }}
+      >
+        {MODELS.map((m) => (
+          <MenuItem key={m.id} value={m.id}>
+            {m.label}
+          </MenuItem>
+        ))}
+      </Select>
+
+      <TextField
+        multiline
+        maxRows={6}
+        fullWidth
+        size="small"
+        placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
+        disabled={disabled}
+      />
+
+      <IconButton
+        onClick={handleSend}
+        disabled={!content.trim() || disabled}
+        color="primary"
+        size="small"
+      >
+        <SendIcon />
+      </IconButton>
     </Box>
   );
 }
