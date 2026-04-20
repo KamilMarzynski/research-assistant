@@ -1,19 +1,133 @@
 import "reflect-metadata";
-import { describe, expect, it } from "vitest";
-import { NotImplementedError } from "../errors";
-import { ResearchService } from "../ResearchService";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+let capturedSubscriber: ((event: unknown) => void) | null = null;
+
+const mockWorker = {
+  state: { tools: [] as never[] },
+  subscribe: vi.fn((cb: (event: unknown) => void) => {
+    capturedSubscriber = cb;
+  }),
+  prompt: vi.fn().mockResolvedValue(undefined),
+};
+
+vi.mock("@mariozechner/pi-agent-core", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: constructor mock requires typed this
+  Agent: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    Object.assign(this, mockWorker);
+    return mockWorker;
+  }),
+}));
+
+vi.mock("@mariozechner/pi-ai", () => ({
+  getModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
+}));
+
+vi.mock("../../agent/context", () => ({
+  buildSystemContext: vi.fn().mockResolvedValue("mock context"),
+}));
+
+vi.mock("../../agent/tools", () => ({
+  createAgentTools: vi.fn().mockReturnValue([]),
+}));
+
+const { ResearchService } = await import("../ResearchService");
+
+function makeEventBus() {
+  const handlers = new Map<string, (payload: unknown) => void>();
+  return {
+    emit: vi.fn((event: { type: string; payload: unknown }) => {
+      handlers.get(event.type)?.(event.payload);
+    }),
+    on: vi.fn((type: string, handler: (payload: unknown) => void) => {
+      handlers.set(type, handler);
+      return () => {};
+    }),
+  };
+}
+
+function makeArtifactService() {
+  return {
+    saveArtifact: vi.fn().mockResolvedValue({
+      id: "art-1",
+      filePath: "/workspace/output.md",
+    }),
+  };
+}
+
+function makeSettingsService() {
+  return {
+    getSettings: vi.fn().mockResolvedValue({
+      openrouterApiKey: "sk-or-test",
+      model: "anthropic/claude-sonnet-4-6",
+    }),
+  };
+}
+
+function makeHomeService() {
+  return {
+    getHomePath: vi.fn().mockReturnValue("/tmp/.research-assistant"),
+    ensureWorkspaceForProject: vi.fn().mockResolvedValue("/tmp/.research-assistant/workspace/p1"),
+  };
+}
 
 describe("ResearchService", () => {
-  describe("startResearch", () => {
-    it("throws NotImplementedError (wired in Run 6)", async () => {
-      const service = new ResearchService();
+  let service: InstanceType<typeof ResearchService>;
 
-      await expect(
-        service.startResearch("proj-1", "Project 1", "quantum computing", null),
-      ).rejects.toThrow(NotImplementedError);
-      await expect(
-        service.startResearch("proj-1", "Project 1", "quantum computing", null),
-      ).rejects.toThrow("Run 6");
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capturedSubscriber = null;
+    service = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+  });
+
+  it("returns taskId immediately without awaiting worker", async () => {
+    const { taskId } = await service.startResearch("p1", "My Project", "research query", null);
+    expect(taskId).toBeTypeOf("string");
+    expect(taskId).toHaveLength(36);
+  });
+
+  it("fires research:started on EventBus", async () => {
+    const eventBus = makeEventBus();
+    service = new ResearchService(
+      eventBus as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+    await service.startResearch("p1", "My Project", "query", null);
+    expect(eventBus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "research:started" }),
+    );
+  });
+
+  it("spawns a Pi Agent with researcher system prompt", async () => {
+    const { Agent } = await import("@mariozechner/pi-agent-core");
+    await service.startResearch("p1", "My Project", "summarise the codebase", null);
+    expect(Agent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initialState: expect.objectContaining({
+          systemPrompt: expect.stringContaining("researcher"),
+        }),
+      }),
+    );
+  });
+
+  it("throws when no API key configured", async () => {
+    service = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      {
+        getSettings: vi.fn().mockResolvedValue({ openrouterApiKey: null, model: "x" }),
+      } as never,
+      makeHomeService() as never,
+    );
+    await expect(service.startResearch("p1", "My Project", "query", null)).rejects.toThrow(
+      "No API key",
+    );
   });
 });
