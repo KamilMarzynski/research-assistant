@@ -1,6 +1,7 @@
 export type Project = {
   id: string;
   name: string;
+  folderPath: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
