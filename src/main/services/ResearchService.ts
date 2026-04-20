@@ -47,7 +47,7 @@ export class ResearchService {
         systemPrompt,
         model: getModel("openrouter", settings.model as never),
       },
-      getApiKey: async () => settings.openrouterApiKey!,
+      getApiKey: async () => settings.openrouterApiKey as string,
     });
 
     // Register tools — no start_research (no recursive dispatch)

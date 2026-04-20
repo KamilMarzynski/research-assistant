@@ -12,7 +12,6 @@ const mockWorker = {
 };
 
 vi.mock("@mariozechner/pi-agent-core", () => ({
-  // biome-ignore lint/suspicious/noExplicitAny: constructor mock requires typed this
   Agent: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
     Object.assign(this, mockWorker);
     return mockWorker;
