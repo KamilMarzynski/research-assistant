@@ -4,7 +4,12 @@ import { NotImplementedError } from "./errors";
 
 @injectable()
 export class ResearchService {
-  async startResearch(_projectId: string, _query: string): Promise<ResearchTask> {
+  async startResearch(
+    _projectId: string,
+    _projectName: string,
+    _query: string,
+    _folderPath: string | null,
+  ): Promise<ResearchTask> {
     throw new NotImplementedError("ResearchService.startResearch", "Run 6");
   }
 }

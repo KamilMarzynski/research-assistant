@@ -3,8 +3,10 @@ import type { DependencyContainer } from "tsyringe";
 import { IPC } from "../shared/ipc-channels";
 import { AgentSession } from "./agent/session";
 import { ArtifactService } from "./services/ArtifactService";
+import { HomeService } from "./services/HomeService";
 import { MessageService } from "./services/MessageService";
 import { ProjectService } from "./services/ProjectService";
+import { ResearchService } from "./services/ResearchService";
 import { SettingsService } from "./services/SettingsService";
 
 export function registerIpcHandlers(win: BrowserWindow, container: DependencyContainer): void {
@@ -12,6 +14,8 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const messageService = container.resolve(MessageService);
   const artifactService = container.resolve(ArtifactService);
   const settingsService = container.resolve(SettingsService);
+  const homeService = container.resolve(HomeService);
+  const researchService = container.resolve(ResearchService);
 
   const sessions = new Map<string, AgentSession>();
 
@@ -106,14 +110,21 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
         }
 
         if (!sessions.has(projectId)) {
+          const project = await projectService.getProject(projectId);
+          const isFirstRun = await homeService.isFirstRun();
           sessions.set(
             projectId,
             new AgentSession({
               win,
               messageService,
+              homeService,
+              researchService,
               projectId,
+              projectName: project.name,
+              folderPath: project.folderPath,
               apiKey: settings.openrouterApiKey,
               model: settings.model,
+              isFirstRun,
             }),
           );
         }

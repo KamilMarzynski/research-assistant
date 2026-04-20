@@ -11,6 +11,8 @@ const mockAgent = {
   }),
   prompt: vi.fn().mockResolvedValue(undefined),
   abort: vi.fn(),
+  followUp: vi.fn(),
+  state: { tools: [] },
 };
 
 vi.mock("@mariozechner/pi-agent-core", () => ({
@@ -25,6 +27,10 @@ vi.mock("@mariozechner/pi-ai", () => ({
 }));
 
 vi.mock("electron", () => ({}));
+
+vi.mock("./tools", () => ({
+  createAgentTools: vi.fn().mockReturnValue([]),
+}));
 
 const { AgentSession } = await import("./session");
 
@@ -52,6 +58,19 @@ function makeWin() {
   return { webContents: { send: vi.fn() } } as unknown as Electron.BrowserWindow;
 }
 
+function makeHomeService() {
+  return {
+    isFirstRun: vi.fn().mockResolvedValue(false),
+    getHomePath: vi.fn().mockReturnValue("/tmp/.research-assistant"),
+  };
+}
+
+function makeResearchService() {
+  return {
+    startResearch: vi.fn().mockResolvedValue({ taskId: "task-1" }),
+  };
+}
+
 describe("AgentSession", () => {
   let messageService: ReturnType<typeof makeMessageService>;
   let win: Electron.BrowserWindow;
@@ -65,9 +84,15 @@ describe("AgentSession", () => {
     session = new AgentSession({
       win,
       messageService: messageService as never,
+      homeService: makeHomeService() as never,
+      researchService: makeResearchService() as never,
       projectId: "p-1",
+      projectName: "Test Project",
+      folderPath: null,
       apiKey: "sk-or-test",
       model: "anthropic/claude-sonnet-4-6",
+      isFirstRun: false,
+      systemContext: "",
     });
   });
 
@@ -181,22 +206,79 @@ describe("AgentSession", () => {
       const constructorCall = vi.mocked(Agent).mock.calls[0];
       const options = constructorCall[0] as {
         getApiKey: () => Promise<string>;
-        beforeToolCall: () => Promise<{ block: boolean; reason: string }>;
+        beforeToolCall: (ctx: {
+          toolCall: { name: string };
+        }) => Promise<{ block: boolean; reason: string } | undefined>;
       };
       const key = await options.getApiKey();
       expect(key).toBe("sk-or-test");
     });
 
-    it("beforeToolCall blocks all tool calls until Run 6", async () => {
+    it("beforeToolCall blocks unregistered tools", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
       const constructorCall = vi.mocked(Agent).mock.calls[0];
       const options = constructorCall[0] as {
         getApiKey: () => Promise<string>;
-        beforeToolCall: () => Promise<{ block: boolean; reason: string }>;
+        beforeToolCall: (ctx: {
+          toolCall: { name: string };
+        }) => Promise<{ block: boolean; reason: string } | undefined>;
       };
-      const result = await options.beforeToolCall();
-      expect(result.block).toBe(true);
-      expect(result.reason).toMatch(/Run 6/);
+      const result = await options.beforeToolCall({ toolCall: { name: "unknown_tool" } });
+      expect(result).toBeDefined();
+      expect(result?.block).toBe(true);
+    });
+  });
+
+  describe("first-run prompt injection", () => {
+    it("includes first-run interview instructions when isFirstRun=true", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        apiKey: "sk-or-test",
+        model: "anthropic/claude-sonnet-4-6",
+        isFirstRun: true,
+        systemContext: "",
+      });
+      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
+        ?.systemPrompt;
+      expect(prompt).toContain("How do you organise your projects");
+    });
+
+    it("does not include first-run instructions when isFirstRun=false", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        apiKey: "sk-or-test",
+        model: "anthropic/claude-sonnet-4-6",
+        isFirstRun: false,
+        systemContext: "",
+      });
+      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
+        ?.systemPrompt;
+      expect(prompt).not.toContain("How do you organise");
+    });
+  });
+
+  describe("queueFollowUp", () => {
+    it("calls agent.followUp with the message", () => {
+      session.queueFollowUp("Research complete: found 5 files.");
+      expect(mockAgent.followUp).toHaveBeenCalledWith(
+        expect.objectContaining({ role: "user", content: "Research complete: found 5 files." }),
+      );
     });
   });
 });

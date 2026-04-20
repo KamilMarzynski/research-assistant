@@ -8,10 +8,12 @@ describe("ResearchService", () => {
     it("throws NotImplementedError (wired in Run 6)", async () => {
       const service = new ResearchService();
 
-      await expect(service.startResearch("proj-1", "quantum computing")).rejects.toThrow(
-        NotImplementedError,
-      );
-      await expect(service.startResearch("proj-1", "quantum computing")).rejects.toThrow("Run 6");
+      await expect(
+        service.startResearch("proj-1", "Project 1", "quantum computing", null),
+      ).rejects.toThrow(NotImplementedError);
+      await expect(
+        service.startResearch("proj-1", "Project 1", "quantum computing", null),
+      ).rejects.toThrow("Run 6");
     });
   });
 });
