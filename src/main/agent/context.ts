@@ -43,6 +43,15 @@ function parseFrontmatter(content: string): { name?: string; description?: strin
   }
 }
 
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export async function loadSkills(projectFolderPath: string | undefined): Promise<string> {
   const home = join(homedir(), ".research-assistant");
   const agents = join(homedir(), ".agents");
@@ -71,9 +80,9 @@ export async function loadSkills(projectFolderPath: string | undefined): Promise
   for (const skill of byName.values()) {
     lines.push(
       `  <skill>`,
-      `    <name>${skill.name}</name>`,
-      `    <description>${skill.description}</description>`,
-      `    <location>${skill.location}</location>`,
+      `    <name>${escapeXml(skill.name)}</name>`,
+      `    <description>${escapeXml(skill.description)}</description>`,
+      `    <location>${escapeXml(skill.location)}</location>`,
       `  </skill>`,
     );
   }

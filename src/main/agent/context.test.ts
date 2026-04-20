@@ -10,7 +10,7 @@ vi.mock("node:os", async (importOriginal) => {
   return { ...actual, homedir: () => tmpHome };
 });
 
-const { loadSkills, buildSystemContext } = await import("./context");
+const { loadSkills, buildSystemContext, toSlug } = await import("./context");
 
 describe("loadSkills", () => {
   beforeEach(async () => {
@@ -62,6 +62,32 @@ describe("loadSkills", () => {
     expect(result).not.toContain("Global version.");
 
     await rm("/tmp/myproject-ctx-test", { recursive: true, force: true });
+  });
+});
+
+describe("toSlug", () => {
+  it("converts to lowercase with spaces as hyphens", () => {
+    expect(toSlug("My Cool Project")).toBe("my-cool-project");
+  });
+
+  it("strips non-alphanumeric characters", () => {
+    expect(toSlug("My Cool Project!")).toBe("my-cool-project");
+  });
+
+  it("collapses multiple spaces", () => {
+    expect(toSlug("hello   world")).toBe("hello-world");
+  });
+
+  it("trims leading and trailing hyphens", () => {
+    expect(toSlug("!hello world!")).toBe("hello-world");
+  });
+
+  it("handles empty string", () => {
+    expect(toSlug("")).toBe("");
+  });
+
+  it("handles all-special characters", () => {
+    expect(toSlug("!!!")).toBe("");
   });
 });
 
