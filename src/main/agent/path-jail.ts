@@ -11,7 +11,7 @@ export class PathJail {
   private readonly projectHomeSkills: string | null;
 
   constructor(
-    private readonly projectId: string,
+    readonly projectId: string,
     folderPath: string | null,
   ) {
     this.home = join(homedir(), ".research-assistant");
@@ -20,9 +20,7 @@ export class PathJail {
     this.agentsSkills = join(homedir(), ".agents", "skills");
     this.projectFolder = folderPath;
     this.projectAgentsSkills = folderPath ? join(folderPath, ".agents", "skills") : null;
-    this.projectHomeSkills = folderPath
-      ? join(folderPath, ".research-assistant", "skills")
-      : null;
+    this.projectHomeSkills = folderPath ? join(folderPath, ".research-assistant", "skills") : null;
   }
 
   validate(inputPath: string, mode: "read" | "write"): string {
@@ -37,7 +35,7 @@ export class PathJail {
     ];
 
     const inZone = (zones: string[]) =>
-      zones.some((z) => resolved.startsWith(z + "/") || resolved === z);
+      zones.some((z) => resolved.startsWith(`${z}/`) || resolved === z);
 
     if (inZone(readWriteZones)) return resolved;
 

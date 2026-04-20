@@ -1,5 +1,5 @@
-import { appendFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { appendFile } from "node:fs/promises";
 
 const BLOCKLIST_PATTERNS = [
   /\brm\s+-rf\b/,
@@ -109,7 +109,7 @@ export async function runSafeBash(opts: SafeBashOptions): Promise<SafeBashResult
       });
 
       // Append to audit log async — do not block resolution
-      appendFile(auditLogPath, entry + "\n", "utf-8").catch(console.error);
+      appendFile(auditLogPath, `${entry}\n`, "utf-8").catch(console.error);
 
       resolve({ stdout, stderr, exitCode: code ?? 1, truncated });
     });

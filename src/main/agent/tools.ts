@@ -1,5 +1,5 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { type TSchema, Type } from "@sinclair/typebox";
 import { runSafeBash } from "./extensions/safe-bash";
@@ -54,7 +54,7 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
       }),
       execute: async (_id, { path, content }): Promise<AgentToolResult<null>> => {
         const resolved = jail.validate(path, "write");
-        const dir = resolved.substring(0, resolved.lastIndexOf("/"));
+        const dir = dirname(resolved);
         await mkdir(dir, { recursive: true });
         await writeFile(resolved, content, "utf-8");
         return {
