@@ -1,8 +1,11 @@
+import { access } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "../../../shared/types";
 import type { IProjectRepository } from "../../repositories/IProjectRepository";
 import { NotFoundError } from "../errors";
 import { ProjectService } from "../ProjectService";
+
+vi.mock("node:fs/promises", () => ({ access: vi.fn().mockResolvedValue(undefined) }));
 
 function makeProject(overrides: Partial<Project> = {}): Project {
   return {
@@ -10,6 +13,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     name: "Test Project",
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
+    folderPath: null,
     ...overrides,
   };
 }
@@ -20,6 +24,7 @@ function makeMockRepo(overrides: Partial<IProjectRepository> = {}): IProjectRepo
     list: vi.fn().mockResolvedValue([]),
     get: vi.fn().mockResolvedValue(null),
     delete: vi.fn().mockResolvedValue(undefined),
+    linkFolder: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -40,7 +45,7 @@ describe("ProjectService", () => {
 
       const result = await service.createProject("New");
 
-      expect(repo.create).toHaveBeenCalledWith({ name: "New" });
+      expect(repo.create).toHaveBeenCalledWith({ name: "New", folderPath: null });
       expect(result).toEqual(project);
     });
   });
@@ -90,6 +95,34 @@ describe("ProjectService", () => {
 
       await expect(service.deleteProject("ghost")).rejects.toThrow(NotFoundError);
       expect(repo.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("linkFolder", () => {
+    it("validates the path exists then delegates to repo", async () => {
+      vi.mocked(repo.get).mockResolvedValue(makeProject());
+
+      await service.linkFolder("proj-1", "/some/path");
+
+      expect(access).toHaveBeenCalledWith("/some/path");
+      expect(repo.linkFolder).toHaveBeenCalledWith("proj-1", "/some/path");
+    });
+
+    it("throws NotFoundError when project does not exist", async () => {
+      vi.mocked(repo.get).mockResolvedValue(null);
+
+      await expect(service.linkFolder("missing", "/some/path")).rejects.toThrow(NotFoundError);
+      expect(repo.linkFolder).not.toHaveBeenCalled();
+    });
+
+    it("throws when the path does not exist on disk", async () => {
+      vi.mocked(repo.get).mockResolvedValue(makeProject());
+      vi.mocked(access).mockRejectedValueOnce(new Error("ENOENT"));
+
+      await expect(service.linkFolder("proj-1", "/no/such/path")).rejects.toThrow(
+        "Folder not found: /no/such/path",
+      );
+      expect(repo.linkFolder).not.toHaveBeenCalled();
     });
   });
 });
