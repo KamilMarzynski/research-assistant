@@ -1,8 +1,10 @@
 import AddIcon from "@mui/icons-material/Add";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
   Box,
   Button,
+  Chip,
   IconButton,
   List,
   ListItemButton,
@@ -24,30 +26,33 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newFolderPath, setNewFolderPath] = useState<string | null>(null);
 
   useEffect(() => {
     window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p as Project[]));
   }, []);
 
+  const handleBrowseFolder = async () => {
+    const path = await window.electronAPI.invoke(IPC.OPEN_FOLDER_DIALOG);
+    setNewFolderPath(path as string | null);
+  };
+
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) return;
-    const project = (await window.electronAPI.invoke(IPC.CREATE_PROJECT, { name })) as Project;
+    const project = (await window.electronAPI.invoke(IPC.CREATE_PROJECT, {
+      name,
+      folderPath: newFolderPath,
+    })) as Project;
     setProjects((prev) => [...prev, project]);
     setNewName("");
+    setNewFolderPath(null);
     setCreating(false);
     setActiveProjectId(project.id);
   };
 
   return (
-    <Box
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        bgcolor: "action.hover",
-      }}
-    >
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "action.hover" }}>
       <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}>
         <Typography variant="subtitle2" color="text.secondary">
           Projects
@@ -72,26 +77,46 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
 
         <Box sx={{ px: 1, py: 0.5 }}>
           {creating ? (
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="Project name"
-              value={newName}
-              autoFocus
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreate();
-                if (e.key === "Escape") {
-                  setCreating(false);
-                  setNewName("");
-                }
-              }}
-              onBlur={() => {
-                if (!newName.trim()) {
-                  setCreating(false);
-                }
-              }}
-            />
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="Project name"
+                value={newName}
+                autoFocus
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreate();
+                  if (e.key === "Escape") {
+                    setCreating(false);
+                    setNewName("");
+                    setNewFolderPath(null);
+                  }
+                }}
+                onBlur={() => {
+                  if (!newName.trim()) {
+                    setCreating(false);
+                    setNewFolderPath(null);
+                  }
+                }}
+              />
+              <Button
+                size="small"
+                startIcon={<FolderOpenIcon />}
+                onClick={handleBrowseFolder}
+                sx={{ justifyContent: "flex-start" }}
+              >
+                {newFolderPath ? newFolderPath.split("/").pop() : "Link folder (optional)"}
+              </Button>
+              {newFolderPath && (
+                <Chip
+                  label={newFolderPath}
+                  size="small"
+                  onDelete={() => setNewFolderPath(null)}
+                  sx={{ maxWidth: "100%", fontSize: 10 }}
+                />
+              )}
+            </Box>
           ) : (
             <Button
               size="small"
