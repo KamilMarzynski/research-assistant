@@ -130,4 +130,78 @@ describe("ResearchService", () => {
       "No API key",
     );
   });
+
+  it("emits research:progress on text_delta events", async () => {
+    const eventBus = makeEventBus();
+    service = new ResearchService(
+      eventBus as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+
+    await service.startResearch("p1", "My Project", "query", null);
+
+    // Drive the subscriber
+    capturedSubscriber?.({
+      type: "message_update",
+      assistantMessageEvent: { type: "text_delta", delta: "hello" },
+    });
+
+    expect(eventBus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "research:progress" }),
+    );
+  });
+
+  it("emits research:complete on agent_end", async () => {
+    const eventBus = makeEventBus();
+    service = new ResearchService(
+      eventBus as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+
+    await service.startResearch("p1", "My Project", "query", null);
+
+    // Drive the subscriber
+    await capturedSubscriber?.({ type: "agent_end" });
+
+    expect(eventBus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "research:complete" }),
+    );
+  });
+
+  it("emits research:failed when artifact save fails", async () => {
+    const eventBus = makeEventBus();
+    service = new ResearchService(
+      eventBus as never,
+      {
+        saveArtifact: vi.fn().mockRejectedValue(new Error("disk full")),
+      } as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+
+    await service.startResearch("p1", "My Project", "query", null);
+    await capturedSubscriber?.({ type: "agent_end" });
+
+    expect(eventBus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "research:failed" }),
+    );
+  });
+
+  it("calls ensureWorkspaceForProject before spawning worker", async () => {
+    const homeService = makeHomeService();
+    service = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      homeService as never,
+    );
+
+    await service.startResearch("p1", "My Project", "query", null);
+
+    expect(homeService.ensureWorkspaceForProject).toHaveBeenCalledWith("p1");
+  });
 });
