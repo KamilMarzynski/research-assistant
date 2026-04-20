@@ -35,7 +35,10 @@ describe("EventBus", () => {
 
     bus.on("research:complete", handlerA);
     bus.on("research:complete", handlerB);
-    bus.emit({ type: "research:complete", payload: { taskId: "t1", artifactId: "a1" } });
+    bus.emit({
+      type: "research:complete",
+      payload: { taskId: "t1", artifactId: "a1", projectId: "p1", query: "Q", filePath: "/tmp/out.md" },
+    });
 
     expect(handlerA).toHaveBeenCalledOnce();
     expect(handlerB).toHaveBeenCalledOnce();

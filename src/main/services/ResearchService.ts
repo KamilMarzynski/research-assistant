@@ -90,6 +90,9 @@ export class ResearchService {
             payload: {
               taskId,
               artifactId: artifact.id,
+              projectId,
+              query,
+              filePath: outputPath,
             },
           });
         } catch (err) {

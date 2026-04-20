@@ -4,7 +4,16 @@ import { injectable } from "tsyringe";
 type AppEvent =
   | { type: "research:started"; payload: { taskId: string; projectId: string; query: string } }
   | { type: "research:progress"; payload: { taskId: string; message: string } }
-  | { type: "research:complete"; payload: { taskId: string; artifactId: string } }
+  | {
+      type: "research:complete";
+      payload: {
+        taskId: string;
+        artifactId: string;
+        projectId: string;
+        query: string;
+        filePath: string;
+      };
+    }
   | { type: "research:failed"; payload: { taskId: string; error: string } };
 
 @injectable()
