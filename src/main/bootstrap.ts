@@ -4,6 +4,7 @@ import { container, type DependencyContainer } from "tsyringe";
 import { createDatabase } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import {
+  AGENT_HOME_PATH_TOKEN,
   ARTIFACT_REPO_TOKEN,
   DB_TOKEN,
   MESSAGE_REPO_TOKEN,
@@ -16,6 +17,7 @@ import { DrizzleMessageRepository } from "./repositories/drizzle/DrizzleMessageR
 import { DrizzleProjectRepository } from "./repositories/drizzle/DrizzleProjectRepository";
 import { ArtifactService } from "./services/ArtifactService";
 import { FileService } from "./services/FileService";
+import { HomeService } from "./services/HomeService";
 import { MessageService } from "./services/MessageService";
 import { ProjectService } from "./services/ProjectService";
 import { ResearchService } from "./services/ResearchService";
@@ -43,6 +45,11 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(FileService);
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);
+  appContainer.registerSingleton(HomeService);
+
+  const homeService = appContainer.resolve(HomeService);
+  await homeService.ensureDirectories();
+  appContainer.registerInstance(AGENT_HOME_PATH_TOKEN, homeService.getHomePath());
 
   return appContainer;
 }

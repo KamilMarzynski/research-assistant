@@ -1,6 +1,6 @@
+import { join } from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
-import { join } from "node:path";
 import { injectable } from "tsyringe";
 import { buildSystemContext } from "../agent/context";
 import { createAgentTools } from "../agent/tools";

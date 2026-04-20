@@ -1,7 +1,9 @@
-import { type BrowserWindow, ipcMain } from "electron";
+import { type BrowserWindow, dialog, ipcMain } from "electron";
 import type { DependencyContainer } from "tsyringe";
 import { IPC } from "../shared/ipc-channels";
+import { buildSystemContext } from "./agent/context";
 import { AgentSession } from "./agent/session";
+import { EventBus } from "./event-bus";
 import { ArtifactService } from "./services/ArtifactService";
 import { HomeService } from "./services/HomeService";
 import { MessageService } from "./services/MessageService";
@@ -16,6 +18,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const settingsService = container.resolve(SettingsService);
   const homeService = container.resolve(HomeService);
   const researchService = container.resolve(ResearchService);
+  const eventBus = container.resolve(EventBus);
 
   const sessions = new Map<string, AgentSession>();
 
@@ -85,6 +88,52 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     }
   });
 
+  ipcMain.handle(IPC.OPEN_FOLDER_DIALOG, async () => {
+    const result = await dialog.showOpenDialog(win, {
+      properties: ["openDirectory"],
+      title: "Select project folder",
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle(IPC.LINK_FOLDER, async (_event, payload: unknown) => {
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof (payload as { projectId?: unknown }).projectId !== "string" ||
+      typeof (payload as { folderPath?: unknown }).folderPath !== "string"
+    ) {
+      throw new Error("Invalid payload: expected { projectId: string, folderPath: string }");
+    }
+    const { projectId, folderPath } = payload as { projectId: string; folderPath: string };
+    await projectService.linkFolder(projectId, folderPath);
+    sessions.delete(projectId); // Invalidate session so next message picks up new folderPath
+  });
+
+  // EventBus → IPC forwarding
+  eventBus.on("research:started", (payload) => {
+    win.webContents.send(IPC.RESEARCH_STATUS_UPDATE, { status: "started", ...payload });
+  });
+
+  eventBus.on("research:progress", (payload) => {
+    win.webContents.send(IPC.RESEARCH_STATUS_UPDATE, { status: "progress", ...payload });
+  });
+
+  eventBus.on("research:complete", (payload) => {
+    win.webContents.send(IPC.RESEARCH_COMPLETE, payload);
+    const session = sessions.get(payload.projectId);
+    if (session) {
+      session.queueFollowUp(
+        `Background research complete (task ${payload.taskId}). Query: "${payload.query}". Artifact saved at ${payload.filePath}. Please briefly summarise the findings for the user.`,
+      );
+    }
+  });
+
+  eventBus.on("research:failed", (payload) => {
+    win.webContents.send(IPC.RESEARCH_STATUS_UPDATE, { status: "failed", ...payload });
+  });
+
   ipcMain.on(IPC.SEND_MESSAGE, (_event, payload: unknown) => {
     void (async () => {
       try {
@@ -112,6 +161,11 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
         if (!sessions.has(projectId)) {
           const project = await projectService.getProject(projectId);
           const isFirstRun = await homeService.isFirstRun();
+          const systemContext = await buildSystemContext(
+            projectId,
+            project.name,
+            project.folderPath ?? undefined,
+          );
           sessions.set(
             projectId,
             new AgentSession({
@@ -125,6 +179,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
               apiKey: settings.openrouterApiKey,
               model: settings.model,
               isFirstRun,
+              systemContext,
             }),
           );
         }
