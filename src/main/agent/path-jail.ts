@@ -18,9 +18,13 @@ export class PathJail {
     this.workspace = join(this.home, "workspace", projectId);
     this.homeSkills = join(this.home, "skills");
     this.agentsSkills = join(homedir(), ".agents", "skills");
-    this.projectFolder = folderPath;
-    this.projectAgentsSkills = folderPath ? join(folderPath, ".agents", "skills") : null;
-    this.projectHomeSkills = folderPath ? join(folderPath, ".research-assistant", "skills") : null;
+    this.projectFolder = folderPath ? resolve(normalize(folderPath)) : null;
+    this.projectAgentsSkills = this.projectFolder
+      ? join(this.projectFolder, ".agents", "skills")
+      : null;
+    this.projectHomeSkills = this.projectFolder
+      ? join(this.projectFolder, ".research-assistant", "skills")
+      : null;
   }
 
   validate(inputPath: string, mode: "read" | "write"): string {

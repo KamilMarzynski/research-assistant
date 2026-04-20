@@ -32,7 +32,11 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     ) {
       throw new Error("Invalid payload: expected { name: string }");
     }
-    return projectService.createProject((payload as { name: string }).name);
+    const p = payload as { name: string; folderPath?: unknown };
+    return projectService.createProject(
+      p.name,
+      typeof p.folderPath === "string" ? p.folderPath : null,
+    );
   });
 
   ipcMain.handle(IPC.GET_ARTIFACTS, async (_event, payload: unknown) => {

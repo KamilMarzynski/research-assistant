@@ -59,6 +59,14 @@ export async function runSafeBash(opts: SafeBashOptions): Promise<SafeBashResult
     let stdout = "";
     let stderr = "";
     let truncated = false;
+    let settled = false;
+
+    const settle = (result: SafeBashResult) => {
+      if (!settled) {
+        settled = true;
+        resolve(result);
+      }
+    };
 
     proc.stdout.on("data", (chunk: Buffer) => {
       if (stdout.length < MAX_OUTPUT_BYTES) {
@@ -82,15 +90,21 @@ export async function runSafeBash(opts: SafeBashOptions): Promise<SafeBashResult
 
     proc.on("error", (err) => {
       clearTimeout(timer);
-      if ((err as NodeJS.ErrnoException).code === "ABORT_ERR") {
-        resolve({
+      if (
+        (err as NodeJS.ErrnoException).code === "ABORT_ERR" ||
+        (err as NodeJS.ErrnoException).name === "AbortError"
+      ) {
+        settle({
           stdout,
           stderr: "Timeout: command exceeded 30s limit.",
           exitCode: 124,
           truncated,
         });
       } else {
-        reject(err);
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
       }
     });
 
@@ -111,7 +125,7 @@ export async function runSafeBash(opts: SafeBashOptions): Promise<SafeBashResult
       // Append to audit log async — do not block resolution
       appendFile(auditLogPath, `${entry}\n`, "utf-8").catch(console.error);
 
-      resolve({ stdout, stderr, exitCode: code ?? 1, truncated });
+      settle({ stdout, stderr, exitCode: code ?? 1, truncated });
     });
   });
 }
