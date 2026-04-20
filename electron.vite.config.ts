@@ -4,7 +4,7 @@ import { defineConfig, externalizeDepsPlugin } from "electron-vite"
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ["@mariozechner/pi-ai", "@mariozechner/pi-agent-core"] })],
     resolve: {
       alias: {
         "@main": resolve("src/main"),
