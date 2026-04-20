@@ -55,7 +55,10 @@ export class DrizzleProjectRepository implements IProjectRepository {
   }
 
   async linkFolder(id: string, folderPath: string): Promise<void> {
-    await this.db.update(projects).set({ folderPath }).where(eq(projects.id, id));
+    const result = await this.db.update(projects).set({ folderPath }).where(eq(projects.id, id));
+    if (result.rowsAffected === 0) {
+      throw new Error(`Project not found: ${id}`);
+    }
   }
 
   private rowToProject = (row: typeof projects.$inferSelect): Project => ({
