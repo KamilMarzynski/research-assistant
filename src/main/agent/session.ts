@@ -81,10 +81,8 @@ export class AgentSession {
       projectName,
       folderPath,
       homePath,
-      startResearchFn: async (query) => {
-        const task = await researchService.startResearch(projectId, projectName, query, folderPath);
-        return { taskId: task.id };
-      },
+      startResearchFn: (query) =>
+        researchService.startResearch(projectId, projectName, query, folderPath),
     });
 
     this.agent.subscribe(async (event) => {
