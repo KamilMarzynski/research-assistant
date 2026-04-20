@@ -30,4 +30,11 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
       created_at INTEGER NOT NULL
     )
   `);
+
+  // Run 6: add folder_path — idempotent, ignore "duplicate column name" error
+  try {
+    await db.run(sql`ALTER TABLE projects ADD COLUMN folder_path TEXT`);
+  } catch {
+    // column already exists — safe to ignore
+  }
 }

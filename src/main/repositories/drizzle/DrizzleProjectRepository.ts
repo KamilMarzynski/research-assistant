@@ -23,12 +23,14 @@ export class DrizzleProjectRepository implements IProjectRepository {
     const project: Project = {
       id: crypto.randomUUID(),
       name: data.name,
+      folderPath: data.folderPath ?? null,
       createdAt: now,
       updatedAt: now,
     };
     await this.db.insert(projects).values({
       id: project.id,
       name: project.name,
+      folderPath: project.folderPath,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
     });
@@ -52,9 +54,14 @@ export class DrizzleProjectRepository implements IProjectRepository {
     await this.db.delete(projects).where(eq(projects.id, id));
   }
 
+  async linkFolder(id: string, folderPath: string): Promise<void> {
+    await this.db.update(projects).set({ folderPath }).where(eq(projects.id, id));
+  }
+
   private rowToProject = (row: typeof projects.$inferSelect): Project => ({
     id: row.id,
     name: row.name,
+    folderPath: row.folderPath ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });

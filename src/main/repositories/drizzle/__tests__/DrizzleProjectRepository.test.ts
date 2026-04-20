@@ -14,7 +14,7 @@ describe("DrizzleProjectRepository", () => {
 
   describe("create", () => {
     it("returns a project with generated id and timestamps", async () => {
-      const project = await repo.create({ name: "My Project" });
+      const project = await repo.create({ name: "My Project", folderPath: null });
 
       expect(project.id).toBeTypeOf("string");
       expect(project.id).toHaveLength(36); // UUID v4
@@ -24,8 +24,8 @@ describe("DrizzleProjectRepository", () => {
     });
 
     it("persists the project so it appears in list()", async () => {
-      await repo.create({ name: "Alpha" });
-      await repo.create({ name: "Beta" });
+      await repo.create({ name: "Alpha", folderPath: null });
+      await repo.create({ name: "Beta", folderPath: null });
 
       const list = await repo.list();
       expect(list).toHaveLength(2);
@@ -38,8 +38,8 @@ describe("DrizzleProjectRepository", () => {
     });
 
     it("returns projects ordered by createdAt descending", async () => {
-      await repo.create({ name: "First" });
-      await repo.create({ name: "Second" });
+      await repo.create({ name: "First", folderPath: null });
+      await repo.create({ name: "Second", folderPath: null });
 
       const list = await repo.list();
       expect(list[0].name).toBe("Second");
@@ -49,7 +49,7 @@ describe("DrizzleProjectRepository", () => {
 
   describe("get", () => {
     it("returns the project by id", async () => {
-      const created = await repo.create({ name: "Find Me" });
+      const created = await repo.create({ name: "Find Me", folderPath: null });
       const found = await repo.get(created.id);
 
       expect(found).not.toBeNull();
@@ -64,7 +64,7 @@ describe("DrizzleProjectRepository", () => {
 
   describe("delete", () => {
     it("removes the project from the database", async () => {
-      const project = await repo.create({ name: "Delete Me" });
+      const project = await repo.create({ name: "Delete Me", folderPath: null });
       await repo.delete(project.id);
 
       expect(await repo.get(project.id)).toBeNull();
@@ -72,6 +72,28 @@ describe("DrizzleProjectRepository", () => {
 
     it("does not throw when deleting a non-existent id", async () => {
       await expect(repo.delete("ghost-id")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("linkFolder", () => {
+    it("persists folderPath to the project row", async () => {
+      const project = await repo.create({ name: "Linked", folderPath: null });
+      await repo.linkFolder(project.id, "/Users/me/myproject");
+
+      const found = await repo.get(project.id);
+      expect(found?.folderPath).toBe("/Users/me/myproject");
+    });
+
+    it("returns null folderPath for newly created projects", async () => {
+      const project = await repo.create({ name: "Fresh", folderPath: null });
+      expect(project.folderPath).toBeNull();
+    });
+
+    it("list() includes folderPath", async () => {
+      const project = await repo.create({ name: "Listed", folderPath: null });
+      await repo.linkFolder(project.id, "/some/path");
+      const list = await repo.list();
+      expect(list[0].folderPath).toBe("/some/path");
     });
   });
 });
