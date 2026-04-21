@@ -1,5 +1,5 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 
 interface ResearchState {
@@ -14,8 +14,14 @@ export default function ResearchStatusBar() {
     message: "",
     doneMessage: null,
   });
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
+    const clearTimers = () => {
+      for (const t of timers.current) clearTimeout(t);
+      timers.current = [];
+    };
+
     const unsubUpdate = window.electronAPI.on(IPC.RESEARCH_STATUS_UPDATE, (data) => {
       const d = data as { status: string; message?: string; query?: string };
       if (d.status === "started") {
@@ -24,19 +30,20 @@ export default function ResearchStatusBar() {
         setState((prev) => ({ ...prev, message: d.message ?? prev.message }));
       } else if (d.status === "failed") {
         setState({ active: false, message: "", doneMessage: "Research failed." });
-        setTimeout(() => setState((s) => ({ ...s, doneMessage: null })), 3000);
+        timers.current.push(setTimeout(() => setState((s) => ({ ...s, doneMessage: null })), 3000));
       }
     });
 
     const unsubComplete = window.electronAPI.on(IPC.RESEARCH_COMPLETE, (data) => {
       const d = data as { query: string };
       setState({ active: false, message: "", doneMessage: `Done: ${d.query}` });
-      setTimeout(() => setState((s) => ({ ...s, doneMessage: null })), 3000);
+      timers.current.push(setTimeout(() => setState((s) => ({ ...s, doneMessage: null })), 3000));
     });
 
     return () => {
       unsubUpdate();
       unsubComplete();
+      clearTimers();
     };
   }, []);
 

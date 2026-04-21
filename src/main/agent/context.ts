@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { parse } from "yaml";
@@ -61,9 +61,7 @@ export async function loadSkills(projectFolderPath: string | undefined): Promise
     join(agents, "skills"),
     join(home, "skills"),
     ...(projectFolderPath ? [join(projectFolderPath, ".agents", "skills")] : []),
-    ...(projectFolderPath
-      ? [join(projectFolderPath, ".research-assistant", "skills")]
-      : []),
+    ...(projectFolderPath ? [join(projectFolderPath, ".research-assistant", "skills")] : []),
   ];
 
   const byName = new Map<string, SkillMeta>();

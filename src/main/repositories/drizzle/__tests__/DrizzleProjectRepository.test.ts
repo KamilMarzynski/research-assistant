@@ -97,7 +97,9 @@ describe("DrizzleProjectRepository", () => {
     });
 
     it("throws when project does not exist", async () => {
-      await expect(repo.linkFolder("nonexistent-id", "/some/path")).rejects.toThrow("Project not found");
+      await expect(repo.linkFolder("nonexistent-id", "/some/path")).rejects.toThrow(
+        "Project not found",
+      );
     });
   });
 });

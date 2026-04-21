@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let tmpHome: string;
@@ -132,10 +132,7 @@ describe("buildSystemContext", () => {
     // "My Cool Project!" → "my-cool-project"
     const slug = "my-cool-project";
     await mkdir(join(home, "projects", slug), { recursive: true });
-    await writeFile(
-      join(home, "projects", slug, "AGENTS.md"),
-      "# Context for cool project.",
-    );
+    await writeFile(join(home, "projects", slug, "AGENTS.md"), "# Context for cool project.");
 
     const result = await buildSystemContext("proj-1", "My Cool Project!", undefined);
     expect(result).toContain("Context for cool project.");

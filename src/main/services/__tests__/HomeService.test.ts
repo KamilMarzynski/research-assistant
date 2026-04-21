@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let tmpHome: string;
@@ -32,7 +32,9 @@ describe("HomeService", () => {
     const { access } = await import("node:fs/promises");
     await expect(access(join(tmpHome, ".research-assistant"))).resolves.toBeUndefined();
     await expect(access(join(tmpHome, ".research-assistant", "skills"))).resolves.toBeUndefined();
-    await expect(access(join(tmpHome, ".research-assistant", "workspace"))).resolves.toBeUndefined();
+    await expect(
+      access(join(tmpHome, ".research-assistant", "workspace")),
+    ).resolves.toBeUndefined();
     await expect(access(join(tmpHome, ".research-assistant", "projects"))).resolves.toBeUndefined();
     await expect(access(join(tmpHome, ".agents", "skills"))).resolves.toBeUndefined();
   });
