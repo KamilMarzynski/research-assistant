@@ -7,16 +7,19 @@ import { USER_DATA_PATH_TOKEN } from "../di/tokens";
 export interface AppSettings {
   openrouterApiKey: string | null;
   model: string;
+  langfuseEnabled: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   openrouterApiKey: null,
   model: "anthropic/claude-sonnet-4-6",
+  langfuseEnabled: false,
 };
 
 interface StoredSettings {
   encryptedApiKey?: string;
   model?: string;
+  langfuseEnabled?: boolean;
 }
 
 @injectable()
@@ -45,6 +48,7 @@ export class SettingsService {
       return {
         openrouterApiKey,
         model: stored.model ?? DEFAULT_SETTINGS.model,
+        langfuseEnabled: stored.langfuseEnabled ?? false,
       };
     } catch {
       return { ...DEFAULT_SETTINGS };
@@ -65,7 +69,7 @@ export class SettingsService {
       }
     }
 
-    const stored: StoredSettings = { model: next.model };
+    const stored: StoredSettings = { model: next.model, langfuseEnabled: next.langfuseEnabled };
     if (encryptedApiKey !== undefined) stored.encryptedApiKey = encryptedApiKey;
 
     await mkdir(dirname(this.settingsPath), { recursive: true });

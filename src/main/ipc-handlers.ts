@@ -67,6 +67,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
       hasApiKey: settings.openrouterApiKey !== null && settings.openrouterApiKey !== "",
       openrouterApiKey: settings.openrouterApiKey,
       model: settings.model,
+      langfuseEnabled: settings.langfuseEnabled,
     };
   });
 
@@ -84,6 +85,9 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
       typeof p.openrouterApiKey !== "string"
     ) {
       throw new Error("openrouterApiKey must be a string or null");
+    }
+    if ("langfuseEnabled" in p && typeof p.langfuseEnabled !== "boolean") {
+      throw new Error("langfuseEnabled must be a boolean");
     }
     await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
     // If model changed, clear sessions so next message creates a fresh session with the new model

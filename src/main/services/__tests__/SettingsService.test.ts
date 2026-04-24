@@ -36,7 +36,13 @@ describe("SettingsService", () => {
       expect(settings).toEqual({
         openrouterApiKey: null,
         model: "anthropic/claude-sonnet-4-6",
+        langfuseEnabled: false,
       });
+    });
+
+    it("returns langfuseEnabled false when no settings file exists", async () => {
+      const settings = await service.getSettings();
+      expect(settings.langfuseEnabled).toBe(false);
     });
   });
 
@@ -57,6 +63,22 @@ describe("SettingsService", () => {
       const settings = await service.getSettings();
       expect(settings.openrouterApiKey).toBe("sk-or-test");
       expect(settings.model).toBe("anthropic/claude-haiku-4-5");
+    });
+
+    it("saves and retrieves langfuseEnabled true", async () => {
+      await service.saveSettings({ langfuseEnabled: true });
+      const settings = await service.getSettings();
+      expect(settings.langfuseEnabled).toBe(true);
+    });
+
+    it("langfuseEnabled defaults to false when missing from stored JSON", async () => {
+      // Save without langfuseEnabled to simulate old settings file
+      await service.saveSettings({
+        openrouterApiKey: "sk-or-test",
+        model: "anthropic/claude-sonnet-4-6",
+      });
+      const settings = await service.getSettings();
+      expect(settings.langfuseEnabled).toBe(false);
     });
 
     it("allows clearing API key by passing null", async () => {
