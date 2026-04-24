@@ -92,8 +92,8 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
       throw new Error("langfuseEnabled must be a boolean");
     }
     await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
-    // If model changed, clear sessions so next message creates a fresh session with the new model
-    if ("model" in p) {
+    // If model or langfuseEnabled changed, clear sessions so next message creates a fresh session with the new config
+    if ("model" in p || "langfuseEnabled" in p) {
       sessions.clear();
     }
   });
@@ -193,7 +193,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
               model: settings.model,
               isFirstRun,
               systemContext,
-              langfuseEnabled: false,
+              langfuseEnabled: settings.langfuseEnabled,
             }),
           );
         }
