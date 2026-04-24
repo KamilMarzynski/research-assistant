@@ -97,6 +97,13 @@ describe("DrizzleProjectRepository", () => {
       const found = await repo.get(created.id);
       expect(found?.maxRecentMessages).toBe(20);
     });
+
+    it("persists a custom maxRecentMessages value", async () => {
+      const created = await repo.create({ name: "Custom", folderPath: null, maxRecentMessages: 50 });
+      expect(created.maxRecentMessages).toBe(50);
+      const found = await repo.get(created.id);
+      expect(found?.maxRecentMessages).toBe(50);
+    });
   });
 
   describe("linkFolder", () => {
