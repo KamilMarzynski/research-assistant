@@ -31,7 +31,7 @@ export interface IMemoryManager {
 
 @injectable()
 export class MemoryManager implements IMemoryManager {
-  private store: LibSQLStore | null = null;
+  private initPromise: Promise<LibSQLStore> | null = null;
   private readonly dbPath: string;
 
   constructor(
@@ -41,15 +41,18 @@ export class MemoryManager implements IMemoryManager {
     this.dbPath = join(userDataPath, "research-assistant.db");
   }
 
-  private async getStore(): Promise<LibSQLStore> {
-    if (!this.store) {
-      this.store = new LibSQLStore({
-        id: "research-assistant-memory",
-        url: `file:${this.dbPath}`,
-      });
-      await this.store.init();
+  private getStore(): Promise<LibSQLStore> {
+    if (!this.initPromise) {
+      this.initPromise = (async () => {
+        const store = new LibSQLStore({
+          id: "research-assistant-memory",
+          url: `file:${this.dbPath}`,
+        });
+        await store.init();
+        return store;
+      })();
     }
-    return this.store;
+    return this.initPromise;
   }
 
   async buildContext(projectId: string, maxRecent: number): Promise<MemoryContext> {
@@ -72,9 +75,13 @@ export class MemoryManager implements IMemoryManager {
       // Retrieve recent messages for history injection
       let recentMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
       try {
+        // orderBy createdAt ASC (default) returns messages oldest-first, which is
+        // the correct chronological order for <conversation_history> injection.
+        // StorageListMessagesInput.orderBy is typed as StorageOrderBy<'createdAt'>.
         const result = await memoryStore.listMessages({
           threadId: projectId,
           perPage: maxRecent,
+          orderBy: { field: "createdAt", direction: "ASC" },
         });
         recentMessages = result.messages
           .filter((m) => m.role === "user" || m.role === "assistant")
