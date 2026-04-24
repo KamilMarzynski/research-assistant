@@ -7,6 +7,7 @@ import {
   AGENT_HOME_PATH_TOKEN,
   ARTIFACT_REPO_TOKEN,
   DB_TOKEN,
+  MEMORY_MANAGER_TOKEN,
   MESSAGE_REPO_TOKEN,
   PROJECT_REPO_TOKEN,
   USER_DATA_PATH_TOKEN,
@@ -18,6 +19,7 @@ import { DrizzleProjectRepository } from "./repositories/drizzle/DrizzleProjectR
 import { ArtifactService } from "./services/ArtifactService";
 import { FileService } from "./services/FileService";
 import { HomeService } from "./services/HomeService";
+import { MemoryManager } from "./services/MemoryManager";
 import { MessageService } from "./services/MessageService";
 import { ProjectService } from "./services/ProjectService";
 import { ResearchService } from "./services/ResearchService";
@@ -45,6 +47,11 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(FileService);
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);
+  appContainer.registerSingleton(MemoryManager);
+  appContainer.registerInstance(
+    MEMORY_MANAGER_TOKEN,
+    appContainer.resolve(MemoryManager),
+  );
   appContainer.registerSingleton(HomeService);
 
   const homeService = appContainer.resolve(HomeService);
