@@ -48,10 +48,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);
   appContainer.registerSingleton(MemoryManager);
-  appContainer.registerInstance(
-    MEMORY_MANAGER_TOKEN,
-    appContainer.resolve(MemoryManager),
-  );
+  appContainer.registerInstance(MEMORY_MANAGER_TOKEN, appContainer.resolve(MemoryManager));
   appContainer.registerSingleton(HomeService);
 
   const homeService = appContainer.resolve(HomeService);

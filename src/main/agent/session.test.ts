@@ -410,7 +410,10 @@ describe("AgentSession", () => {
 
       // Simulate a follow-up turn: assistant responds but lastUserContent was never set via send()
       void localSession;
-      await triggerEvent({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "follow-up response" } });
+      await triggerEvent({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "follow-up response" },
+      });
       await triggerEvent({ type: "agent_end", messages: [] });
 
       // lastUserContent is "" so save should NOT be called

@@ -68,10 +68,7 @@ function makeMastraMessage(role: "user" | "assistant" | "system", text: string) 
 }
 
 /** Build a MastraDBMessage with plain string content (format-1 fast path). */
-function makeMastraMessageStringContent(
-  role: "user" | "assistant",
-  text: string,
-) {
+function makeMastraMessageStringContent(role: "user" | "assistant", text: string) {
   return {
     id: crypto.randomUUID(),
     role,
@@ -83,10 +80,7 @@ function makeMastraMessageStringContent(
 }
 
 /** Build a MastraDBMessage with non-format-2 content (JSON fallback path). */
-function makeMastraMessageNonFormat2Content(
-  role: "user" | "assistant",
-  data: unknown,
-) {
+function makeMastraMessageNonFormat2Content(role: "user" | "assistant", data: unknown) {
   return {
     id: crypto.randomUUID(),
     role,
@@ -251,9 +245,7 @@ describe("MemoryManager", () => {
       const ctx = await manager.buildContext("proj-1", 10);
 
       expect(ctx.recentMessages).toHaveLength(1);
-      expect(ctx.recentMessages[0].content).toBe(
-        JSON.stringify({ format: 1, data: "some data" }),
-      );
+      expect(ctx.recentMessages[0].content).toBe(JSON.stringify({ format: 1, data: "some data" }));
     });
   });
 

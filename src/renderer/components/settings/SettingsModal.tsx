@@ -36,7 +36,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   useEffect(() => {
     if (!open) return;
     window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => {
-      const settings = s as { openrouterApiKey: string | null; model: string; langfuseEnabled: boolean };
+      const settings = s as {
+        openrouterApiKey: string | null;
+        model: string;
+        langfuseEnabled: boolean;
+      };
       setApiKey(settings.openrouterApiKey ?? "");
       setModel(settings.model);
       setLangfuseEnabled(settings.langfuseEnabled ?? false);
