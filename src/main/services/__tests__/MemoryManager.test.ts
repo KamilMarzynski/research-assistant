@@ -1,0 +1,315 @@
+import "reflect-metadata";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock electron — safeStorage is main-process only
+vi.mock("electron", () => ({
+  safeStorage: {
+    isEncryptionAvailable: vi.fn().mockReturnValue(false),
+    encryptString: vi.fn((s: string) => Buffer.from(s)),
+    decryptString: vi.fn((b: Buffer) => b.toString()),
+  },
+  app: { getPath: vi.fn().mockReturnValue("/tmp") },
+}));
+
+// ---- LibSQLStore mock ----
+const mockMemoryStore = {
+  getThreadById: vi.fn().mockResolvedValue(null),
+  listMessages: vi.fn().mockResolvedValue({ messages: [] }),
+  saveMessages: vi.fn().mockResolvedValue(undefined),
+  saveThread: vi.fn().mockResolvedValue(undefined),
+  updateThread: vi.fn().mockResolvedValue(undefined),
+};
+
+const mockLibSQLStoreInstance = {
+  init: vi.fn().mockResolvedValue(undefined),
+  getStore: vi.fn().mockResolvedValue(mockMemoryStore),
+};
+
+vi.mock("@mastra/libsql", () => ({
+  LibSQLStore: vi.fn().mockImplementation(function (this: unknown) {
+    return mockLibSQLStoreInstance;
+  }),
+}));
+
+// ---- @mariozechner/pi-ai mock ----
+const mockComplete = vi.fn().mockResolvedValue({
+  content: [{ type: "text", text: "Compressed summary." }],
+});
+
+vi.mock("@mariozechner/pi-ai", () => ({
+  getModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
+  complete: mockComplete,
+}));
+
+const { MemoryManager } = await import("../MemoryManager");
+
+// ---- Helpers ----
+
+function makeSettingsService(apiKey: string | null = "sk-or-test") {
+  return {
+    getSettings: vi.fn().mockResolvedValue({
+      openrouterApiKey: apiKey,
+      model: "anthropic/claude-sonnet-4-6",
+      langfuseEnabled: false,
+    }),
+  };
+}
+
+/** Build a MastraDBMessage-shaped object for use in listMessages results. */
+function makeMastraMessage(role: "user" | "assistant" | "system", text: string) {
+  return {
+    id: crypto.randomUUID(),
+    role,
+    content: { format: 2, parts: [{ type: "text", text }] },
+    threadId: "proj-1",
+    resourceId: "proj-1",
+    createdAt: new Date(),
+  };
+}
+
+// ---- Tests ----
+
+describe("MemoryManager", () => {
+  let manager: InstanceType<typeof MemoryManager>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Reset defaults
+    mockMemoryStore.getThreadById.mockResolvedValue(null);
+    mockMemoryStore.listMessages.mockResolvedValue({ messages: [] });
+    mockMemoryStore.saveMessages.mockResolvedValue(undefined);
+    mockMemoryStore.saveThread.mockResolvedValue(undefined);
+    mockMemoryStore.updateThread.mockResolvedValue(undefined);
+    mockLibSQLStoreInstance.getStore.mockResolvedValue(mockMemoryStore);
+
+    manager = new MemoryManager("/tmp/test-userdata", makeSettingsService() as never);
+  });
+
+  // ------------------------------------------------------------------ buildContext
+
+  describe("buildContext()", () => {
+    it("returns empty context on first use (no thread, no messages)", async () => {
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx).toEqual({ summary: "", recentMessages: [] });
+    });
+
+    it("returns summary from summary thread metadata when it exists", async () => {
+      mockMemoryStore.getThreadById.mockImplementation(({ threadId }: { threadId: string }) => {
+        if (threadId === "proj-1-summary") {
+          return Promise.resolve({ metadata: { summary: "Prior work summary." } });
+        }
+        return Promise.resolve(null);
+      });
+
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx.summary).toBe("Prior work summary.");
+    });
+
+    it("returns recent messages mapped to { role, content } strings", async () => {
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [
+          makeMastraMessage("user", "Hello from user"),
+          makeMastraMessage("assistant", "Hello from assistant"),
+        ],
+      });
+
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx.recentMessages).toEqual([
+        { role: "user", content: "Hello from user" },
+        { role: "assistant", content: "Hello from assistant" },
+      ]);
+    });
+
+    it("respects maxRecent by passing it as perPage to listMessages", async () => {
+      await manager.buildContext("proj-1", 5);
+
+      expect(mockMemoryStore.listMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ perPage: 5 }),
+      );
+    });
+
+    it("filters out non-user/assistant messages (e.g. system)", async () => {
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [
+          makeMastraMessage("system", "You are an assistant"),
+          makeMastraMessage("user", "Hello"),
+          makeMastraMessage("assistant", "Hi"),
+        ],
+      });
+
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx.recentMessages).toHaveLength(2);
+      expect(ctx.recentMessages.every((m) => m.role === "user" || m.role === "assistant")).toBe(
+        true,
+      );
+    });
+
+    it("returns empty context when storage throws during getStore", async () => {
+      mockLibSQLStoreInstance.getStore.mockRejectedValueOnce(new Error("DB unavailable"));
+
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx).toEqual({ summary: "", recentMessages: [] });
+    });
+
+    it("still returns messages even when summary thread lookup throws", async () => {
+      mockMemoryStore.getThreadById.mockRejectedValueOnce(new Error("summary thread error"));
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [makeMastraMessage("user", "some message")],
+      });
+
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx.summary).toBe("");
+      expect(ctx.recentMessages).toHaveLength(1);
+    });
+
+    it("still returns summary even when listMessages throws", async () => {
+      mockMemoryStore.getThreadById.mockResolvedValue({
+        metadata: { summary: "Existing summary." },
+      });
+      mockMemoryStore.listMessages.mockRejectedValueOnce(new Error("list error"));
+
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx.summary).toBe("Existing summary.");
+      expect(ctx.recentMessages).toEqual([]);
+    });
+  });
+
+  // ------------------------------------------------------------------ save
+
+  describe("save()", () => {
+    it("calls saveMessages with correctly-shaped MastraDBMessage objects", async () => {
+      await manager.save("proj-1", [
+        { role: "user", content: "What is Mastra?" },
+        { role: "assistant", content: "Mastra is a framework." },
+      ]);
+
+      expect(mockMemoryStore.saveMessages).toHaveBeenCalledTimes(1);
+      const { messages } = mockMemoryStore.saveMessages.mock.calls[0][0] as {
+        messages: Array<{
+          id: string;
+          role: string;
+          content: { format: number; parts: Array<{ type: string; text: string }> };
+          threadId: string;
+          resourceId: string;
+          createdAt: Date;
+        }>;
+      };
+
+      expect(messages).toHaveLength(2);
+
+      const [userMsg, assistantMsg] = messages;
+
+      expect(userMsg.role).toBe("user");
+      expect(userMsg.content).toEqual({
+        format: 2,
+        parts: [{ type: "text", text: "What is Mastra?" }],
+      });
+      expect(userMsg.threadId).toBe("proj-1");
+      expect(userMsg.resourceId).toBe("proj-1");
+      expect(userMsg.id).toBeTypeOf("string");
+      expect(userMsg.createdAt).toBeInstanceOf(Date);
+
+      expect(assistantMsg.role).toBe("assistant");
+      expect(assistantMsg.content).toEqual({
+        format: 2,
+        parts: [{ type: "text", text: "Mastra is a framework." }],
+      });
+    });
+
+    it("does not throw when saveMessages fails", async () => {
+      mockMemoryStore.saveMessages.mockRejectedValueOnce(new Error("write failed"));
+
+      await expect(
+        manager.save("proj-1", [{ role: "user", content: "Hello" }]),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  // ------------------------------------------------------------------ maybeCompress (Observer)
+
+  describe("maybeCompress (Observer via save)", () => {
+    it("does NOT call complete() when total chars are below threshold", async () => {
+      // Below threshold: 120,000 chars total (30,000 tokens × 4 chars/token)
+      const shortMessage = makeMastraMessage("user", "short");
+      mockMemoryStore.listMessages.mockResolvedValue({ messages: [shortMessage] });
+
+      await manager.save("proj-1", [{ role: "user", content: "short" }]);
+
+      // Let the async void task settle
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockComplete).not.toHaveBeenCalled();
+    });
+
+    it("skips compression when no API key configured", async () => {
+      manager = new MemoryManager("/tmp/test-userdata", makeSettingsService(null) as never);
+
+      // Build messages above threshold (120,001 chars)
+      const longText = "x".repeat(120_001);
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [makeMastraMessage("user", longText)],
+      });
+
+      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockComplete).not.toHaveBeenCalled();
+    });
+
+    it("calls complete() and saves summary thread when chars exceed threshold", async () => {
+      // Above threshold: 120,001 chars
+      const longText = "x".repeat(120_001);
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [makeMastraMessage("user", longText)],
+      });
+      // No existing summary thread
+      mockMemoryStore.getThreadById.mockResolvedValue(null);
+
+      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(mockMemoryStore.saveThread).toHaveBeenCalledWith(
+        expect.objectContaining({
+          thread: expect.objectContaining({
+            id: "proj-1-summary",
+            metadata: { summary: "Compressed summary." },
+          }),
+        }),
+      );
+    });
+
+    it("calls updateThread when summary thread already exists", async () => {
+      const longText = "x".repeat(120_001);
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [makeMastraMessage("user", longText)],
+      });
+      // Existing summary thread
+      mockMemoryStore.getThreadById.mockImplementation(({ threadId }: { threadId: string }) => {
+        if (threadId === "proj-1-summary") {
+          return Promise.resolve({ id: "proj-1-summary", metadata: { summary: "old summary" } });
+        }
+        return Promise.resolve(null);
+      });
+
+      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockMemoryStore.updateThread).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "proj-1-summary",
+          metadata: { summary: "Compressed summary." },
+        }),
+      );
+      expect(mockMemoryStore.saveThread).not.toHaveBeenCalled();
+    });
+  });
+});
