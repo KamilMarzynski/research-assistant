@@ -67,6 +67,36 @@ function makeMastraMessage(role: "user" | "assistant" | "system", text: string) 
   };
 }
 
+/** Build a MastraDBMessage with plain string content (format-1 fast path). */
+function makeMastraMessageStringContent(
+  role: "user" | "assistant",
+  text: string,
+) {
+  return {
+    id: crypto.randomUUID(),
+    role,
+    content: text,
+    threadId: "proj-1",
+    resourceId: "proj-1",
+    createdAt: new Date(),
+  };
+}
+
+/** Build a MastraDBMessage with non-format-2 content (JSON fallback path). */
+function makeMastraMessageNonFormat2Content(
+  role: "user" | "assistant",
+  data: unknown,
+) {
+  return {
+    id: crypto.randomUUID(),
+    role,
+    content: { format: 1, data },
+    threadId: "proj-1",
+    resourceId: "proj-1",
+    createdAt: new Date(),
+  };
+}
+
 // ---- Tests ----
 
 describe("MemoryManager", () => {
@@ -82,6 +112,9 @@ describe("MemoryManager", () => {
     mockMemoryStore.saveThread.mockResolvedValue(undefined);
     mockMemoryStore.updateThread.mockResolvedValue(undefined);
     mockLibSQLStoreInstance.getStore.mockResolvedValue(mockMemoryStore);
+    mockComplete.mockResolvedValue({
+      content: [{ type: "text", text: "Compressed summary." }],
+    });
 
     manager = new MemoryManager("/tmp/test-userdata", makeSettingsService() as never);
   });
@@ -128,7 +161,10 @@ describe("MemoryManager", () => {
       await manager.buildContext("proj-1", 5);
 
       expect(mockMemoryStore.listMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ perPage: 5 }),
+        expect.objectContaining({
+          perPage: 5,
+          orderBy: { field: "createdAt", direction: "ASC" },
+        }),
       );
     });
 
@@ -149,7 +185,7 @@ describe("MemoryManager", () => {
       );
     });
 
-    it("returns empty context when storage throws during getStore", async () => {
+    it("returns empty context when store.getStore('memory') throws", async () => {
       mockLibSQLStoreInstance.getStore.mockRejectedValueOnce(new Error("DB unavailable"));
 
       const ctx = await manager.buildContext("proj-1", 10);
@@ -179,6 +215,45 @@ describe("MemoryManager", () => {
 
       expect(ctx.summary).toBe("Existing summary.");
       expect(ctx.recentMessages).toEqual([]);
+    });
+
+    it("returns empty context when store.getStore('memory') resolves to undefined in buildContext", async () => {
+      mockLibSQLStoreInstance.getStore.mockResolvedValueOnce(undefined);
+
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx).toEqual({ summary: "", recentMessages: [] });
+    });
+
+    it("extracts content correctly when messages have plain string content", async () => {
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [
+          makeMastraMessageStringContent("user", "plain string content"),
+          makeMastraMessageStringContent("assistant", "plain reply"),
+        ],
+      });
+
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx.recentMessages).toEqual([
+        { role: "user", content: "plain string content" },
+        { role: "assistant", content: "plain reply" },
+      ]);
+    });
+
+    it("extracts content correctly when messages have non-format-2 content (JSON fallback)", async () => {
+      const nonFormat2Msg = makeMastraMessageNonFormat2Content("user", "some data");
+
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [nonFormat2Msg],
+      });
+
+      const ctx = await manager.buildContext("proj-1", 10);
+
+      expect(ctx.recentMessages).toHaveLength(1);
+      expect(ctx.recentMessages[0].content).toBe(
+        JSON.stringify({ format: 1, data: "some data" }),
+      );
     });
   });
 
@@ -231,6 +306,16 @@ describe("MemoryManager", () => {
         manager.save("proj-1", [{ role: "user", content: "Hello" }]),
       ).resolves.toBeUndefined();
     });
+
+    it("returns without error when store.getStore('memory') resolves to undefined in save", async () => {
+      mockLibSQLStoreInstance.getStore.mockResolvedValueOnce(undefined);
+
+      await expect(
+        manager.save("proj-1", [{ role: "user", content: "Hello" }]),
+      ).resolves.toBeUndefined();
+
+      expect(mockMemoryStore.saveMessages).not.toHaveBeenCalled();
+    });
   });
 
   // ------------------------------------------------------------------ maybeCompress (Observer)
@@ -277,6 +362,11 @@ describe("MemoryManager", () => {
       await new Promise((r) => setTimeout(r, 10));
 
       expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(mockComplete).toHaveBeenCalledWith(
+        expect.objectContaining({ provider: "openrouter" }),
+        expect.objectContaining({ messages: expect.any(Array) }),
+        { apiKey: "sk-or-test" },
+      );
       expect(mockMemoryStore.saveThread).toHaveBeenCalledWith(
         expect.objectContaining({
           thread: expect.objectContaining({
@@ -306,10 +396,44 @@ describe("MemoryManager", () => {
       expect(mockMemoryStore.updateThread).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "proj-1-summary",
+          title: "Memory Summary",
           metadata: { summary: "Compressed summary." },
         }),
       );
       expect(mockMemoryStore.saveThread).not.toHaveBeenCalled();
+    });
+
+    it("does NOT call saveThread when compress returns no text parts", async () => {
+      // complete() returns content with no text parts
+      mockComplete.mockResolvedValueOnce({ content: [] });
+
+      const longText = "x".repeat(120_001);
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [makeMastraMessage("user", longText)],
+      });
+      mockMemoryStore.getThreadById.mockResolvedValue(null);
+
+      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(mockMemoryStore.saveThread).not.toHaveBeenCalled();
+      expect(mockMemoryStore.updateThread).not.toHaveBeenCalled();
+    });
+
+    it("skips compression when store.getStore('memory') resolves to undefined in maybeCompress", async () => {
+      const longText = "x".repeat(120_001);
+      // First call (from save()) returns mockMemoryStore, second call (from maybeCompress()) returns undefined
+      mockLibSQLStoreInstance.getStore
+        .mockResolvedValueOnce(mockMemoryStore)
+        .mockResolvedValueOnce(undefined);
+
+      mockMemoryStore.saveMessages.mockResolvedValue(undefined);
+
+      await manager.save("proj-1", [{ role: "user", content: longText }]);
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockComplete).not.toHaveBeenCalled();
     });
   });
 });
