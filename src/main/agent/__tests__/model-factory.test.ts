@@ -29,13 +29,13 @@ describe("createModel", () => {
 
   it("returns base openrouter model when langfuseEnabled is false", () => {
     const model = createModel("anthropic/claude-sonnet-4-6", false);
-    expect(model?.baseUrl).toBe("https://openrouter.ai/api/v1");
+    expect(model.baseUrl).toBe("https://openrouter.ai/api/v1");
   });
 
   it("returns base openrouter model when langfuseEnabled true but keys missing", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const model = createModel("anthropic/claude-sonnet-4-6", true);
-    expect(model?.baseUrl).toBe("https://openrouter.ai/api/v1");
+    expect(model.baseUrl).toBe("https://openrouter.ai/api/v1");
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("LangFuse keys"));
     warnSpy.mockRestore();
   });
@@ -44,8 +44,8 @@ describe("createModel", () => {
     process.env.LANGFUSE_PUBLIC_KEY = "pk-test";
     process.env.LANGFUSE_SECRET_KEY = "sk-test";
     const model = createModel("anthropic/claude-sonnet-4-6", true);
-    expect(model?.baseUrl).toContain("cloud.langfuse.com");
-    expect(model?.baseUrl).toContain("/api/proxy/openai/v1");
+    expect(model.baseUrl).toContain("cloud.langfuse.com");
+    expect(model.baseUrl).toContain("/api/proxy/openai/v1");
   });
 
   it("includes LangFuse headers when proxy active", () => {
@@ -64,7 +64,7 @@ describe("createModel", () => {
     process.env.LANGFUSE_SECRET_KEY = "sk-test";
     process.env.LANGFUSE_HOST = "https://my-langfuse.example.com";
     const model = createModel("anthropic/claude-sonnet-4-6", true);
-    expect(model?.baseUrl).toContain("my-langfuse.example.com");
+    expect(model.baseUrl).toContain("my-langfuse.example.com");
   });
 
   it("throws when model ID is not found in registry", async () => {

@@ -7,7 +7,7 @@ import { getModel } from "@mariozechner/pi-ai";
  * overrides baseUrl to route through LangFuse proxy → OpenRouter.
  * Falls back silently to direct OpenRouter if keys are missing.
  */
-export function createModel(modelId: string, langfuseEnabled: boolean): Model<Api> | undefined {
+export function createModel(modelId: string, langfuseEnabled: boolean): Model<Api> {
   const base = getModel("openrouter", modelId as never) as Model<Api> | undefined;
   if (!base) {
     throw new Error(
@@ -25,7 +25,7 @@ export function createModel(modelId: string, langfuseEnabled: boolean): Model<Ap
     return base;
   }
 
-  const host = process.env.LANGFUSE_HOST ?? "https://cloud.langfuse.com";
+  const host = (process.env.LANGFUSE_HOST ?? "https://cloud.langfuse.com").replace(/\/$/, "");
 
   return {
     ...base,
@@ -34,7 +34,7 @@ export function createModel(modelId: string, langfuseEnabled: boolean): Model<Ap
       ...base.headers,
       "x-langfuse-public-key": publicKey,
       "x-langfuse-secret-key": secretKey,
-      "x-langfuse-baseurl": "https://openrouter.ai/api/v1",
+      "x-langfuse-baseurl": base.baseUrl,
     },
-  };
+  } as Model<Api>;
 }
