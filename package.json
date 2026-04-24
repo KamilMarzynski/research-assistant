@@ -38,6 +38,7 @@
     "@libsql/client": "^0.17.2",
     "@mariozechner/pi-agent-core": "^0.67.68",
     "@mariozechner/pi-ai": "^0.67.68",
+    "@mastra/libsql": "^1.9.0",
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
     "drizzle-orm": "^0.45.2",
