@@ -1,10 +1,11 @@
 import { Agent } from "@mariozechner/pi-agent-core";
-import { getModel } from "@mariozechner/pi-ai";
 import type { BrowserWindow } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { HomeService } from "../services/HomeService";
+import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
+import { createModel } from "./model-factory";
 import { createAgentTools } from "./tools";
 
 const FIRST_RUN_PROMPT = `You are setting up for first use. Ask the user these questions one at a time. Do not ask all at once.
@@ -16,11 +17,21 @@ After receiving all answers, write a concise summary to ~/.research-assistant/co
 
 const BASE_SYSTEM_PROMPT = "You are a helpful research assistant.";
 
+function formatConversationHistory(
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+): string {
+  if (messages.length === 0) return "";
+  const lines = messages.map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`);
+  return `<conversation_history>\n${lines.join("\n\n")}\n</conversation_history>`;
+}
+
 export interface AgentSessionOptions {
   win: BrowserWindow;
   messageService: MessageService;
   homeService: HomeService;
   researchService: ResearchService;
+  memoryManager: IMemoryManager;
+  initialMemoryContext: MemoryContext;
   projectId: string;
   projectName: string;
   folderPath: string | null;
@@ -28,20 +39,25 @@ export interface AgentSessionOptions {
   model: string;
   isFirstRun: boolean;
   systemContext?: string;
+  langfuseEnabled: boolean;
 }
 
 export class AgentSession {
   private readonly agent: Agent;
   private readonly win: BrowserWindow;
   private readonly messageService: MessageService;
+  private readonly memoryManager: IMemoryManager;
   private readonly projectId: string;
   private assistantContent = "";
+  private lastUserContent = "";
 
   constructor({
     win,
     messageService,
     homeService,
     researchService,
+    memoryManager,
+    initialMemoryContext,
     projectId,
     projectName,
     folderPath,
@@ -49,21 +65,29 @@ export class AgentSession {
     model,
     isFirstRun,
     systemContext = "",
+    langfuseEnabled,
   }: AgentSessionOptions) {
     this.win = win;
     this.messageService = messageService;
+    this.memoryManager = memoryManager;
     this.projectId = projectId;
 
     const homePath = homeService.getHomePath();
+    const historyBlock = formatConversationHistory(initialMemoryContext.recentMessages);
 
-    const systemPrompt = [isFirstRun ? FIRST_RUN_PROMPT : BASE_SYSTEM_PROMPT, systemContext]
+    const systemPrompt = [
+      isFirstRun ? FIRST_RUN_PROMPT : BASE_SYSTEM_PROMPT,
+      initialMemoryContext.summary,
+      historyBlock,
+      systemContext,
+    ]
       .filter(Boolean)
       .join("\n\n");
 
     this.agent = new Agent({
       initialState: {
         systemPrompt,
-        model: getModel("openrouter", model as never),
+        model: createModel(model, langfuseEnabled),
       },
       getApiKey: async () => apiKey,
       beforeToolCall: async (ctx) => {
@@ -75,7 +99,6 @@ export class AgentSession {
       },
     });
 
-    // Register tools — start_research calls ResearchService
     this.agent.state.tools = createAgentTools({
       projectId,
       projectName,
@@ -106,7 +129,12 @@ export class AgentSession {
               role: "assistant",
               content: this.assistantContent,
             });
+            await this.memoryManager.save(this.projectId, [
+              { role: "user", content: this.lastUserContent },
+              { role: "assistant", content: this.assistantContent },
+            ]);
             this.assistantContent = "";
+            this.lastUserContent = "";
           }
           this.win.webContents.send(IPC.MESSAGE_DONE);
         }
@@ -118,6 +146,7 @@ export class AgentSession {
   }
 
   async send(content: string): Promise<void> {
+    this.lastUserContent = content;
     await this.messageService.addMessage({
       projectId: this.projectId,
       role: "user",

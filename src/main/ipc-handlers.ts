@@ -6,6 +6,7 @@ import { AgentSession } from "./agent/session";
 import { EventBus } from "./event-bus";
 import { ArtifactService } from "./services/ArtifactService";
 import { HomeService } from "./services/HomeService";
+import { MemoryManager } from "./services/MemoryManager";
 import { MessageService } from "./services/MessageService";
 import { ProjectService } from "./services/ProjectService";
 import { ResearchService } from "./services/ResearchService";
@@ -18,6 +19,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const settingsService = container.resolve(SettingsService);
   const homeService = container.resolve(HomeService);
   const researchService = container.resolve(ResearchService);
+  const memoryManager = container.resolve(MemoryManager);
   const eventBus = container.resolve(EventBus);
 
   const sessions = new Map<string, AgentSession>();
@@ -174,6 +176,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
             project.name,
             project.folderPath ?? undefined,
           );
+          const initialMemoryContext = await memoryManager.buildContext(projectId, 20);
           sessions.set(
             projectId,
             new AgentSession({
@@ -181,6 +184,8 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
               messageService,
               homeService,
               researchService,
+              memoryManager,
+              initialMemoryContext,
               projectId,
               projectName: project.name,
               folderPath: project.folderPath,
@@ -188,6 +193,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
               model: settings.model,
               isFirstRun,
               systemContext,
+              langfuseEnabled: false,
             }),
           );
         }

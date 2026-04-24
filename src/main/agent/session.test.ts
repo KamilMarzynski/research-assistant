@@ -26,6 +26,10 @@ vi.mock("@mariozechner/pi-ai", () => ({
   getModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
 }));
 
+vi.mock("./model-factory", () => ({
+  createModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
+}));
+
 vi.mock("electron", () => ({}));
 
 vi.mock("./tools", () => ({
@@ -71,6 +75,13 @@ function makeResearchService() {
   };
 }
 
+function makeMemoryManager() {
+  return {
+    buildContext: vi.fn().mockResolvedValue({ summary: "", recentMessages: [] }),
+    save: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
 describe("AgentSession", () => {
   let messageService: ReturnType<typeof makeMessageService>;
   let win: Electron.BrowserWindow;
@@ -86,6 +97,8 @@ describe("AgentSession", () => {
       messageService: messageService as never,
       homeService: makeHomeService() as never,
       researchService: makeResearchService() as never,
+      memoryManager: makeMemoryManager() as never,
+      initialMemoryContext: { summary: "", recentMessages: [] },
       projectId: "p-1",
       projectName: "Test Project",
       folderPath: null,
@@ -93,6 +106,7 @@ describe("AgentSession", () => {
       model: "anthropic/claude-sonnet-4-6",
       isFirstRun: false,
       systemContext: "",
+      langfuseEnabled: false,
     });
   });
 
@@ -237,6 +251,8 @@ describe("AgentSession", () => {
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
@@ -244,6 +260,7 @@ describe("AgentSession", () => {
         model: "anthropic/claude-sonnet-4-6",
         isFirstRun: true,
         systemContext: "",
+        langfuseEnabled: false,
       });
       const lastCall = vi.mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
@@ -258,6 +275,8 @@ describe("AgentSession", () => {
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
@@ -265,6 +284,7 @@ describe("AgentSession", () => {
         model: "anthropic/claude-sonnet-4-6",
         isFirstRun: false,
         systemContext: "",
+        langfuseEnabled: false,
       });
       const lastCall = vi.mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
@@ -279,6 +299,123 @@ describe("AgentSession", () => {
       expect(mockAgent.followUp).toHaveBeenCalledWith(
         expect.objectContaining({ role: "user", content: "Research complete: found 5 files." }),
       );
+    });
+  });
+
+  describe("memory saving", () => {
+    it("calls memoryManager.save() with user + assistant content on agent_end", async () => {
+      const memoryManager = makeMemoryManager();
+      const localSession = new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: memoryManager as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        apiKey: "sk-or-test",
+        model: "anthropic/claude-sonnet-4-6",
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+      });
+
+      await localSession.send("my question");
+      await triggerEvent({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "answer" },
+      });
+      await triggerEvent({ type: "agent_end", messages: [] });
+
+      expect(memoryManager.save).toHaveBeenCalledWith("p-1", [
+        { role: "user", content: "my question" },
+        { role: "assistant", content: "answer" },
+      ]);
+    });
+
+    it("does not call memoryManager.save() when assistant content is empty", async () => {
+      const memoryManager = makeMemoryManager();
+      const localSession = new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: memoryManager as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        apiKey: "sk-or-test",
+        model: "anthropic/claude-sonnet-4-6",
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+      });
+
+      void localSession;
+      await triggerEvent({ type: "agent_end", messages: [] });
+      expect(memoryManager.save).not.toHaveBeenCalled();
+    });
+
+    it("injects memory summary into system prompt when non-empty", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: {
+          summary: "Past context: user prefers TypeScript.",
+          recentMessages: [],
+        },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        apiKey: "sk-or-test",
+        model: "anthropic/claude-sonnet-4-6",
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+      });
+      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
+        ?.systemPrompt;
+      expect(prompt).toContain("Past context: user prefers TypeScript.");
+    });
+
+    it("injects recent messages as conversation history block when non-empty", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: {
+          summary: "",
+          recentMessages: [
+            { role: "user", content: "Hello from last session" },
+            { role: "assistant", content: "Hi there from last session" },
+          ],
+        },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        apiKey: "sk-or-test",
+        model: "anthropic/claude-sonnet-4-6",
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+      });
+      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
+        ?.systemPrompt;
+      expect(prompt).toContain("Hello from last session");
+      expect(prompt).toContain("Hi there from last session");
+      expect(prompt).toContain("<conversation_history>");
     });
   });
 });
