@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -72,11 +72,12 @@ describe("SettingsService", () => {
     });
 
     it("langfuseEnabled defaults to false when missing from stored JSON", async () => {
-      // Save without langfuseEnabled to simulate old settings file
-      await service.saveSettings({
-        openrouterApiKey: "sk-or-test",
-        model: "anthropic/claude-sonnet-4-6",
-      });
+      // Write a raw JSON file without langfuseEnabled to genuinely simulate an old settings file
+      await writeFile(
+        join(tmpDir, "settings.json"),
+        JSON.stringify({ model: "anthropic/claude-sonnet-4-6" }),
+        "utf-8",
+      );
       const settings = await service.getSettings();
       expect(settings.langfuseEnabled).toBe(false);
     });
