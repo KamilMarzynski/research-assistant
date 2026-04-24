@@ -123,7 +123,7 @@ export class AgentSession {
             this.win.webContents.send(IPC.MESSAGE_CHUNK, ae.delta);
           }
         } else if (e.type === "agent_end") {
-          if (this.assistantContent) {
+          if (this.assistantContent && this.lastUserContent) {
             await this.messageService.addMessage({
               projectId: this.projectId,
               role: "assistant",

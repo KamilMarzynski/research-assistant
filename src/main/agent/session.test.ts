@@ -146,6 +146,7 @@ describe("AgentSession", () => {
     });
 
     it("accumulates deltas and persists full content on agent_end", async () => {
+      await session.send("my question");
       await triggerEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "Hello" },
@@ -178,6 +179,7 @@ describe("AgentSession", () => {
     });
 
     it("resets accumulated content after agent_end so next prompt starts fresh", async () => {
+      await session.send("first question");
       await triggerEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "First" },
@@ -186,6 +188,7 @@ describe("AgentSession", () => {
 
       vi.clearAllMocks();
 
+      await session.send("second question");
       await triggerEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "Second" },
@@ -384,6 +387,34 @@ describe("AgentSession", () => {
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
         ?.systemPrompt;
       expect(prompt).toContain("Past context: user prefers TypeScript.");
+    });
+
+    it("does not call memoryManager.save() when lastUserContent is empty (follow-up turn)", async () => {
+      const memoryManager = makeMemoryManager();
+      const localSession = new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: memoryManager as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        apiKey: "sk-or-test",
+        model: "anthropic/claude-sonnet-4-6",
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+      });
+
+      // Simulate a follow-up turn: assistant responds but lastUserContent was never set via send()
+      void localSession;
+      await triggerEvent({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "follow-up response" } });
+      await triggerEvent({ type: "agent_end", messages: [] });
+
+      // lastUserContent is "" so save should NOT be called
+      expect(memoryManager.save).not.toHaveBeenCalled();
     });
 
     it("injects recent messages as conversation history block when non-empty", async () => {
