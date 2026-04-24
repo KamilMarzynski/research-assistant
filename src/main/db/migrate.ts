@@ -37,4 +37,13 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   } catch {
     // column already exists — safe to ignore
   }
+
+  // Run 7: add max_recent_messages — idempotent, ignore "duplicate column name" error
+  try {
+    await db.run(
+      sql`ALTER TABLE projects ADD COLUMN max_recent_messages INTEGER NOT NULL DEFAULT 20`,
+    );
+  } catch {
+    // column already exists — safe to ignore
+  }
 }

@@ -4,7 +4,7 @@ import { inject, injectable } from "tsyringe";
 import type { DrizzleDB } from "../../db/client";
 import { projects } from "../../db/schema";
 import { DB_TOKEN } from "../../di/tokens";
-import type { IProjectRepository } from "../IProjectRepository";
+import type { CreateProjectData, IProjectRepository } from "../IProjectRepository";
 
 @injectable()
 export class DrizzleProjectRepository implements IProjectRepository {
@@ -18,12 +18,13 @@ export class DrizzleProjectRepository implements IProjectRepository {
 
   constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
 
-  async create(data: Omit<Project, "id" | "createdAt" | "updatedAt">): Promise<Project> {
+  async create(data: CreateProjectData): Promise<Project> {
     const now = this.monotonicNow();
     const project: Project = {
       id: crypto.randomUUID(),
       name: data.name,
       folderPath: data.folderPath ?? null,
+      maxRecentMessages: data.maxRecentMessages ?? 20,
       createdAt: now,
       updatedAt: now,
     };
@@ -31,6 +32,7 @@ export class DrizzleProjectRepository implements IProjectRepository {
       id: project.id,
       name: project.name,
       folderPath: project.folderPath,
+      maxRecentMessages: project.maxRecentMessages,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
     });
@@ -65,6 +67,7 @@ export class DrizzleProjectRepository implements IProjectRepository {
     id: row.id,
     name: row.name,
     folderPath: row.folderPath ?? null,
+    maxRecentMessages: row.maxRecentMessages ?? 20,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });

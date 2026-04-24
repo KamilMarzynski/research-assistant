@@ -14,6 +14,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
     folderPath: null,
+    maxRecentMessages: 20,
     ...overrides,
   };
 }

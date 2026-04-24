@@ -30,6 +30,11 @@ describe("DrizzleProjectRepository", () => {
       const list = await repo.list();
       expect(list).toHaveLength(2);
     });
+
+    it("sets maxRecentMessages to default 20 on create", async () => {
+      const project = await repo.create({ name: "Defaults", folderPath: null });
+      expect(project.maxRecentMessages).toBe(20);
+    });
   });
 
   describe("list", () => {
@@ -72,6 +77,25 @@ describe("DrizzleProjectRepository", () => {
 
     it("does not throw when deleting a non-existent id", async () => {
       await expect(repo.delete("ghost-id")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("maxRecentMessages", () => {
+    it("returns 20 as default for new projects", async () => {
+      const project = await repo.create({ name: "Default Max", folderPath: null });
+      expect(project.maxRecentMessages).toBe(20);
+    });
+
+    it("list() includes maxRecentMessages", async () => {
+      await repo.create({ name: "Listed", folderPath: null });
+      const list = await repo.list();
+      expect(list[0].maxRecentMessages).toBe(20);
+    });
+
+    it("get() includes maxRecentMessages", async () => {
+      const created = await repo.create({ name: "Fetched", folderPath: null });
+      const found = await repo.get(created.id);
+      expect(found?.maxRecentMessages).toBe(20);
     });
   });
 
