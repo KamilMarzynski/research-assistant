@@ -12,12 +12,29 @@ function makeTool<TParams extends TSchema, TDetails>(
   return tool;
 }
 
+export type AgentToolName =
+  | "read_file"
+  | "write_file"
+  | "list_dir"
+  | "safe_bash"
+  | "request_evaluation"
+  | "start_research";
+
+export interface EvaluationVerdict {
+  pass: boolean;
+  criteria: Array<{ name: string; pass: boolean; rationale: string }>;
+}
+
 export interface AgentToolsOptions {
   projectId: string;
   projectName: string;
   folderPath: string | null;
   homePath: string;
+  toolNames?: AgentToolName[];
+  apiKey?: string;
+  model?: string;
   startResearchFn?: (query: string) => Promise<{ taskId: string }>;
+  requestEvaluationFn?: (filePath: string, criteria: string[]) => Promise<EvaluationVerdict>;
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
@@ -148,5 +165,38 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
     );
   }
 
+  if (opts.requestEvaluationFn) {
+    const evaluateFn = opts.requestEvaluationFn;
+    tools.push(
+      makeTool({
+        name: "request_evaluation",
+        label: "Request evaluation",
+        description:
+          "Ask the evaluator agent to assess a research output file against a list of criteria. Returns a structured pass/fail verdict.",
+        parameters: Type.Object({
+          filePath: Type.String({ description: "Absolute path to the research output file" }),
+          criteria: Type.Array(Type.String(), {
+            description: "List of criteria to evaluate the file against",
+          }),
+        }),
+        execute: async (
+          _id,
+          { filePath, criteria },
+        ): Promise<AgentToolResult<EvaluationVerdict>> => {
+          const resolvedPath = jail.validate(filePath, "read");
+          const verdict = await evaluateFn(resolvedPath, criteria);
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify(verdict, null, 2) }],
+            details: verdict,
+          };
+        },
+      }),
+    );
+  }
+
+  if (opts.toolNames) {
+    const allowed = new Set<AgentToolName>(opts.toolNames);
+    return tools.filter((t) => allowed.has(t.name as AgentToolName));
+  }
   return tools;
 }
