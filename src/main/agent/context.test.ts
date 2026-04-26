@@ -10,7 +10,7 @@ vi.mock("node:os", async (importOriginal) => {
   return { ...actual, homedir: () => tmpHome };
 });
 
-const { loadSkills, buildSystemContext, toSlug } = await import("./context");
+const { loadSkills, buildSystemContext, toSlug, loadSkillsByContent } = await import("./context");
 
 describe("loadSkills", () => {
   beforeEach(async () => {
@@ -136,5 +136,47 @@ describe("buildSystemContext", () => {
 
     const result = await buildSystemContext("proj-1", "My Cool Project!", undefined);
     expect(result).toContain("Context for cool project.");
+  });
+});
+
+describe("loadSkillsByContent", () => {
+  beforeEach(async () => {
+    tmpHome = await mkdtemp(join(tmpdir(), "ctx-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpHome, { recursive: true, force: true });
+  });
+
+  it("returns empty string for empty names array", async () => {
+    expect(await loadSkillsByContent([], undefined)).toBe("");
+  });
+
+  it("returns SKILL.md full content for a matching skill", async () => {
+    const skillDir = join(tmpHome, ".research-assistant", "skills", "my-skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: my-skill\ndescription: does stuff\n---\n# Instructions\nDo the thing.",
+    );
+    const result = await loadSkillsByContent(["my-skill"], undefined);
+    expect(result).toContain("# Instructions");
+    expect(result).toContain("Do the thing.");
+  });
+
+  it("returns empty string for unknown skill name", async () => {
+    const result = await loadSkillsByContent(["nonexistent-skill"], undefined);
+    expect(result).toBe("");
+  });
+
+  it("joins multiple skills with separator", async () => {
+    for (const name of ["skill-a", "skill-b"]) {
+      const dir = join(tmpHome, ".research-assistant", "skills", name);
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, "SKILL.md"), `# ${name}`);
+    }
+    const result = await loadSkillsByContent(["skill-a", "skill-b"], undefined);
+    expect(result).toContain("# skill-a");
+    expect(result).toContain("# skill-b");
   });
 });

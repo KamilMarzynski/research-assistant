@@ -97,6 +97,41 @@ export function toSlug(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
+export async function loadSkillsByContent(
+  skillNames: string[],
+  projectFolderPath: string | undefined,
+): Promise<string> {
+  if (skillNames.length === 0) return "";
+
+  const home = join(homedir(), ".research-assistant");
+  const agents = join(homedir(), ".agents");
+
+  // Same priority order as loadSkills — later dirs have higher priority
+  const dirs = [
+    join(agents, "skills"),
+    join(home, "skills"),
+    ...(projectFolderPath ? [join(projectFolderPath, ".agents", "skills")] : []),
+    ...(projectFolderPath ? [join(projectFolderPath, ".research-assistant", "skills")] : []),
+  ];
+
+  const parts: string[] = [];
+  for (const name of skillNames) {
+    // Search highest-priority dirs first
+    for (const dir of [...dirs].reverse()) {
+      const skillPath = join(dir, name, "SKILL.md");
+      try {
+        const content = await readFile(skillPath, "utf-8");
+        parts.push(content.trim());
+        break;
+      } catch {
+        // not in this dir, try next
+      }
+    }
+  }
+
+  return parts.join("\n\n---\n\n");
+}
+
 export async function buildSystemContext(
   _projectId: string,
   projectName: string,
