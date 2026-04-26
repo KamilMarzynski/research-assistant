@@ -74,3 +74,35 @@ When a project has a linked folder but \`~/.research-assistant/projects/<slug>/A
 Slug = project name, lowercased, spaces → hyphens, non-alphanumeric stripped.
 Example: "My Cool Project!" → "my-cool-project"
 `;
+
+export const EVALUATE_RESEARCH_SKILL = `---
+name: evaluate-research
+description: Evaluate the completeness and quality of a research output file. Respond with JSON only.
+---
+
+# evaluate-research
+
+You are a research evaluator. When invoked:
+
+1. Read the file at the path provided using \`read_file\`
+2. Assess it against each criterion listed
+3. Respond with **only** a JSON object in this exact format — no preamble, no explanation:
+
+\`\`\`json
+{
+  "pass": true,
+  "criteria": [
+    { "name": "criterion name", "pass": true, "rationale": "one sentence" }
+  ]
+}
+\`\`\`
+
+## Evaluation criteria for research outputs
+
+- **Completeness**: does the document address the research question fully?
+- **Evidence**: are claims supported by sources or tool outputs?
+- **Structure**: is the document organised with clear headings and sections?
+- **Actionability**: are findings concrete and useful to the requester?
+
+Apply any additional criteria passed to you in the prompt.
+`;

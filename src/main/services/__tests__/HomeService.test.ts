@@ -85,3 +85,112 @@ describe("HomeService", () => {
     expect(entries).toContain("my-custom-skill");
   });
 });
+
+describe("task persistence", () => {
+  beforeEach(async () => {
+    tmpHome = await mkdtemp(join(tmpdir(), "home-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpHome, { recursive: true, force: true });
+  });
+
+  it("saveTask writes JSON file to tasks/", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    const task = {
+      taskId: "task-abc",
+      projectId: "proj-1",
+      projectName: "My Project",
+      query: "research something",
+      folderPath: null,
+      startedAt: "2026-04-26T10:00:00.000Z",
+    };
+    await svc.saveTask(task);
+    const { readFile } = await import("node:fs/promises");
+    const raw = await readFile(
+      join(tmpHome, ".research-assistant", "tasks", "task-abc.json"),
+      "utf-8",
+    );
+    expect(JSON.parse(raw)).toEqual(task);
+  });
+
+  it("deleteTask removes the JSON file", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    const task = {
+      taskId: "task-del",
+      projectId: "p",
+      projectName: "P",
+      query: "q",
+      folderPath: null,
+      startedAt: "2026-04-26T10:00:00.000Z",
+    };
+    await svc.saveTask(task);
+    await svc.deleteTask("task-del");
+    const { access } = await import("node:fs/promises");
+    await expect(
+      access(join(tmpHome, ".research-assistant", "tasks", "task-del.json")),
+    ).rejects.toThrow();
+  });
+
+  it("getInProgressTasks returns all saved tasks", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    const tasks = [
+      {
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "P1",
+        query: "q1",
+        folderPath: null,
+        startedAt: "2026-04-26T10:00:00.000Z",
+      },
+      {
+        taskId: "t2",
+        projectId: "p2",
+        projectName: "P2",
+        query: "q2",
+        folderPath: "/some/path",
+        startedAt: "2026-04-26T11:00:00.000Z",
+      },
+    ];
+    for (const t of tasks) await svc.saveTask(t);
+    const result = await svc.getInProgressTasks();
+    expect(result).toHaveLength(2);
+    expect(result.map((t) => t.taskId).sort()).toEqual(["t1", "t2"]);
+  });
+
+  it("getInProgressTasks returns empty array when tasks/ dir is empty", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    expect(await svc.getInProgressTasks()).toEqual([]);
+  });
+
+  it("deleteTask is idempotent — no error on missing file", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    await expect(svc.deleteTask("nonexistent")).resolves.toBeUndefined();
+  });
+});
+
+describe("builtin skills", () => {
+  beforeEach(async () => {
+    tmpHome = await mkdtemp(join(tmpdir(), "home-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpHome, { recursive: true, force: true });
+  });
+
+  it("evaluate-research skill is written on ensureDirectories", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    const { readFile } = await import("node:fs/promises");
+    const content = await readFile(
+      join(tmpHome, ".research-assistant", "skills", "evaluate-research", "SKILL.md"),
+      "utf-8",
+    );
+    expect(content).toContain("evaluate-research");
+  });
+});
