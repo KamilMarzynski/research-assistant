@@ -7,6 +7,7 @@ import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { createModel } from "./model-factory";
 import { createAgentTools } from "./tools";
+import { makeEvaluatorFn } from "./worker-agent";
 
 const FIRST_RUN_PROMPT = `You are setting up for first use. Ask the user these questions one at a time. Do not ask all at once.
 1. How do you organise your projects? (e.g. folder per project, by topic, other)
@@ -104,8 +105,18 @@ export class AgentSession {
       projectName,
       folderPath,
       homePath,
+      apiKey,
+      model,
       startResearchFn: (query) =>
         researchService.startResearch(projectId, projectName, query, folderPath),
+      requestEvaluationFn: makeEvaluatorFn({
+        projectId,
+        projectName,
+        folderPath,
+        homePath,
+        apiKey,
+        model,
+      }),
     });
 
     this.agent.subscribe(async (event) => {

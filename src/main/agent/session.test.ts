@@ -36,6 +36,10 @@ vi.mock("./tools", () => ({
   createAgentTools: vi.fn().mockReturnValue([]),
 }));
 
+vi.mock("./worker-agent", () => ({
+  makeEvaluatorFn: vi.fn().mockReturnValue(vi.fn()),
+}));
+
 const { AgentSession } = await import("./session");
 
 function triggerEvent(event: unknown) {
