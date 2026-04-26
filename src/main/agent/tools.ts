@@ -30,7 +30,7 @@ export interface AgentToolsOptions {
   projectName: string;
   folderPath: string | null;
   homePath: string;
-  toolNames?: AgentToolName[];
+  toolNames?: readonly AgentToolName[];
   apiKey?: string;
   model?: string;
   startResearchFn?: (query: string) => Promise<{ taskId: string }>;
