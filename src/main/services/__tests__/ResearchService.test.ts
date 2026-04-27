@@ -197,7 +197,12 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
     );
-    const { taskId } = await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    const { taskId } = await svc.startOrchestratedResearch(
+      "p1",
+      "My Project",
+      "deep research",
+      null,
+    );
     expect(taskId).toBeTruthy();
   });
 
@@ -210,9 +215,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeHomeService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
-    expect(createWorkerAgent).toHaveBeenCalledWith(
-      expect.objectContaining({ remainingDepth: 3 }),
-    );
+    expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 3 }));
   });
 
   it("calls createWorkerAgent with saveArtifactFn callback", async () => {
@@ -256,7 +259,12 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       home as never,
     );
-    const { taskId } = await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    const { taskId } = await svc.startOrchestratedResearch(
+      "p1",
+      "My Project",
+      "deep research",
+      null,
+    );
     expect(home.saveTask).toHaveBeenCalledWith(
       expect.objectContaining({ taskId, projectId: "p1", query: "deep research" }),
     );
@@ -282,7 +290,12 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       home as never,
     );
-    const { taskId } = await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    const { taskId } = await svc.startOrchestratedResearch(
+      "p1",
+      "My Project",
+      "deep research",
+      null,
+    );
     await capturedSubscriber?.({ type: "agent_end" });
     expect(home.deleteTask).toHaveBeenCalledWith(taskId);
   });

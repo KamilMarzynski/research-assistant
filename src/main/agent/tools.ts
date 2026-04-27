@@ -2,8 +2,8 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { type TSchema, Type } from "@sinclair/typebox";
-import { runInDocker } from "./extensions/docker-sandbox";
 import type { DockerSandboxInput } from "./extensions/docker-sandbox";
+import { runInDocker } from "./extensions/docker-sandbox";
 import { runSafeBash } from "./extensions/safe-bash";
 import { PathJail } from "./path-jail";
 
@@ -165,10 +165,9 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
           { description: "Programming language" },
         ),
         files: Type.Optional(
-          Type.Array(
-            Type.Object({ name: Type.String(), content: Type.String() }),
-            { description: "Additional files to write into /workspace before execution" },
-          ),
+          Type.Array(Type.Object({ name: Type.String(), content: Type.String() }), {
+            description: "Additional files to write into /workspace before execution",
+          }),
         ),
         networkEnabled: Type.Optional(
           Type.Boolean({ description: "Allow network access inside the container" }),
@@ -274,7 +273,10 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
             description: "Absolute path where the child agent should write its output",
           }),
         }),
-        execute: async (_id, { type, query, outputPath }): Promise<AgentToolResult<SpawnResult>> => {
+        execute: async (
+          _id,
+          { type, query, outputPath },
+        ): Promise<AgentToolResult<SpawnResult>> => {
           const resolvedPath = jail.validate(outputPath, "write");
           const result = await spawnFn(type as AgentType, query, resolvedPath);
           return {
@@ -339,9 +341,7 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
           const resolvedPath = jail.validate(path, "read");
           const result = await saveFn(resolvedPath, title);
           return {
-            content: [
-              { type: "text" as const, text: `Artifact saved (id: ${result.artifactId})` },
-            ],
+            content: [{ type: "text" as const, text: `Artifact saved (id: ${result.artifactId})` }],
             details: result,
           };
         },
@@ -367,9 +367,14 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
             Type.String({ description: "Optional shell script to bundle with the skill" }),
           ),
         }),
-        execute: async (_id, { name, description: _desc, skillContent, script }): Promise<AgentToolResult<null>> => {
+        execute: async (
+          _id,
+          { name, description: _desc, skillContent, script },
+        ): Promise<AgentToolResult<null>> => {
           if (!/^[a-z0-9-]+$/.test(name)) {
-            throw new Error(`Invalid tool name "${name}": only lowercase letters, digits, and hyphens allowed`);
+            throw new Error(
+              `Invalid tool name "${name}": only lowercase letters, digits, and hyphens allowed`,
+            );
           }
           await proposeFn(name, skillContent, script);
           return {

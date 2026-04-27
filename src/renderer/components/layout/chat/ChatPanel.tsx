@@ -5,6 +5,8 @@ import type { Message } from "../../../../shared/types";
 import { useProject } from "../../../contexts/ProjectContext";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
+import PendingToolBanner from "./PendingToolBanner";
+import ResearchStatusBar from "./ResearchStatusBar";
 
 export default function ChatPanel() {
   const { activeProjectId } = useProject();
@@ -99,6 +101,8 @@ export default function ChatPanel() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <ResearchStatusBar />
+      <PendingToolBanner />
       <MessageList messages={messages} streamingContent={streamingContent} />
       {hasApiKey === false ? (
         <Box sx={{ p: 2, textAlign: "center", borderTop: 1, borderColor: "divider" }}>

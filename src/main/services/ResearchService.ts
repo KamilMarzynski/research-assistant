@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { injectable } from "tsyringe";
-import { ORCHESTRATOR_TOOL_NAMES, createWorkerAgent } from "../agent/worker-agent";
+import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
 import type { EventBus } from "../event-bus";
 import type { ArtifactService } from "./ArtifactService";
 import type { HomeService } from "./HomeService";
@@ -145,7 +145,11 @@ export class ResearchService {
     await mkdir(workspaceRoot, { recursive: true });
 
     const saveArtifactFn = async (path: string, title: string) => {
-      const artifact = await this.artifactService.saveArtifact({ projectId, title, filePath: path });
+      const artifact = await this.artifactService.saveArtifact({
+        projectId,
+        title,
+        filePath: path,
+      });
       return { artifactId: artifact.id };
     };
 
