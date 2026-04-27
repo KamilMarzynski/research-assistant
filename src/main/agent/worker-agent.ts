@@ -123,19 +123,30 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
 
   // Depth-guard: remove orchestrator-only tools when at leaf depth
   const effectiveToolNames =
-    remainingDepth === 0
-      ? toolNames.filter((t) => !ORCHESTRATOR_ONLY_TOOLS.has(t))
-      : toolNames;
+    remainingDepth === 0 ? toolNames.filter((t) => !ORCHESTRATOR_ONLY_TOOLS.has(t)) : toolNames;
 
   // Build spawn callbacks (only when depth > 0)
-  let spawnAgentFn: ((type: AgentType, query: string, outputPath: string) => Promise<SpawnResult>) | undefined;
+  let spawnAgentFn:
+    | ((type: AgentType, query: string, outputPath: string) => Promise<SpawnResult>)
+    | undefined;
   let spawnAgentsParallelFn:
-    | ((agents: Array<{ type: AgentType; query: string; outputPath: string }>) => Promise<SpawnResult[]>)
+    | ((
+        agents: Array<{ type: AgentType; query: string; outputPath: string }>,
+      ) => Promise<SpawnResult[]>)
     | undefined;
 
   if (remainingDepth > 0) {
     const buildChildConfig = (type: AgentType, outputPath: string): WorkerAgentConfig => {
-      const base = { projectId, projectName, folderPath, homePath, apiKey, model, saveArtifactFn, proposeToolFn };
+      const base = {
+        projectId,
+        projectName,
+        folderPath,
+        homePath,
+        apiKey,
+        model,
+        saveArtifactFn,
+        proposeToolFn,
+      };
       switch (type) {
         case "researcher":
           return {
@@ -161,7 +172,11 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       }
     };
 
-    spawnAgentFn = async (type: AgentType, query: string, outputPath: string): Promise<SpawnResult> => {
+    spawnAgentFn = async (
+      type: AgentType,
+      query: string,
+      outputPath: string,
+    ): Promise<SpawnResult> => {
       const childConfig = buildChildConfig(type, outputPath);
       const { run } = await createWorkerAgent(childConfig);
       const summary = await run(query);

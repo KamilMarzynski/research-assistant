@@ -1,7 +1,7 @@
-import Docker from "dockerode";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Docker from "dockerode";
 
 export interface DockerSandboxInput {
   code: string;
@@ -33,18 +33,12 @@ const ENTRY_FILES: Record<DockerSandboxInput["language"], string> = {
 const COMMANDS: Record<DockerSandboxInput["language"], string[]> = {
   python: ["sh", "-c", "python /workspace/main.py > /workspace/.stdout 2>&1"],
   bash: ["sh", "-c", "bash /workspace/main.sh > /workspace/.stdout 2>&1"],
-  typescript: [
-    "sh",
-    "-c",
-    "npx --yes tsx /workspace/main.ts > /workspace/.stdout 2>&1",
-  ],
+  typescript: ["sh", "-c", "npx --yes tsx /workspace/main.ts > /workspace/.stdout 2>&1"],
 };
 
 const TIMEOUT_MS = 60_000;
 
-export async function runInDocker(
-  input: DockerSandboxInput,
-): Promise<DockerSandboxOutput> {
+export async function runInDocker(input: DockerSandboxInput): Promise<DockerSandboxOutput> {
   const docker = new Docker();
   let tmpDir: string | null = null;
   let container: Docker.Container | null = null;
@@ -57,11 +51,7 @@ export async function runInDocker(
     for (const f of input.files ?? []) {
       await writeFile(join(tmpDir, f.name), f.content, "utf-8");
     }
-    await writeFile(
-      join(tmpDir, ENTRY_FILES[input.language]),
-      input.code,
-      "utf-8",
-    );
+    await writeFile(join(tmpDir, ENTRY_FILES[input.language]), input.code, "utf-8");
 
     container = await docker.createContainer({
       Image: IMAGES[input.language],

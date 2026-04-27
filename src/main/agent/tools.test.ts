@@ -71,6 +71,102 @@ describe("createAgentTools – run_in_docker", () => {
   });
 });
 
+describe("createAgentTools – spawn + orchestrator tools", () => {
+  it("excludes spawn_agent when spawnAgentFn not provided", () => {
+    const tools = createAgentTools({ ...BASE, toolNames: ["spawn_agent"] });
+    expect(tools.map((t) => t.name)).not.toContain("spawn_agent");
+  });
+
+  it("includes spawn_agent when spawnAgentFn provided and in toolNames", () => {
+    const tools = createAgentTools({
+      ...BASE,
+      toolNames: ["spawn_agent"],
+      spawnAgentFn: vi.fn().mockResolvedValue({ outputPath: "/p", summary: "done" }),
+    });
+    expect(tools.map((t) => t.name)).toContain("spawn_agent");
+  });
+
+  it("excludes spawn_agents_parallel when spawnAgentsParallelFn not provided", () => {
+    const tools = createAgentTools({ ...BASE, toolNames: ["spawn_agents_parallel"] });
+    expect(tools.map((t) => t.name)).not.toContain("spawn_agents_parallel");
+  });
+
+  it("includes spawn_agents_parallel when spawnAgentsParallelFn provided", () => {
+    const tools = createAgentTools({
+      ...BASE,
+      toolNames: ["spawn_agents_parallel"],
+      spawnAgentsParallelFn: vi.fn().mockResolvedValue([]),
+    });
+    expect(tools.map((t) => t.name)).toContain("spawn_agents_parallel");
+  });
+
+  it("excludes save_artifact when saveArtifactFn not provided", () => {
+    const tools = createAgentTools({ ...BASE, toolNames: ["save_artifact"] });
+    expect(tools.map((t) => t.name)).not.toContain("save_artifact");
+  });
+
+  it("includes save_artifact when saveArtifactFn provided", () => {
+    const tools = createAgentTools({
+      ...BASE,
+      toolNames: ["save_artifact"],
+      saveArtifactFn: vi.fn().mockResolvedValue({ artifactId: "art-1" }),
+    });
+    expect(tools.map((t) => t.name)).toContain("save_artifact");
+  });
+
+  it("excludes propose_tool when proposeToolFn not provided", () => {
+    const tools = createAgentTools({ ...BASE, toolNames: ["propose_tool"] });
+    expect(tools.map((t) => t.name)).not.toContain("propose_tool");
+  });
+
+  it("includes propose_tool when proposeToolFn provided", () => {
+    const tools = createAgentTools({
+      ...BASE,
+      toolNames: ["propose_tool"],
+      proposeToolFn: vi.fn().mockResolvedValue(undefined),
+    });
+    expect(tools.map((t) => t.name)).toContain("propose_tool");
+  });
+
+  it("propose_tool rejects invalid name (spaces not allowed)", async () => {
+    const proposeToolFn = vi.fn().mockResolvedValue(undefined);
+    const tools = createAgentTools({
+      ...BASE,
+      toolNames: ["propose_tool"],
+      proposeToolFn,
+    });
+    const tool = tools.find((t) => t.name === "propose_tool");
+    await expect(
+      tool?.execute("call-1", {
+        name: "invalid name",
+        description: "desc",
+        skillContent: "# skill",
+      }),
+    ).rejects.toThrow(/invalid/i);
+    expect(proposeToolFn).not.toHaveBeenCalled();
+  });
+
+  it("propose_tool calls proposeToolFn with valid name", async () => {
+    const proposeToolFn = vi.fn().mockResolvedValue(undefined);
+    const tools = createAgentTools({
+      ...BASE,
+      toolNames: ["propose_tool"],
+      proposeToolFn,
+    });
+    const tool = tools.find((t) => t.name === "propose_tool");
+    await tool?.execute("call-1", {
+      name: "fetch-arxiv",
+      description: "fetches arxiv papers",
+      skillContent: "# fetch-arxiv\n\nFetches arxiv papers.",
+    });
+    expect(proposeToolFn).toHaveBeenCalledWith(
+      "fetch-arxiv",
+      "# fetch-arxiv\n\nFetches arxiv papers.",
+      undefined,
+    );
+  });
+});
+
 describe("createAgentTools – request_evaluation execute path", () => {
   it("calls requestEvaluationFn with jail-validated path and criteria, returns verdict", async () => {
     const verdict = {

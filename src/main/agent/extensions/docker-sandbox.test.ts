@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockContainer = {
   start: vi.fn(),
@@ -54,9 +54,7 @@ describe("runInDocker", () => {
 
   it("selects bash:5 for bash", async () => {
     await runInDocker({ code: 'echo "hi"', language: "bash" });
-    expect(mockCreateContainer).toHaveBeenCalledWith(
-      expect.objectContaining({ Image: "bash:5" }),
-    );
+    expect(mockCreateContainer).toHaveBeenCalledWith(expect.objectContaining({ Image: "bash:5" }));
   });
 
   it("uses bridge network when networkEnabled is true", async () => {
