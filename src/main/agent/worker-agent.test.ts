@@ -90,6 +90,44 @@ describe("createWorkerAgent", () => {
   });
 });
 
+describe("createWorkerAgent – depth limit", () => {
+  beforeEach(() => {
+    capturedSubscriber = null;
+    vi.clearAllMocks();
+    mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
+      capturedSubscriber = cb;
+    });
+    mockAgent.prompt.mockResolvedValue(undefined);
+  });
+
+  it("depth defaults to 0 — orchestrator-only tools filtered from createAgentTools call", async () => {
+    const { createAgentTools } = await import("./tools");
+    await createWorkerAgent({
+      ...BASE_CONFIG,
+      toolNames: ["read_file", "spawn_agent", "save_artifact"] as const,
+    });
+    expect(createAgentTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolNames: ["read_file"],
+      }),
+    );
+  });
+
+  it("when remainingDepth > 0, orchestrator tools pass through to createAgentTools", async () => {
+    const { createAgentTools } = await import("./tools");
+    await createWorkerAgent({
+      ...BASE_CONFIG,
+      toolNames: ["read_file", "spawn_agent", "save_artifact"] as const,
+      remainingDepth: 2,
+    });
+    expect(createAgentTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolNames: ["read_file", "spawn_agent", "save_artifact"],
+      }),
+    );
+  });
+});
+
 describe("makeEvaluatorFn", () => {
   beforeEach(() => {
     capturedSubscriber = null;

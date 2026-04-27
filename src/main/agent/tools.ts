@@ -27,6 +27,9 @@ export type AgentToolName =
   | "save_artifact"
   | "propose_tool";
 
+export type SpawnResult = { outputPath: string; summary: string };
+export type AgentType = "researcher" | "coder" | "orchestrator";
+
 export interface EvaluationVerdict {
   pass: boolean;
   criteria: Array<{ name: string; pass: boolean; rationale: string }>;
@@ -40,8 +43,14 @@ export interface AgentToolsOptions {
   toolNames?: readonly AgentToolName[];
   apiKey?: string;
   model?: string;
-  startResearchFn?: (query: string) => Promise<{ taskId: string }>;
+  startResearchFn?: (query: string, deep?: boolean) => Promise<{ taskId: string }>;
   requestEvaluationFn?: (filePath: string, criteria: string[]) => Promise<EvaluationVerdict>;
+  spawnAgentFn?: (type: AgentType, query: string, outputPath: string) => Promise<SpawnResult>;
+  spawnAgentsParallelFn?: (
+    agents: Array<{ type: AgentType; query: string; outputPath: string }>,
+  ) => Promise<SpawnResult[]>;
+  saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
+  proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
