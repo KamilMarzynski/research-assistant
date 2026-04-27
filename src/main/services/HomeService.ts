@@ -1,4 +1,4 @@
-import { access, mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { injectable } from "tsyringe";
@@ -37,6 +37,7 @@ export class HomeService {
       join(home, "workspace"),
       join(home, "projects"),
       join(home, "tasks"),
+      join(home, "pending-tools"),
       join(agents, "skills"),
     ];
 
@@ -94,6 +95,46 @@ export class HomeService {
       }
     }
     return tasks;
+  }
+
+  async savePendingTool(name: string, skillContent: string, script?: string): Promise<void> {
+    const dir = join(this.getHomePath(), "pending-tools", name);
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "SKILL.md"), skillContent, "utf-8");
+    if (script) {
+      const ext = script.trimStart().startsWith("#!/bin/bash") ? ".sh" : ".py";
+      await writeFile(join(dir, `script${ext}`), script, "utf-8");
+    }
+  }
+
+  async getPendingTools(): Promise<Array<{ name: string; skillContent: string }>> {
+    const dir = join(this.getHomePath(), "pending-tools");
+    let entries: string[] = [];
+    try {
+      entries = await readdir(dir);
+    } catch {
+      return [];
+    }
+    const tools: Array<{ name: string; skillContent: string }> = [];
+    for (const name of entries) {
+      try {
+        const skillContent = await readFile(join(dir, name, "SKILL.md"), "utf-8");
+        tools.push({ name, skillContent });
+      } catch {
+        // skip malformed entries
+      }
+    }
+    return tools;
+  }
+
+  async approvePendingTool(name: string): Promise<void> {
+    const src = join(this.getHomePath(), "pending-tools", name);
+    const dst = join(this.getHomePath(), "skills", name);
+    await rename(src, dst);
+  }
+
+  async rejectPendingTool(name: string): Promise<void> {
+    await rm(join(this.getHomePath(), "pending-tools", name), { recursive: true, force: true });
   }
 
   private async copyBuiltinSkillsIfNeeded(): Promise<void> {

@@ -178,6 +178,102 @@ describe("task persistence", () => {
   });
 });
 
+describe("pending tools", () => {
+  beforeEach(async () => {
+    tmpHome = await mkdtemp(join(tmpdir(), "home-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpHome, { recursive: true, force: true });
+  });
+
+  it("ensureDirectories creates pending-tools dir", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    const { access } = await import("node:fs/promises");
+    await expect(
+      access(join(tmpHome, ".research-assistant", "pending-tools")),
+    ).resolves.toBeUndefined();
+  });
+
+  it("savePendingTool writes SKILL.md", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    await svc.savePendingTool("fetch-arxiv", "# fetch-arxiv\n\nFetches papers.");
+    const { readFile } = await import("node:fs/promises");
+    const content = await readFile(
+      join(tmpHome, ".research-assistant", "pending-tools", "fetch-arxiv", "SKILL.md"),
+      "utf-8",
+    );
+    expect(content).toBe("# fetch-arxiv\n\nFetches papers.");
+  });
+
+  it("savePendingTool writes script.py for Python script", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    await svc.savePendingTool("run-analysis", "# run-analysis", "import pandas as pd\nprint('hi')");
+    const { readFile } = await import("node:fs/promises");
+    const content = await readFile(
+      join(tmpHome, ".research-assistant", "pending-tools", "run-analysis", "script.py"),
+      "utf-8",
+    );
+    expect(content).toContain("import pandas");
+  });
+
+  it("savePendingTool writes script.sh for bash script", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    await svc.savePendingTool("run-bash", "# run-bash", "#!/bin/bash\necho hello");
+    const { readFile } = await import("node:fs/promises");
+    const content = await readFile(
+      join(tmpHome, ".research-assistant", "pending-tools", "run-bash", "script.sh"),
+      "utf-8",
+    );
+    expect(content).toContain("echo hello");
+  });
+
+  it("getPendingTools returns empty array when no pending tools", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    expect(await svc.getPendingTools()).toEqual([]);
+  });
+
+  it("getPendingTools returns saved tools", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    await svc.savePendingTool("tool-a", "# tool-a");
+    await svc.savePendingTool("tool-b", "# tool-b");
+    const tools = await svc.getPendingTools();
+    expect(tools).toHaveLength(2);
+    expect(tools.map((t) => t.name).sort()).toEqual(["tool-a", "tool-b"]);
+  });
+
+  it("approvePendingTool moves dir to skills/", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    await svc.savePendingTool("my-tool", "# my-tool");
+    await svc.approvePendingTool("my-tool");
+    const { access } = await import("node:fs/promises");
+    await expect(
+      access(join(tmpHome, ".research-assistant", "skills", "my-tool", "SKILL.md")),
+    ).resolves.toBeUndefined();
+    await expect(
+      access(join(tmpHome, ".research-assistant", "pending-tools", "my-tool")),
+    ).rejects.toThrow();
+  });
+
+  it("rejectPendingTool deletes the dir", async () => {
+    const svc = new HomeService();
+    await svc.ensureDirectories();
+    await svc.savePendingTool("bad-tool", "# bad-tool");
+    await svc.rejectPendingTool("bad-tool");
+    const { access } = await import("node:fs/promises");
+    await expect(
+      access(join(tmpHome, ".research-assistant", "pending-tools", "bad-tool")),
+    ).rejects.toThrow();
+  });
+});
+
 describe("builtin skills", () => {
   beforeEach(async () => {
     tmpHome = await mkdtemp(join(tmpdir(), "home-test-"));

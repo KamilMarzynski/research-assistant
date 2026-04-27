@@ -14,7 +14,8 @@ type AppEvent =
         filePath: string;
       };
     }
-  | { type: "research:failed"; payload: { taskId: string; error: string } };
+  | { type: "research:failed"; payload: { taskId: string; error: string } }
+  | { type: "tool:pending"; payload: { name: string; skillContent: string } };
 
 @injectable()
 export class EventBus {
