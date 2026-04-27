@@ -18,10 +18,6 @@ vi.mock("../../agent/worker-agent", () => ({
   }),
 }));
 
-vi.mock("../../agent/context", () => ({
-  buildSystemContext: vi.fn().mockResolvedValue("mock context"),
-}));
-
 const { ResearchService } = await import("../ResearchService");
 
 function makeEventBus() {
