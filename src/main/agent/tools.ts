@@ -256,6 +256,133 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
     );
   }
 
+  if (opts.spawnAgentFn) {
+    const spawnFn = opts.spawnAgentFn;
+    tools.push(
+      makeTool({
+        name: "spawn_agent",
+        label: "Spawn agent",
+        description:
+          "Spawn a child agent (researcher, coder, or orchestrator) to handle a subtask. Blocks until the child completes and returns a summary.",
+        parameters: Type.Object({
+          type: Type.Union(
+            [Type.Literal("researcher"), Type.Literal("coder"), Type.Literal("orchestrator")],
+            { description: "Agent type to spawn" },
+          ),
+          query: Type.String({ description: "Task description for the child agent" }),
+          outputPath: Type.String({
+            description: "Absolute path where the child agent should write its output",
+          }),
+        }),
+        execute: async (_id, { type, query, outputPath }): Promise<AgentToolResult<SpawnResult>> => {
+          const resolvedPath = jail.validate(outputPath, "write");
+          const result = await spawnFn(type as AgentType, query, resolvedPath);
+          return {
+            content: [{ type: "text" as const, text: result.summary }],
+            details: result,
+          };
+        },
+      }),
+    );
+  }
+
+  if (opts.spawnAgentsParallelFn) {
+    const spawnParallelFn = opts.spawnAgentsParallelFn;
+    tools.push(
+      makeTool({
+        name: "spawn_agents_parallel",
+        label: "Spawn agents in parallel",
+        description:
+          "Spawn multiple child agents concurrently. All run in parallel; returns when all complete.",
+        parameters: Type.Object({
+          agents: Type.Array(
+            Type.Object({
+              type: Type.Union(
+                [Type.Literal("researcher"), Type.Literal("coder"), Type.Literal("orchestrator")],
+                { description: "Agent type" },
+              ),
+              query: Type.String({ description: "Task description" }),
+              outputPath: Type.String({ description: "Absolute path for output" }),
+            }),
+            { description: "List of agents to spawn" },
+          ),
+        }),
+        execute: async (_id, { agents }): Promise<AgentToolResult<SpawnResult[]>> => {
+          const validated = agents.map(({ type, query, outputPath }) => ({
+            type: type as AgentType,
+            query,
+            outputPath: jail.validate(outputPath, "write"),
+          }));
+          const results = await spawnParallelFn(validated);
+          const summary = results.map((r, i) => `[${i + 1}] ${r.summary}`).join("\n\n");
+          return {
+            content: [{ type: "text" as const, text: summary }],
+            details: results,
+          };
+        },
+      }),
+    );
+  }
+
+  if (opts.saveArtifactFn) {
+    const saveFn = opts.saveArtifactFn;
+    tools.push(
+      makeTool({
+        name: "save_artifact",
+        label: "Save artifact",
+        description: "Register a file as a named research artifact so it appears in the UI.",
+        parameters: Type.Object({
+          path: Type.String({ description: "Absolute path to the artifact file" }),
+          title: Type.String({ description: "Human-readable title for the artifact" }),
+        }),
+        execute: async (_id, { path, title }): Promise<AgentToolResult<{ artifactId: string }>> => {
+          const resolvedPath = jail.validate(path, "read");
+          const result = await saveFn(resolvedPath, title);
+          return {
+            content: [
+              { type: "text" as const, text: `Artifact saved (id: ${result.artifactId})` },
+            ],
+            details: result,
+          };
+        },
+      }),
+    );
+  }
+
+  if (opts.proposeToolFn) {
+    const proposeFn = opts.proposeToolFn;
+    tools.push(
+      makeTool({
+        name: "propose_tool",
+        label: "Propose new tool",
+        description:
+          "Propose a new skill/tool for the user to review and approve. The tool becomes available in future sessions once approved.",
+        parameters: Type.Object({
+          name: Type.String({
+            description: "Kebab-case tool name (lowercase letters, digits, hyphens only)",
+          }),
+          description: Type.String({ description: "What the tool does" }),
+          skillContent: Type.String({ description: "Full markdown skill file content" }),
+          script: Type.Optional(
+            Type.String({ description: "Optional shell script to bundle with the skill" }),
+          ),
+        }),
+        execute: async (_id, { name, description: _desc, skillContent, script }): Promise<AgentToolResult<null>> => {
+          if (!/^[a-z0-9-]+$/.test(name)) {
+            throw new Error(`Invalid tool name "${name}": only lowercase letters, digits, and hyphens allowed`);
+          }
+          await proposeFn(name, skillContent, script);
+          return {
+            content: [
+              { type: "text" as const, text: `Tool "${name}" proposed and pending user approval.` },
+            ],
+            details: null,
+          };
+        },
+      }),
+    );
+  }
+
   if (opts.toolNames) {
     const allowed = new Set<AgentToolName>(opts.toolNames);
     return tools.filter((t) => allowed.has(t.name as AgentToolName));
