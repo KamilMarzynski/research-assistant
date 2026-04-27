@@ -144,6 +144,36 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     win.webContents.send(IPC.RESEARCH_STATUS_UPDATE, { status: "failed", ...payload });
   });
 
+  eventBus.on("tool:pending", (payload) => {
+    win.webContents.send(IPC.TOOL_PENDING, payload);
+  });
+
+  ipcMain.handle(IPC.GET_PENDING_TOOLS, async () => {
+    return homeService.getPendingTools();
+  });
+
+  ipcMain.handle(IPC.APPROVE_TOOL, async (_event, payload: unknown) => {
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof (payload as { name?: unknown }).name !== "string"
+    ) {
+      throw new Error("Invalid payload: expected { name: string }");
+    }
+    await homeService.approvePendingTool((payload as { name: string }).name);
+  });
+
+  ipcMain.handle(IPC.REJECT_TOOL, async (_event, payload: unknown) => {
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof (payload as { name?: unknown }).name !== "string"
+    ) {
+      throw new Error("Invalid payload: expected { name: string }");
+    }
+    await homeService.rejectPendingTool((payload as { name: string }).name);
+  });
+
   // Auto-resume in-progress research tasks from the previous session
   void (async () => {
     try {

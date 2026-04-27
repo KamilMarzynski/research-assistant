@@ -12,12 +12,18 @@ export const IPC = {
   // renderer → main (send — fire-and-forget)
   SEND_MESSAGE: "SEND_MESSAGE",
 
+  // renderer → main (pending tools)
+  GET_PENDING_TOOLS: "GET_PENDING_TOOLS",
+  APPROVE_TOOL: "APPROVE_TOOL",
+  REJECT_TOOL: "REJECT_TOOL",
+
   // main → renderer (push via webContents.send)
   MESSAGE_CHUNK: "MESSAGE_CHUNK",
   MESSAGE_DONE: "MESSAGE_DONE",
   NEW_MESSAGE: "NEW_MESSAGE",
   RESEARCH_STATUS_UPDATE: "RESEARCH_STATUS_UPDATE",
   RESEARCH_COMPLETE: "RESEARCH_COMPLETE",
+  TOOL_PENDING: "TOOL_PENDING",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
