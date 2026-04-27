@@ -59,6 +59,18 @@ describe("createAgentTools – toolNames filter", () => {
   });
 });
 
+describe("createAgentTools – run_in_docker", () => {
+  it("includes run_in_docker when in toolNames", () => {
+    const tools = createAgentTools({ ...BASE, toolNames: ["run_in_docker"] });
+    expect(tools.map((t) => t.name)).toContain("run_in_docker");
+  });
+
+  it("excludes run_in_docker when not in toolNames", () => {
+    const tools = createAgentTools({ ...BASE, toolNames: ["read_file"] });
+    expect(tools.map((t) => t.name)).not.toContain("run_in_docker");
+  });
+});
+
 describe("createAgentTools – request_evaluation execute path", () => {
   it("calls requestEvaluationFn with jail-validated path and criteria, returns verdict", async () => {
     const verdict = {

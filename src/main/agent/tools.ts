@@ -2,6 +2,8 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { type TSchema, Type } from "@sinclair/typebox";
+import { runInDocker } from "./extensions/docker-sandbox";
+import type { DockerSandboxInput } from "./extensions/docker-sandbox";
 import { runSafeBash } from "./extensions/safe-bash";
 import { PathJail } from "./path-jail";
 
@@ -18,7 +20,12 @@ export type AgentToolName =
   | "list_dir"
   | "safe_bash"
   | "request_evaluation"
-  | "start_research";
+  | "start_research"
+  | "run_in_docker"
+  | "spawn_agent"
+  | "spawn_agents_parallel"
+  | "save_artifact"
+  | "propose_tool";
 
 export interface EvaluationVerdict {
   pass: boolean;
@@ -135,6 +142,52 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
       },
     }),
   ];
+
+  tools.push(
+    makeTool({
+      name: "run_in_docker",
+      label: "Run code in Docker",
+      description:
+        "Execute code in an isolated Docker container. Write output files to /workspace/output/ to receive them back as outputFiles.",
+      parameters: Type.Object({
+        code: Type.String({ description: "Code to execute" }),
+        language: Type.Union(
+          [Type.Literal("python"), Type.Literal("bash"), Type.Literal("typescript")],
+          { description: "Programming language" },
+        ),
+        files: Type.Optional(
+          Type.Array(
+            Type.Object({ name: Type.String(), content: Type.String() }),
+            { description: "Additional files to write into /workspace before execution" },
+          ),
+        ),
+        networkEnabled: Type.Optional(
+          Type.Boolean({ description: "Allow network access inside the container" }),
+        ),
+      }),
+      execute: async (_id, { code, language, files, networkEnabled }) => {
+        const result = await runInDocker({
+          code,
+          language: language as DockerSandboxInput["language"],
+          files,
+          networkEnabled,
+        });
+        const text = [
+          result.stdout ? `stdout:\n${result.stdout}` : "",
+          result.error ? `error: ${result.error}` : "",
+          result.outputFiles.length > 0
+            ? `output files: ${result.outputFiles.map((f) => f.name).join(", ")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+        return {
+          content: [{ type: "text" as const, text: text || "(no output)" }],
+          details: result,
+        };
+      },
+    }),
+  );
 
   if (startResearchFn) {
     tools.push(
