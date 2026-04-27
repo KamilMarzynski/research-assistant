@@ -112,6 +112,10 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     apiKey,
     model,
     toolNames,
+    // requestEvaluationFn is provided unconditionally, but the toolNames filter in
+    // createAgentTools will exclude request_evaluation unless "request_evaluation"
+    // is in toolNames. Evaluator agents always use ["read_file", "safe_bash"], so
+    // they will never receive the request_evaluation tool — preventing infinite recursion.
     requestEvaluationFn: makeEvaluatorFn({
       projectId,
       projectName,

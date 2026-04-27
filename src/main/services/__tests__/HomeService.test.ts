@@ -69,20 +69,24 @@ describe("HomeService", () => {
     expect(entries).toContain("discover_project");
   });
 
-  it("ensureDirectories does NOT overwrite existing skills", async () => {
-    // Pre-create skills dir with an existing skill
+  it("does NOT overwrite existing builtin skill SKILL.md", async () => {
     const skillsDir = join(tmpHome, ".research-assistant", "skills");
-    await mkdir(skillsDir, { recursive: true });
-    await mkdir(join(skillsDir, "my-custom-skill"), { recursive: true });
-    await writeFile(join(skillsDir, "my-custom-skill", "SKILL.md"), "# Custom");
+    const startResearchSkillDir = join(skillsDir, "start_research");
+    await mkdir(startResearchSkillDir, { recursive: true });
+    await writeFile(join(startResearchSkillDir, "SKILL.md"), "# Custom overridden");
 
     const svc = new HomeService();
     await svc.ensureDirectories();
 
-    // Should not copy builtin skills since dir is not empty
+    const { readFile } = await import("node:fs/promises");
+    const content = await readFile(join(startResearchSkillDir, "SKILL.md"), "utf-8");
+    // The existing file should NOT have been overwritten
+    expect(content).toBe("# Custom overridden");
+
+    // Other builtin skills SHOULD have been written (since they were missing)
     const entries = await readdir(skillsDir);
-    expect(entries).not.toContain("start_research");
-    expect(entries).toContain("my-custom-skill");
+    expect(entries).toContain("discover_project");
+    expect(entries).toContain("evaluate-research");
   });
 });
 

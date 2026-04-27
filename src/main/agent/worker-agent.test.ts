@@ -30,7 +30,7 @@ vi.mock("./tools", () => ({
   createAgentTools: vi.fn().mockReturnValue([{ name: "read_file" }, { name: "safe_bash" }]),
 }));
 
-const { createWorkerAgent } = await import("./worker-agent");
+const { createWorkerAgent, makeEvaluatorFn } = await import("./worker-agent");
 
 const BASE_CONFIG = {
   toolNames: ["read_file", "safe_bash"] as const,
@@ -87,5 +87,66 @@ describe("createWorkerAgent", () => {
     mockAgent.prompt.mockRejectedValue(new Error("network error"));
     const { run } = await createWorkerAgent(BASE_CONFIG);
     await expect(run("test")).rejects.toThrow("network error");
+  });
+});
+
+describe("makeEvaluatorFn", () => {
+  beforeEach(() => {
+    capturedSubscriber = null;
+    vi.clearAllMocks();
+    mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
+      capturedSubscriber = cb;
+    });
+  });
+
+  it("parses valid JSON from evaluator output and returns verdict", async () => {
+    const verdict = {
+      pass: true,
+      criteria: [{ name: "completeness", pass: true, rationale: "All sections present" }],
+    };
+    mockAgent.prompt.mockImplementation(async () => {
+      await capturedSubscriber?.({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: JSON.stringify(verdict) },
+      });
+      await capturedSubscriber?.({ type: "agent_end" });
+    });
+
+    const fn = makeEvaluatorFn({ ...BASE_CONFIG });
+    const result = await fn("/some/path/output.md", ["completeness"]);
+    expect(result.pass).toBe(true);
+    expect(result.criteria[0].name).toBe("completeness");
+  });
+
+  it("returns parse-error verdict when evaluator output contains no JSON", async () => {
+    mockAgent.prompt.mockImplementation(async () => {
+      await capturedSubscriber?.({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "Sorry, I cannot evaluate this." },
+      });
+      await capturedSubscriber?.({ type: "agent_end" });
+    });
+
+    const fn = makeEvaluatorFn({ ...BASE_CONFIG });
+    const result = await fn("/some/path/output.md", ["completeness"]);
+    expect(result.pass).toBe(false);
+    expect(result.criteria[0].name).toBe("parse-error");
+    expect(result.criteria[0].rationale).toContain("valid JSON");
+  });
+
+  it("returns parse-error verdict when evaluator output has malformed JSON", async () => {
+    mockAgent.prompt.mockImplementation(async () => {
+      await capturedSubscriber?.({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: '{ "pass": true, broken }' },
+      });
+      await capturedSubscriber?.({ type: "agent_end" });
+    });
+
+    const fn = makeEvaluatorFn({ ...BASE_CONFIG });
+    const result = await fn("/some/path/output.md", ["completeness"]);
+    expect(result.pass).toBe(false);
+    expect(result.criteria[0].name).toBe("parse-error");
+    expect(result.criteria[0].rationale).toContain("malformed JSON");
   });
 });
