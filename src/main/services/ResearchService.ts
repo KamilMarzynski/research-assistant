@@ -1,9 +1,6 @@
 import { join } from "node:path";
-import { Agent } from "@mariozechner/pi-agent-core";
-import { getModel } from "@mariozechner/pi-ai";
 import { injectable } from "tsyringe";
-import { buildSystemContext } from "../agent/context";
-import { createAgentTools } from "../agent/tools";
+import { createWorkerAgent } from "../agent/worker-agent";
 import type { EventBus } from "../event-bus";
 import type { ArtifactService } from "./ArtifactService";
 import type { HomeService } from "./HomeService";
@@ -33,29 +30,30 @@ export class ResearchService {
     const homePath = this.homeService.getHomePath();
     await this.homeService.ensureWorkspaceForProject(projectId);
 
-    const systemContext = await buildSystemContext(projectId, projectName, folderPath ?? undefined);
-
-    const systemPrompt = [
-      "You are a background researcher. Your job is to investigate the given query thoroughly using the available tools, then write a comprehensive Markdown report to the workspace file 'output.md'. Be thorough. When done, respond with a final summary of your findings.",
-      systemContext,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-
-    const worker = new Agent({
-      initialState: {
-        systemPrompt,
-        model: getModel("openrouter", settings.model as never),
-      },
-      getApiKey: async () => settings.openrouterApiKey as string,
+    await this.homeService.saveTask({
+      taskId,
+      projectId,
+      projectName,
+      query,
+      folderPath,
+      startedAt: new Date().toISOString(),
     });
 
-    // Register tools — no start_research (no recursive dispatch)
-    worker.state.tools = createAgentTools({
+    const systemPromptAddition = [
+      "You are a background researcher. Investigate the given query thoroughly using the available tools,",
+      "then write a comprehensive Markdown report to the workspace file 'output.md'.",
+      "Be thorough. When done, respond with a final summary of your findings.",
+    ].join(" ");
+
+    const { agent } = await createWorkerAgent({
+      toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "request_evaluation"],
+      systemPromptAddition,
       projectId,
       projectName,
       folderPath,
       homePath,
+      apiKey: settings.openrouterApiKey,
+      model: settings.model,
     });
 
     this.eventBus.emit({
@@ -63,7 +61,7 @@ export class ResearchService {
       payload: { taskId, projectId, query },
     });
 
-    worker.subscribe(async (event) => {
+    agent.subscribe(async (event) => {
       const e = event as {
         type: string;
         assistantMessageEvent?: { type: string; delta: string };
@@ -85,6 +83,7 @@ export class ResearchService {
             title: `Research: ${query.slice(0, 60)}`,
             filePath: outputPath,
           });
+          await this.homeService.deleteTask(taskId);
           this.eventBus.emit({
             type: "research:complete",
             payload: {
@@ -96,6 +95,7 @@ export class ResearchService {
             },
           });
         } catch (err) {
+          await this.homeService.deleteTask(taskId);
           this.eventBus.emit({
             type: "research:failed",
             payload: { taskId, error: String(err) },
@@ -104,9 +104,9 @@ export class ResearchService {
       }
     });
 
-    // Fire-and-forget — caller gets taskId immediately
-    worker.prompt(query).catch((err) => {
+    agent.prompt(query).catch(async (err) => {
       console.error("[ResearchService] worker error:", err);
+      await this.homeService.deleteTask(taskId);
       this.eventBus.emit({
         type: "research:failed",
         payload: { taskId, error: String(err) },
