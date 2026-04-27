@@ -1,6 +1,6 @@
 export const START_RESEARCH_SKILL = `---
 name: start_research
-description: Dispatch a background research task. Use when the user asks for in-depth research that would take more than one exchange to complete.
+description: Dispatch a background research task. Use when the user asks for research, investigation, or in-depth analysis.
 ---
 
 # start_research
@@ -13,23 +13,36 @@ Use the \`start_research\` tool to dispatch a background research worker when:
 ## Tool signature
 
 \`\`\`
-start_research({ query: string })
+start_research({ query: string, deep?: boolean })
 \`\`\`
 
 - \`query\`: a clear, self-contained research question. Include all necessary context — the worker has no access to the current conversation.
+- \`deep\`: set to \`true\` for complex multi-source research that benefits from parallel subtopic investigation, code execution, or hierarchical orchestration. Defaults to \`false\` (single researcher).
+
+## When to set deep: true
+
+- Query requires researching multiple independent subtopics in parallel
+- Query involves processing data files (CSV, JSON, etc.) with code
+- Query requires fetching and analysing papers, articles, or web pages
+- Query is open-ended enough that an orchestrator should plan the approach
 
 ## What happens next
 
 - The tool returns immediately with a \`taskId\`
-- A background agent runs the research using \`read_file\`, \`list_dir\`, and \`safe_bash\`
+- A background agent runs the research using the available tools
 - When done, a summary will be injected into this conversation automatically
-- The artifact is saved to the project workspace
+- Artifacts are saved to the project workspace
 
-## Examples of good queries
+## Examples
 
-- "Summarise the API surface of all TypeScript files in src/main/services/ — list public methods and their signatures"
-- "Find all usages of the IProjectRepository interface and list every call site"
-- "Read README.md and CLAUDE.md and write a one-page onboarding guide for a new developer"
+Standard research (deep: false or omitted):
+- "Summarise the API surface of all TypeScript files in src/main/services/"
+- "Find all usages of the IProjectRepository interface"
+
+Deep research (deep: true):
+- "Research the latest approaches to LLM memory management — check academic papers and GitHub repos"
+- "Analyse the CSV at ~/data/sales.csv and produce a trend report"
+- "Compare the top 5 vector databases for production use — benchmark if possible"
 `;
 
 export const DISCOVER_PROJECT_SKILL = `---

@@ -107,8 +107,10 @@ export class AgentSession {
       homePath,
       apiKey,
       model,
-      startResearchFn: (query) =>
-        researchService.startResearch(projectId, projectName, query, folderPath),
+      startResearchFn: (query, deep) =>
+        deep === true
+          ? researchService.startOrchestratedResearch(projectId, projectName, query, folderPath)
+          : researchService.startResearch(projectId, projectName, query, folderPath),
       requestEvaluationFn: makeEvaluatorFn({
         projectId,
         projectName,
