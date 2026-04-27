@@ -144,6 +144,27 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     win.webContents.send(IPC.RESEARCH_STATUS_UPDATE, { status: "failed", ...payload });
   });
 
+  // Auto-resume in-progress research tasks from the previous session
+  void (async () => {
+    try {
+      const tasks = await homeService.getInProgressTasks();
+      for (const task of tasks) {
+        try {
+          await researchService.startResearch(
+            task.projectId,
+            task.projectName,
+            task.query,
+            task.folderPath,
+          );
+        } catch (err) {
+          console.error("[startup] Failed to resume task", task.taskId, err);
+        }
+      }
+    } catch (err) {
+      console.error("[startup] Failed to load in-progress tasks:", err);
+    }
+  })();
+
   ipcMain.on(IPC.SEND_MESSAGE, (_event, payload: unknown) => {
     void (async () => {
       try {
