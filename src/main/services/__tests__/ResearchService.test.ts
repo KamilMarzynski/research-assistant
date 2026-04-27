@@ -16,6 +16,17 @@ vi.mock("../../agent/worker-agent", () => ({
     agent: mockAgent,
     run: vi.fn(),
   }),
+  ORCHESTRATOR_TOOL_NAMES: [
+    "read_file",
+    "write_file",
+    "list_dir",
+    "safe_bash",
+    "run_in_docker",
+    "spawn_agent",
+    "spawn_agents_parallel",
+    "save_artifact",
+    "propose_tool",
+  ],
 }));
 
 const { ResearchService } = await import("../ResearchService");
@@ -54,6 +65,7 @@ function makeHomeService() {
     ensureWorkspaceForProject: vi.fn().mockResolvedValue("/tmp/home/workspace/p1"),
     saveTask: vi.fn().mockResolvedValue(undefined),
     deleteTask: vi.fn().mockResolvedValue(undefined),
+    savePendingTool: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -165,5 +177,113 @@ describe("ResearchService", () => {
 
     expect(artifacts.saveArtifact).toHaveBeenCalled();
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:complete" }));
+  });
+});
+
+describe("ResearchService – startOrchestratedResearch", () => {
+  beforeEach(() => {
+    capturedSubscriber = null;
+    vi.clearAllMocks();
+    mockAgent.subscribe.mockImplementation((cb: (event: unknown) => void) => {
+      capturedSubscriber = cb;
+    });
+    mockAgent.prompt.mockResolvedValue(undefined);
+  });
+
+  it("returns a taskId immediately", async () => {
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+    const { taskId } = await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    expect(taskId).toBeTruthy();
+  });
+
+  it("calls createWorkerAgent with remainingDepth: 3", async () => {
+    const { createWorkerAgent } = await import("../../agent/worker-agent");
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+    await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    expect(createWorkerAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ remainingDepth: 3 }),
+    );
+  });
+
+  it("calls createWorkerAgent with saveArtifactFn callback", async () => {
+    const { createWorkerAgent } = await import("../../agent/worker-agent");
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+    await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    expect(createWorkerAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ saveArtifactFn: expect.any(Function) }),
+    );
+  });
+
+  it("saveArtifactFn callback delegates to artifactService.saveArtifact", async () => {
+    const { createWorkerAgent } = await import("../../agent/worker-agent");
+    const artifacts = makeArtifactService();
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      artifacts as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+    await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    const call = vi.mocked(createWorkerAgent).mock.calls[0][0];
+    await call.saveArtifactFn?.("/tmp/home/workspace/p1/output.md", "My Artifact");
+    expect(artifacts.saveArtifact).toHaveBeenCalledWith({
+      projectId: "p1",
+      title: "My Artifact",
+      filePath: "/tmp/home/workspace/p1/output.md",
+    });
+  });
+
+  it("calls homeService.saveTask with task details", async () => {
+    const home = makeHomeService();
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      home as never,
+    );
+    const { taskId } = await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    expect(home.saveTask).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId, projectId: "p1", query: "deep research" }),
+    );
+  });
+
+  it("emits research:started event", async () => {
+    const bus = makeEventBus();
+    const svc = new ResearchService(
+      bus as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+    await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
+  });
+
+  it("calls homeService.deleteTask on agent_end", async () => {
+    const home = makeHomeService();
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      home as never,
+    );
+    const { taskId } = await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
+    await capturedSubscriber?.({ type: "agent_end" });
+    expect(home.deleteTask).toHaveBeenCalledWith(taskId);
   });
 });
