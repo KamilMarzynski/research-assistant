@@ -38,11 +38,6 @@ export function createAppTheme(): Theme {
           root: { backgroundImage: "none", border: "none" },
         },
       },
-      MuiCard: {
-        styleOverrides: {
-          root: { border: "none" },
-        },
-      },
     },
   });
 }
