@@ -68,7 +68,7 @@ export default function PendingToolModal({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={onReject} color="error">
+        <Button onClick={onReject} color="error" data-testid="reject-tool-btn">
           Reject
         </Button>
         <Button onClick={onApprove} variant="contained" data-testid="approve-tool-btn">
