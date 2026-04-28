@@ -27,3 +27,9 @@ export const IPC = {
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
+
+export interface ResearchProgressPayload {
+  taskId: string;
+  message: string;
+  label?: string;
+}
