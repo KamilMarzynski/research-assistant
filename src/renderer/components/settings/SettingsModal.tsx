@@ -60,7 +60,13 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: glassSx } }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      slotProps={{ paper: { sx: glassSx } }}
+    >
       <DialogTitle>Settings</DialogTitle>
       <DialogContent>
         <TextField
