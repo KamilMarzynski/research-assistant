@@ -39,6 +39,8 @@ export interface WorkerAgentConfig {
   remainingDepth?: number; // defaults to 0 (leaf)
   saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  agentLabel?: string;
+  onProgress?: (label: string, delta: string) => void;
 }
 
 export interface WorkerAgent {
@@ -242,7 +244,10 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
         };
         if (e.type === "message_update") {
           const ae = e.assistantMessageEvent;
-          if (ae?.type === "text_delta") output += ae.delta;
+          if (ae?.type === "text_delta") {
+            output += ae.delta;
+            config.onProgress?.(config.agentLabel ?? "", ae.delta);
+          }
         } else if (e.type === "agent_end") {
           resolve(output);
         }

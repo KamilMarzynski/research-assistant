@@ -128,6 +128,61 @@ describe("createWorkerAgent – depth limit", () => {
   });
 });
 
+describe("createWorkerAgent – onProgress", () => {
+  beforeEach(() => {
+    capturedSubscriber = null;
+    vi.clearAllMocks();
+    mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
+      capturedSubscriber = cb;
+    });
+    mockAgent.prompt.mockResolvedValue(undefined);
+  });
+
+  it("run() calls onProgress with agentLabel and delta for each text_delta", async () => {
+    const onProgress = vi.fn();
+    mockAgent.prompt.mockImplementation(async () => {
+      await capturedSubscriber?.({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "chunk" },
+      });
+      await capturedSubscriber?.({ type: "agent_end" });
+    });
+    const { run } = await createWorkerAgent({
+      ...BASE_CONFIG,
+      agentLabel: "[researcher-1]",
+      onProgress,
+    });
+    await run("test");
+    expect(onProgress).toHaveBeenCalledWith("[researcher-1]", "chunk");
+  });
+
+  it("run() uses empty string label when agentLabel not set", async () => {
+    const onProgress = vi.fn();
+    mockAgent.prompt.mockImplementation(async () => {
+      await capturedSubscriber?.({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "x" },
+      });
+      await capturedSubscriber?.({ type: "agent_end" });
+    });
+    const { run } = await createWorkerAgent({ ...BASE_CONFIG, onProgress });
+    await run("test");
+    expect(onProgress).toHaveBeenCalledWith("", "x");
+  });
+
+  it("run() does not throw when onProgress is not provided", async () => {
+    mockAgent.prompt.mockImplementation(async () => {
+      await capturedSubscriber?.({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "y" },
+      });
+      await capturedSubscriber?.({ type: "agent_end" });
+    });
+    const { run } = await createWorkerAgent(BASE_CONFIG);
+    await expect(run("test")).resolves.toBe("y");
+  });
+});
+
 describe("makeEvaluatorFn", () => {
   beforeEach(() => {
     capturedSubscriber = null;
