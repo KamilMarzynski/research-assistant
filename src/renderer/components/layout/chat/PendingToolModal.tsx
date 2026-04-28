@@ -28,7 +28,21 @@ export default function PendingToolModal({
   onClose,
 }: PendingToolModalProps) {
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth slotProps={{ paper: { sx: glassSx } }}>
+    <Dialog
+      open
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      slotProps={
+        {
+          paper: {
+            sx: glassSx,
+            "data-testid": "pending-tool-modal",
+          },
+          // biome-ignore lint/suspicious/noExplicitAny: MUI v9 slotProps type doesn't include HTML attributes like data-testid
+        } as any
+      }
+    >
       <DialogTitle>Review proposed tool: {tool.name}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -57,7 +71,7 @@ export default function PendingToolModal({
         <Button onClick={onReject} color="error">
           Reject
         </Button>
-        <Button onClick={onApprove} variant="contained">
+        <Button onClick={onApprove} variant="contained" data-testid="approve-tool-btn">
           Approve
         </Button>
       </DialogActions>
