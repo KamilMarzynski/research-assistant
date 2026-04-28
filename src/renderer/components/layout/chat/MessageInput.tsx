@@ -42,11 +42,10 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
     <Box
       sx={{
         p: 1.5,
-        borderTop: 1,
-        borderColor: "divider",
         display: "flex",
         gap: 1,
         alignItems: "flex-end",
+        bgcolor: "background.paper",
       }}
     >
       <Select
@@ -77,6 +76,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
           }
         }}
         disabled={disabled}
+        slotProps={{ htmlInput: { "data-testid": "message-input" } }}
       />
 
       <IconButton
@@ -84,6 +84,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
         disabled={!content.trim() || disabled}
         color="primary"
         size="small"
+        data-testid="send-btn"
       >
         <SendIcon />
       </IconButton>

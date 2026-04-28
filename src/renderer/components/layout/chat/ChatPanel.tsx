@@ -105,7 +105,7 @@ export default function ChatPanel() {
       <PendingToolBanner />
       <MessageList messages={messages} streamingContent={streamingContent} />
       {hasApiKey === false ? (
-        <Box sx={{ p: 2, textAlign: "center", borderTop: 1, borderColor: "divider" }}>
+        <Box sx={{ p: 2, textAlign: "center", bgcolor: "background.paper" }}>
           <Typography variant="body2" color="text.secondary">
             Configure your OpenRouter API key in Settings to start chatting.
           </Typography>
