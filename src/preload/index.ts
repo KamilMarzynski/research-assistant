@@ -13,7 +13,7 @@ function assertAllowed(channel: string): asserts channel is IpcChannel {
 // Populated only when PLAYWRIGHT_TEST=1.
 const _testListeners = new Map<string, Array<(data: unknown) => void>>();
 
-const isTestMode = process.env["PLAYWRIGHT_TEST"] === "1";
+const isTestMode = process.env.PLAYWRIGHT_TEST === "1";
 
 const baseApi = {
   send(channel: IpcChannel, data?: unknown): void {
@@ -39,10 +39,12 @@ const baseApi = {
 
     return () => {
       ipcRenderer.removeListener(channel, handler);
-      const list = _testListeners.get(channel);
-      if (list) {
-        const idx = list.indexOf(callback);
-        if (idx !== -1) list.splice(idx, 1);
+      if (isTestMode) {
+        const list = _testListeners.get(channel);
+        if (list) {
+          const idx = list.indexOf(callback);
+          if (idx !== -1) list.splice(idx, 1);
+        }
       }
     };
   },
@@ -51,7 +53,8 @@ const baseApi = {
 const api = isTestMode
   ? {
       ...baseApi,
-      _simulateEvent(channel: string, payload: unknown): void {
+      _simulateEvent(channel: IpcChannel, payload: unknown): void {
+        assertAllowed(channel);
         const list = _testListeners.get(channel) ?? [];
         for (const cb of list) cb(payload);
       },
