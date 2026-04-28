@@ -5,6 +5,7 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 5_000 },
   reporter: "list",
+  workers: 1,
   use: {
     trace: "on-first-retry",
   },

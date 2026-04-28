@@ -1,5 +1,5 @@
-import { _electron as electron, type ElectronApplication, type Page } from "@playwright/test";
-import path from "path";
+import path from "node:path";
+import { type ElectronApplication, _electron as electron, type Page } from "@playwright/test";
 
 export interface AppHandle {
   app: ElectronApplication;
