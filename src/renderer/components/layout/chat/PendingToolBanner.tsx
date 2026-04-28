@@ -48,7 +48,7 @@ export default function PendingToolBanner() {
       {pendingTools.map((tool) => (
         <Box
           key={tool.name}
-          data-testid="pending-tool-banner"
+          data-testid={`pending-tool-banner-${tool.name}`}
           sx={{
             ...glassSx,
             px: 2,
@@ -61,7 +61,7 @@ export default function PendingToolBanner() {
           <Typography variant="caption" sx={{ flex: 1 }}>
             Agent proposed a new tool: <strong>{tool.name}</strong>
           </Typography>
-          <Button size="small" data-testid="review-tool-btn" onClick={() => setSelectedTool(tool)}>
+          <Button size="small" data-testid={`review-tool-btn-${tool.name}`} onClick={() => setSelectedTool(tool)}>
             Review
           </Button>
         </Box>
