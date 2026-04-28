@@ -17,5 +17,5 @@
       "@shared/*": ["./src/shared/*"]
     }
   },
-  "include": ["src", "electron.vite.config.ts"]
+  "include": ["src", "electron.vite.config.ts", "e2e"]
 }
