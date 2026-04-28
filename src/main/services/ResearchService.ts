@@ -164,7 +164,6 @@ export class ResearchService {
       "Write intermediate results to subdirectories within your workspace root.",
       "Write your final synthesis to synthesis.md in your workspace root.",
       "Use save_artifact to persist valuable outputs — both intermediate and final.",
-      "Remaining orchestration depth: 3.",
     ].join("\n");
 
     const { agent } = await createWorkerAgent({

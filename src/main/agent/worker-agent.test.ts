@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Captured subscriber so tests can fire Pi events manually
 let capturedSubscriber: ((event: unknown) => Promise<void>) | null = null;
@@ -128,6 +128,109 @@ describe("createWorkerAgent – depth limit", () => {
   });
 });
 
+describe("createWorkerAgent – AGENT_TYPE_PRESETS (spawn label propagation)", () => {
+  beforeEach(async () => {
+    capturedSubscriber = null;
+    vi.clearAllMocks();
+    const { Agent } = await import("@mariozechner/pi-agent-core");
+    vi.mocked(Agent).mockImplementation(function (this: unknown) {
+      return mockAgent;
+    } as never);
+    mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
+      capturedSubscriber = cb;
+    });
+    mockAgent.prompt.mockImplementation(async () => {
+      await capturedSubscriber?.({ type: "agent_end" });
+    });
+  });
+
+  afterEach(async () => {
+    // Restore Agent to return shared mockAgent after any per-call overrides
+    const { Agent } = await import("@mariozechner/pi-agent-core");
+    vi.mocked(Agent).mockImplementation(function (this: unknown) {
+      return mockAgent;
+    } as never);
+  });
+
+  it("spawnAgentFn passes [researcher] label to child createWorkerAgent", async () => {
+    const { createAgentTools } = await import("./tools");
+    const capturedConfigs: unknown[] = [];
+    vi.mocked(createAgentTools).mockImplementation((opts) => {
+      capturedConfigs.push(opts);
+      return [];
+    });
+
+    await createWorkerAgent({
+      ...BASE_CONFIG,
+      toolNames: ["spawn_agent"] as const,
+      remainingDepth: 1,
+    });
+
+    // Parent was configured — get its spawnAgentFn
+    const parentOpts = capturedConfigs[0] as {
+      spawnAgentFn?: (type: string, query: string, outputPath: string) => Promise<unknown>;
+    };
+    expect(parentOpts.spawnAgentFn).toBeDefined();
+
+    // Call spawnAgentFn — child createWorkerAgent will be called (second Agent instantiation)
+    // biome-ignore lint/style/noNonNullAssertion: expect above confirmed defined
+    await parentOpts.spawnAgentFn!("researcher", "q1", "/tmp/out.md");
+
+    // createAgentTools called twice: parent + child
+    expect(capturedConfigs).toHaveLength(2);
+  });
+
+  it("spawnAgentsParallelFn assigns indexed labels [researcher-1] and [researcher-2]", async () => {
+    // Each new Agent() must get its own subscribe/prompt so parallel children
+    // don't clobber each other's subscriber reference.
+    const { Agent } = await import("@mariozechner/pi-agent-core");
+    vi.mocked(Agent).mockImplementation(function (this: unknown) {
+      const sub = vi.fn();
+      const prom = vi.fn();
+      const childAgent = { subscribe: sub, prompt: prom, state: { tools: [] as never[] } };
+      prom.mockImplementation(async () => {
+        // Fire this agent's own subscriber, not the shared capturedSubscriber
+        const cb = sub.mock.calls[0]?.[0] as ((e: unknown) => Promise<void>) | undefined;
+        if (cb) {
+          await cb({
+            type: "message_update",
+            assistantMessageEvent: { type: "text_delta", delta: "d" },
+          });
+          await cb({ type: "agent_end" });
+        }
+      });
+      return childAgent;
+    } as never);
+
+    const onProgress = vi.fn();
+
+    await createWorkerAgent({
+      ...BASE_CONFIG,
+      toolNames: ["spawn_agents_parallel"] as const,
+      remainingDepth: 1,
+      onProgress,
+    });
+
+    const { createAgentTools } = await import("./tools");
+    const parentOpts = vi.mocked(createAgentTools).mock.calls[0][0] as {
+      spawnAgentsParallelFn?: (
+        agents: Array<{ type: string; query: string; outputPath: string }>,
+      ) => Promise<unknown>;
+    };
+    expect(parentOpts.spawnAgentsParallelFn).toBeDefined();
+
+    // biome-ignore lint/style/noNonNullAssertion: expect above confirmed defined
+    await parentOpts.spawnAgentsParallelFn!([
+      { type: "researcher", query: "q1", outputPath: "/tmp/r1.md" },
+      { type: "researcher", query: "q2", outputPath: "/tmp/r2.md" },
+    ]);
+
+    const labels = onProgress.mock.calls.map((c: unknown[]) => c[0] as string);
+    expect(labels).toContain("[researcher-1]");
+    expect(labels).toContain("[researcher-2]");
+  });
+});
+
 describe("createWorkerAgent – onProgress", () => {
   beforeEach(() => {
     capturedSubscriber = null;
@@ -184,9 +287,14 @@ describe("createWorkerAgent – onProgress", () => {
 });
 
 describe("makeEvaluatorFn", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     capturedSubscriber = null;
     vi.clearAllMocks();
+    // Restore Agent mock to return shared mockAgent
+    const { Agent } = await import("@mariozechner/pi-agent-core");
+    vi.mocked(Agent).mockImplementation(function (this: unknown) {
+      return mockAgent;
+    } as never);
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
       capturedSubscriber = cb;
     });

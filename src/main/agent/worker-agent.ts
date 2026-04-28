@@ -107,6 +107,46 @@ export function makeEvaluatorFn(
   };
 }
 
+type WorkerAgentBase = Pick<
+  WorkerAgentConfig,
+  | "projectId"
+  | "projectName"
+  | "folderPath"
+  | "homePath"
+  | "apiKey"
+  | "model"
+  | "saveArtifactFn"
+  | "proposeToolFn"
+  | "onProgress"
+>;
+
+type PresetBuilder = (
+  base: WorkerAgentBase,
+  outputPath: string,
+  depth: number,
+) => WorkerAgentConfig;
+
+const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
+  researcher: (base, outputPath) => ({
+    ...base,
+    toolNames: ["read_file", "write_file", "list_dir", "safe_bash"],
+    systemPromptAddition: `You are a background researcher. Investigate thoroughly using the available tools, then write your complete findings to: ${outputPath}. When done, respond with a final summary.`,
+    remainingDepth: 0,
+  }),
+  coder: (base, outputPath) => ({
+    ...base,
+    toolNames: ["read_file", "write_file", "run_in_docker"],
+    systemPromptAddition: `You are a coder agent. Use run_in_docker to execute code, then write your results to: ${outputPath}. When done, respond with a summary.`,
+    remainingDepth: 0,
+  }),
+  orchestrator: (base, outputPath, depth) => ({
+    ...base,
+    toolNames: [...ORCHESTRATOR_TOOL_NAMES],
+    systemPromptAddition: `You are a research orchestrator. Plan and delegate subtasks using spawn_agent or spawn_agents_parallel. Write your final synthesis to: ${outputPath}.`,
+    remainingDepth: depth - 1,
+  }),
+};
+
 export async function createWorkerAgent(config: WorkerAgentConfig): Promise<WorkerAgent> {
   const {
     toolNames,
@@ -121,6 +161,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     remainingDepth = 0,
     saveArtifactFn,
     proposeToolFn,
+    onProgress,
   } = config;
 
   // Depth-guard: remove orchestrator-only tools when at leaf depth
@@ -129,7 +170,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
 
   // Build spawn callbacks (only when depth > 0)
   let spawnAgentFn:
-    | ((type: AgentType, query: string, outputPath: string) => Promise<SpawnResult>)
+    | ((type: AgentType, query: string, outputPath: string, label?: string) => Promise<SpawnResult>)
     | undefined;
   let spawnAgentsParallelFn:
     | ((
@@ -138,49 +179,27 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     | undefined;
 
   if (remainingDepth > 0) {
-    const buildChildConfig = (type: AgentType, outputPath: string): WorkerAgentConfig => {
-      const base = {
-        projectId,
-        projectName,
-        folderPath,
-        homePath,
-        apiKey,
-        model,
-        saveArtifactFn,
-        proposeToolFn,
-      };
-      switch (type) {
-        case "researcher":
-          return {
-            ...base,
-            toolNames: ["read_file", "write_file", "list_dir", "safe_bash"],
-            systemPromptAddition: `You are a background researcher. Investigate thoroughly using the available tools, then write your complete findings to: ${outputPath}. When done, respond with a final summary.`,
-            remainingDepth: 0,
-          };
-        case "coder":
-          return {
-            ...base,
-            toolNames: ["read_file", "write_file", "run_in_docker"],
-            systemPromptAddition: `You are a coder agent. Use run_in_docker to execute code, then write your results to: ${outputPath}. When done, respond with a summary.`,
-            remainingDepth: 0,
-          };
-        case "orchestrator":
-          return {
-            ...base,
-            toolNames: [...ORCHESTRATOR_TOOL_NAMES],
-            systemPromptAddition: `You are a research orchestrator. Plan and delegate. Remaining orchestration depth: ${remainingDepth - 1}. Write your synthesis to: ${outputPath}.`,
-            remainingDepth: remainingDepth - 1,
-          };
-      }
+    const base: WorkerAgentBase = {
+      projectId,
+      projectName,
+      folderPath,
+      homePath,
+      apiKey,
+      model,
+      saveArtifactFn,
+      proposeToolFn,
+      onProgress,
     };
 
     spawnAgentFn = async (
       type: AgentType,
       query: string,
       outputPath: string,
+      label?: string,
     ): Promise<SpawnResult> => {
-      const childConfig = buildChildConfig(type, outputPath);
-      const { run } = await createWorkerAgent(childConfig);
+      const effectiveLabel = label ?? `[${type}]`;
+      const childConfig = AGENT_TYPE_PRESETS[type](base, outputPath, remainingDepth);
+      const { run } = await createWorkerAgent({ ...childConfig, agentLabel: effectiveLabel });
       const summary = await run(query);
       return { outputPath, summary };
     };
@@ -188,11 +207,14 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     spawnAgentsParallelFn = async (
       agents: Array<{ type: AgentType; query: string; outputPath: string }>,
     ): Promise<SpawnResult[]> => {
+      const typeCounters: Partial<Record<AgentType, number>> = {};
       return Promise.all(
-        agents.map(({ type, query, outputPath }) =>
-          // biome-ignore lint/style/noNonNullAssertion: spawnAgentFn is defined in this branch
-          spawnAgentFn!(type, query, outputPath),
-        ),
+        agents.map(({ type, query, outputPath }) => {
+          typeCounters[type] = (typeCounters[type] ?? 0) + 1;
+          const label = `[${type}-${typeCounters[type]}]`;
+          // biome-ignore lint/style/noNonNullAssertion: spawnAgentFn defined in this branch
+          return spawnAgentFn!(type, query, outputPath, label);
+        }),
       );
     };
   }
