@@ -15,13 +15,11 @@ test("send a message and see the user bubble in the message list", async () => {
   await expect(page.getByTestId("new-project-btn")).toBeVisible();
 
   // Skip if no API key is configured
-  const settings = (await page.evaluate(() => window.electronAPI.invoke("GET_SETTINGS"))) as {
-    hasApiKey: boolean;
-  };
-  if (!settings.hasApiKey) {
-    test.skip();
-    return;
-  }
+  const raw = await page.evaluate(() => window.electronAPI.invoke("GET_SETTINGS"));
+  const hasApiKey =
+    typeof raw === "object" && raw !== null && (raw as Record<string, unknown>).hasApiKey === true;
+  test.skip(!hasApiKey, "No API key configured");
+  if (!hasApiKey) return;
 
   // Create a project so the chat panel becomes available
   const projectName = `Send Test ${Date.now()}`;
@@ -53,4 +51,5 @@ test("send a message and see the user bubble in the message list", async () => {
     hasText: messageText,
   });
   await expect(bubble).toBeVisible();
+  // Streaming cursor assertion omitted — requires a live LLM connection
 });
