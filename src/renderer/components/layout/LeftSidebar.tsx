@@ -66,7 +66,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
           {projects.map((p) => (
             <ListItemButton
               key={p.id}
-              data-testid="project-item"
+              data-testid={`project-item-${p.id}`}
               selected={p.id === activeProjectId}
               onClick={() => setActiveProjectId(p.id)}
             >
