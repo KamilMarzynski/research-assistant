@@ -6,6 +6,7 @@ export default defineConfig({
   expect: { timeout: 5_000 },
   reporter: "list",
   workers: 1,
+  fullyParallel: false,
   use: {
     trace: "on-first-retry",
   },

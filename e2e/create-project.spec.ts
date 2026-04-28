@@ -1,15 +1,17 @@
-import { type ElectronApplication, expect, test } from "@playwright/test";
-import { launchApp } from "./helpers/electron";
+import { expect, test } from "@playwright/test";
+import { type AppHandle, launchApp } from "./helpers/electron";
 
-let app: ElectronApplication;
+let handle: AppHandle | undefined;
 
 test.afterEach(async () => {
-  await app.close();
+  await handle?.app.close();
 });
 
 test("create a new project and see it in the sidebar", async () => {
-  const { app: electronApp, page } = await launchApp();
-  app = electronApp;
+  handle = await launchApp();
+  const { page } = handle;
+
+  await expect(page.getByTestId("new-project-btn")).toBeVisible();
 
   const projectName = `Test Project ${Date.now()}`;
 
