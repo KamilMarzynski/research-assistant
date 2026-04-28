@@ -7,6 +7,7 @@ import {
   DialogTitle,
   Typography,
 } from "@mui/material";
+import { glassSx } from "../../../styles/glass";
 
 interface PendingTool {
   name: string;
@@ -27,7 +28,7 @@ export default function PendingToolModal({
   onClose,
 }: PendingToolModalProps) {
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth slotProps={{ paper: { sx: glassSx } }}>
       <DialogTitle>Review proposed tool: {tool.name}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
