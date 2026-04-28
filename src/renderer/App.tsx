@@ -1,13 +1,18 @@
-import { CssBaseline, ThemeProvider, useMediaQuery } from "@mui/material";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/700.css";
+import { CssBaseline, ThemeProvider } from "@mui/material";
 import { useState } from "react";
 import AppShell from "./components/layout/AppShell";
 import SettingsModal from "./components/settings/SettingsModal";
 import { ProjectProvider } from "./contexts/ProjectContext";
 import { createAppTheme } from "./theme";
 
+const theme = createAppTheme();
+
 export default function App() {
-  const isDark = useMediaQuery("(prefers-color-scheme: dark)");
-  const theme = createAppTheme(isDark ? "dark" : "light");
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
