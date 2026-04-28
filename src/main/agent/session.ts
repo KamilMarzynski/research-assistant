@@ -5,16 +5,10 @@ import type { HomeService } from "../services/HomeService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
+import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { createModel } from "./model-factory";
 import { createAgentTools } from "./tools";
 import { makeEvaluatorFn } from "./worker-agent";
-
-const FIRST_RUN_PROMPT = `You are setting up for first use. Ask the user these questions one at a time. Do not ask all at once.
-1. How do you organise your projects? (e.g. folder per project, by topic, other)
-2. Do you use a note-taking app or work with plain folders?
-3. What file types do you mainly work with?
-4. Any naming conventions or folder structures you always follow?
-After receiving all answers, write a concise summary to ~/.research-assistant/config.md (plain Markdown, human-editable). Then confirm setup is complete.`;
 
 const BASE_SYSTEM_PROMPT = "You are a helpful research assistant.";
 
@@ -77,7 +71,7 @@ export class AgentSession {
     const historyBlock = formatConversationHistory(initialMemoryContext.recentMessages);
 
     const systemPrompt = [
-      isFirstRun ? FIRST_RUN_PROMPT : BASE_SYSTEM_PROMPT,
+      isFirstRun ? FIRST_RUN_SKILL : BASE_SYSTEM_PROMPT,
       initialMemoryContext.summary,
       historyBlock,
       systemContext,
