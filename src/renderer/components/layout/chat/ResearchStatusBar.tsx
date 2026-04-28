@@ -1,6 +1,7 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
+import { glassSx } from "../../../styles/glass";
 
 interface ResearchState {
   active: boolean;
@@ -48,16 +49,16 @@ export default function ResearchStatusBar() {
   }, []);
 
   if (!state.active && !state.doneMessage) {
-    return <Box sx={{ px: 2, py: 1, borderBottom: 1, borderColor: "divider", minHeight: 40 }} />;
+    return <Box sx={{ minHeight: 40 }} />;
   }
 
   return (
     <Box
+      data-testid="research-status-bar"
       sx={{
+        ...glassSx,
         px: 2,
         py: 1,
-        borderBottom: 1,
-        borderColor: "divider",
         display: "flex",
         alignItems: "center",
         gap: 1,

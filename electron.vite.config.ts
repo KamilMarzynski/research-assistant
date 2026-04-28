@@ -14,6 +14,9 @@ export default defineConfig({
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
+    define: {
+      "process.env.PLAYWRIGHT_TEST": JSON.stringify(process.env.PLAYWRIGHT_TEST ?? ""),
+    },
     resolve: {
       alias: {
         "@shared": resolve("src/shared"),

@@ -1,18 +1,43 @@
 import { createTheme, type Theme } from "@mui/material/styles";
 
-export function createAppTheme(mode: "light" | "dark"): Theme {
+const manrope = '"Manrope", system-ui, -apple-system, sans-serif';
+const inter = '"Inter", system-ui, -apple-system, sans-serif';
+
+export function createAppTheme(): Theme {
   return createTheme({
     palette: {
-      mode,
+      mode: "dark",
       primary: {
-        main: "#3F51B5",
+        main: "#5C6BC0",
+      },
+      secondary: {
+        main: "#26C6DA",
+      },
+      background: {
+        default: "#0D0F14",
+        paper: "#13161E",
+      },
+      text: {
+        primary: "#E8EAED",
+        secondary: "#8A9BB0",
       },
     },
     typography: {
-      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+      fontFamily: inter,
+      h1: { fontFamily: manrope },
+      h2: { fontFamily: manrope },
+      h3: { fontFamily: manrope },
+      h4: { fontFamily: manrope },
     },
     shape: {
       borderRadius: 12,
+    },
+    components: {
+      MuiPaper: {
+        styleOverrides: {
+          root: { backgroundImage: "none", border: "none" },
+        },
+      },
     },
   });
 }

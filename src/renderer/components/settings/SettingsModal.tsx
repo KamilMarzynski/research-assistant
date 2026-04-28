@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
+import { glassSx } from "../../styles/glass";
 
 const MODELS = [
   { id: "anthropic/claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
@@ -59,7 +60,13 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      slotProps={{ paper: { sx: glassSx } }}
+    >
       <DialogTitle>Settings</DialogTitle>
       <DialogContent>
         <TextField

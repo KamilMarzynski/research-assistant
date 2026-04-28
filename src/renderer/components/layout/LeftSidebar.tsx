@@ -52,8 +52,10 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   };
 
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "action.hover" }}>
-      <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}>
+    <Box
+      sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "background.paper" }}
+    >
+      <Box sx={{ px: 2, py: 1.5, bgcolor: "background.default" }}>
         <Typography variant="subtitle2" color="text.secondary">
           Projects
         </Typography>
@@ -64,6 +66,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
           {projects.map((p) => (
             <ListItemButton
               key={p.id}
+              data-testid={`project-item-${p.id}`}
               selected={p.id === activeProjectId}
               onClick={() => setActiveProjectId(p.id)}
             >
@@ -121,6 +124,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
             <Button
               size="small"
               startIcon={<AddIcon />}
+              data-testid="new-project-btn"
               onClick={() => setCreating(true)}
               fullWidth
               sx={{ justifyContent: "flex-start" }}
@@ -131,7 +135,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
         </Box>
       </Box>
 
-      <Box sx={{ p: 1, borderTop: 1, borderColor: "divider" }}>
+      <Box sx={{ p: 1, bgcolor: "background.default" }}>
         <IconButton size="small" onClick={onOpenSettings} title="Settings">
           <SettingsIcon fontSize="small" />
         </IconButton>

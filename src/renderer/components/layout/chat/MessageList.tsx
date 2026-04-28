@@ -29,6 +29,7 @@ export default function MessageList({ messages, streamingContent }: MessageListP
       {messages.map((msg) => (
         <Box
           key={msg.id}
+          data-testid="message-bubble"
           sx={{
             alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
             maxWidth: "75%",
@@ -60,6 +61,7 @@ export default function MessageList({ messages, streamingContent }: MessageListP
               {streamingContent}
               <Box
                 component="span"
+                data-testid="streaming-cursor"
                 sx={{
                   display: "inline-block",
                   width: 8,
