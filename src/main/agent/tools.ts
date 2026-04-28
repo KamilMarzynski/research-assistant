@@ -209,9 +209,15 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
             description:
               "A clear, self-contained research question including all necessary context",
           }),
+          deep: Type.Optional(
+            Type.Boolean({
+              description:
+                "Set true for complex multi-source research requiring parallel subtopic investigation, code execution, or hierarchical orchestration. Defaults to false (single researcher).",
+            }),
+          ),
         }),
-        execute: async (_id, { query }) => {
-          const { taskId } = await startResearchFn(query);
+        execute: async (_id, { query, deep }) => {
+          const { taskId } = await startResearchFn(query, deep);
           return {
             content: [
               {

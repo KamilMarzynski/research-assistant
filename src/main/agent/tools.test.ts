@@ -167,6 +167,35 @@ describe("createAgentTools – spawn + orchestrator tools", () => {
   });
 });
 
+describe("createAgentTools – start_research deep flag", () => {
+  it("passes deep=true to startResearchFn when tool called with deep: true", async () => {
+    const startResearchFn = vi.fn().mockResolvedValue({ taskId: "t1" });
+    const tools = createAgentTools({
+      ...BASE,
+      toolNames: ["start_research"],
+      startResearchFn,
+    });
+    const tool = tools.find((t) => t.name === "start_research");
+    expect(tool).toBeDefined();
+    // biome-ignore lint/style/noNonNullAssertion: expect above confirmed defined
+    await tool!.execute("call-1", { query: "research X", deep: true });
+    expect(startResearchFn).toHaveBeenCalledWith("research X", true);
+  });
+
+  it("passes deep=undefined to startResearchFn when deep omitted", async () => {
+    const startResearchFn = vi.fn().mockResolvedValue({ taskId: "t1" });
+    const tools = createAgentTools({
+      ...BASE,
+      toolNames: ["start_research"],
+      startResearchFn,
+    });
+    const tool = tools.find((t) => t.name === "start_research");
+    // biome-ignore lint/style/noNonNullAssertion: expect above confirmed defined
+    await tool!.execute("call-1", { query: "research X" });
+    expect(startResearchFn).toHaveBeenCalledWith("research X", undefined);
+  });
+});
+
 describe("createAgentTools – request_evaluation execute path", () => {
   it("calls requestEvaluationFn with jail-validated path and criteria, returns verdict", async () => {
     const verdict = {
