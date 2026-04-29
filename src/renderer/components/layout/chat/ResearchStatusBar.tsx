@@ -24,11 +24,12 @@ export default function ResearchStatusBar() {
     };
 
     const unsubUpdate = window.electronAPI.on(IPC.RESEARCH_STATUS_UPDATE, (data) => {
-      const d = data as { status: string; message?: string; query?: string };
+      const d = data as { status: string; message?: string; label?: string; query?: string };
       if (d.status === "started") {
         setState({ active: true, message: "Research started…", doneMessage: null });
       } else if (d.status === "progress" && d.message) {
-        setState((prev) => ({ ...prev, message: d.message ?? prev.message }));
+        const display = d.label ? `${d.label} ${d.message}` : d.message;
+        setState((prev) => ({ ...prev, message: display ?? prev.message }));
       } else if (d.status === "failed") {
         setState({ active: false, message: "", doneMessage: "Research failed." });
         timers.current.push(setTimeout(() => setState((s) => ({ ...s, doneMessage: null })), 3000));
