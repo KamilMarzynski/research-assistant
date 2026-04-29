@@ -300,3 +300,75 @@ describe("ResearchService – startOrchestratedResearch", () => {
     expect(home.deleteTask).toHaveBeenCalledWith(taskId);
   });
 });
+
+describe("ResearchService – _runResearch internals", () => {
+  beforeEach(() => {
+    capturedSubscriber = null;
+    vi.clearAllMocks();
+    mockAgent.subscribe.mockImplementation((cb: (event: unknown) => void) => {
+      capturedSubscriber = cb;
+    });
+    mockAgent.prompt.mockResolvedValue(undefined);
+  });
+
+  it("two sequential startResearch calls on same project produce different output paths", async () => {
+    const { createWorkerAgent } = await import("../../agent/worker-agent");
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+
+    await svc.startResearch("p1", "My Project", "query A", null);
+    const firstCall = vi.mocked(createWorkerAgent).mock.calls[0][0];
+
+    await svc.startResearch("p1", "My Project", "query B", null);
+    const secondCall = vi.mocked(createWorkerAgent).mock.calls[1][0];
+
+    // Workspace paths differ because taskIds differ
+    expect(firstCall.systemPromptAddition).not.toBe(secondCall.systemPromptAddition);
+    expect(firstCall.systemPromptAddition).toContain("output.md");
+    expect(secondCall.systemPromptAddition).toContain("output.md");
+  });
+
+  it("startResearch passes onProgress that emits research:progress with label", async () => {
+    const { createWorkerAgent } = await import("../../agent/worker-agent");
+    const bus = makeEventBus();
+    const svc = new ResearchService(
+      bus as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+
+    await svc.startResearch("p1", "My Project", "query", null);
+    const call = vi.mocked(createWorkerAgent).mock.calls[0][0];
+
+    // Fire onProgress with a label
+    call.onProgress?.("[researcher-1]", "some delta");
+
+    expect(bus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "research:progress",
+        payload: expect.objectContaining({ label: "[researcher-1]", message: "some delta" }),
+      }),
+    );
+  });
+
+  it("startOrchestratedResearch passes remainingDepth: 3 and onProgress", async () => {
+    const { createWorkerAgent } = await import("../../agent/worker-agent");
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeArtifactService() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+    );
+
+    await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
+    const call = vi.mocked(createWorkerAgent).mock.calls[0][0];
+
+    expect(call.remainingDepth).toBe(3);
+    expect(call.onProgress).toBeTypeOf("function");
+  });
+});
