@@ -51,6 +51,16 @@ export interface AgentToolsOptions {
   ) => Promise<SpawnResult[]>;
   saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  emitBlocked?: (payload: {
+    commandId: string;
+    command: string;
+    reason: string;
+    category: string;
+    key: string;
+    projectId: string;
+    intent: string;
+    timestamp: string;
+  }) => void;
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
@@ -135,6 +145,7 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
           projectId,
           workspacePath,
           auditLogPath,
+          emitBlocked: opts.emitBlocked,
         });
         const summary = [
           `Exit code: ${result.exitCode}`,

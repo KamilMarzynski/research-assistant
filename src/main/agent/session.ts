@@ -1,10 +1,11 @@
 import { Agent } from "@mariozechner/pi-agent-core";
 import type { BrowserWindow } from "electron";
-import { IPC } from "../../shared/ipc-channels";
 import type { HomeService } from "../services/HomeService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
+import type { EventBus } from "../event-bus";
+import { IPC } from "../../shared/ipc-channels";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { createModel } from "./model-factory";
 import { createAgentTools } from "./tools";
@@ -26,6 +27,7 @@ export interface AgentSessionOptions {
   homeService: HomeService;
   researchService: ResearchService;
   memoryManager: IMemoryManager;
+  eventBus?: EventBus;
   initialMemoryContext: MemoryContext;
   projectId: string;
   projectName: string;
@@ -43,6 +45,7 @@ export class AgentSession {
   private readonly messageService: MessageService;
   private readonly memoryManager: IMemoryManager;
   private readonly projectId: string;
+  private readonly eventBus?: EventBus;
   private assistantContent = "";
   private lastUserContent = "";
 
@@ -52,6 +55,7 @@ export class AgentSession {
     homeService,
     researchService,
     memoryManager,
+    eventBus,
     initialMemoryContext,
     projectId,
     projectName,
@@ -66,6 +70,7 @@ export class AgentSession {
     this.messageService = messageService;
     this.memoryManager = memoryManager;
     this.projectId = projectId;
+    this.eventBus = eventBus;
 
     const homePath = homeService.getHomePath();
     const historyBlock = formatConversationHistory(initialMemoryContext.recentMessages);
@@ -101,6 +106,9 @@ export class AgentSession {
       homePath,
       apiKey,
       model,
+      emitBlocked: eventBus
+        ? (payload) => eventBus.emit({ type: "bash:blocked", payload })
+        : undefined,
       startResearchFn: (query, deep) =>
         deep === true
           ? researchService.startOrchestratedResearch(projectId, projectName, query, folderPath)

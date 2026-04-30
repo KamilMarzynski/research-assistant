@@ -24,6 +24,14 @@ export const IPC = {
   RESEARCH_STATUS_UPDATE: "RESEARCH_STATUS_UPDATE",
   RESEARCH_COMPLETE: "RESEARCH_COMPLETE",
   TOOL_PENDING: "TOOL_PENDING",
+  BASH_BLOCKED: "bash-blocked",
+
+  // renderer → main (blocked command resolution)
+  RESOLVE_BLOCKED_COMMAND: "resolve-blocked-command",
+
+  // Audit log
+  GET_AUDIT_LOG: "get-audit-log",
+  CLEAR_AUDIT_LOG: "clear-audit-log",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

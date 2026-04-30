@@ -15,7 +15,20 @@ type AppEvent =
       };
     }
   | { type: "research:failed"; payload: { taskId: string; error: string } }
-  | { type: "tool:pending"; payload: { name: string; skillContent: string } };
+  | { type: "tool:pending"; payload: { name: string; skillContent: string } }
+  | {
+      type: "bash:blocked";
+      payload: {
+        commandId: string;
+        command: string;
+        reason: string;
+        category: string;
+        key: string;
+        projectId: string;
+        intent: string;
+        timestamp: string;
+      };
+    };
 
 @injectable()
 export class EventBus {

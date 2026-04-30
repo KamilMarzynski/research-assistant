@@ -1,5 +1,5 @@
-import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import { appendFile } from "node:fs/promises";
 
 export interface BlocklistEntry {
@@ -238,7 +238,9 @@ function enterApprovalGate(opts: SafeBashOptions, entry: BlocklistEntry): Promis
 
     const timer = setTimeout(() => {
       blockedPromises.delete(commandId);
-      reject(new BlockedCommandError(`Approval timed out. ${entry.reason}`, commandId, entry.category));
+      reject(
+        new BlockedCommandError(`Approval timed out. ${entry.reason}`, commandId, entry.category),
+      );
     }, 300_000);
 
     blockedPromises.set(commandId, {

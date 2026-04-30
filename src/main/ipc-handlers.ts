@@ -148,6 +148,50 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     win.webContents.send(IPC.TOOL_PENDING, payload);
   });
 
+  eventBus.on("bash:blocked", (payload) => {
+    win.webContents.send(IPC.BASH_BLOCKED, payload);
+  });
+
+  ipcMain.handle(IPC.RESOLVE_BLOCKED_COMMAND, async (_event, payload: unknown) => {
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof (payload as { commandId?: unknown }).commandId !== "string" ||
+      typeof (payload as { action?: unknown }).action !== "string"
+    ) {
+      throw new Error("Invalid payload: expected { commandId: string, action: string }");
+    }
+    const { commandId, action } = payload as { commandId: string; action: string };
+    if (!["approve_once", "approve_session", "deny"].includes(action)) {
+      throw new Error(`Invalid action: ${action}`);
+    }
+    const { resolveBlockedCommand } = await import("./agent/extensions/safe-bash");
+    resolveBlockedCommand(commandId, action as "approve_once" | "approve_session" | "deny");
+  });
+
+  ipcMain.handle(IPC.GET_AUDIT_LOG, async () => {
+    const { readFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const path = join(homeService.getHomePath(), "audit.log");
+    try {
+      const raw = await readFile(path, "utf-8");
+      return raw
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+    } catch {
+      return [];
+    }
+  });
+
+  ipcMain.handle(IPC.CLEAR_AUDIT_LOG, async () => {
+    const { writeFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const path = join(homeService.getHomePath(), "audit.log");
+    await writeFile(path, "", "utf-8");
+  });
+
   ipcMain.handle(IPC.GET_PENDING_TOOLS, async () => {
     return homeService.getPendingTools();
   });
@@ -233,6 +277,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
             new AgentSession({
               win,
               messageService,
+              eventBus,
               homeService,
               researchService,
               memoryManager,
