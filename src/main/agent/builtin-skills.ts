@@ -43,6 +43,20 @@ Deep research (deep: true):
 - "Research the latest approaches to LLM memory management — check academic papers and GitHub repos"
 - "Analyse the CSV at ~/data/sales.csv and produce a trend report"
 - "Compare the top 5 vector databases for production use — benchmark if possible"
+
+## Web Access
+
+Your researcher agents have two web access tools:
+
+- **fetch_url** — fetch a specific web page and get clean Markdown content
+- **web_search** — search DuckDuckGo for relevant pages
+
+Use these when the research requires:
+- Reading documentation, papers, articles, or blog posts
+- Finding current information not in the project files
+- Comparing approaches from external sources
+
+**Note:** safe_bash still blocks curl and wget. Use fetch_url instead.
 `;
 
 export const DISCOVER_PROJECT_SKILL = `---
