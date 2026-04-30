@@ -22,6 +22,10 @@ vi.mock("@mariozechner/pi-ai", () => ({
   getModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
 }));
 
+vi.mock("./model-factory", () => ({
+  createModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
+}));
+
 vi.mock("./context", () => ({
   loadSkillsByContent: vi.fn().mockResolvedValue(""),
 }));
@@ -39,8 +43,11 @@ const BASE_CONFIG = {
   projectName: "Test",
   folderPath: null,
   homePath: "/tmp/home",
-  apiKey: "sk-or-test",
-  model: "anthropic/claude-sonnet-4-5",
+  provider: {
+    type: "openrouter" as const,
+    apiKey: "sk-or-test",
+    model: "anthropic/claude-sonnet-4-5",
+  },
 };
 
 describe("createWorkerAgent", () => {

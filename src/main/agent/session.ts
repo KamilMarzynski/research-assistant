@@ -8,6 +8,7 @@ import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { createModel } from "./model-factory";
+import type { ModelProvider } from "./model-provider";
 import { createAgentTools } from "./tools";
 import { makeEvaluatorFn } from "./worker-agent";
 
@@ -32,8 +33,7 @@ export interface AgentSessionOptions {
   projectId: string;
   projectName: string;
   folderPath: string | null;
-  apiKey: string;
-  model: string;
+  provider: ModelProvider;
   isFirstRun: boolean;
   systemContext?: string;
   langfuseEnabled: boolean;
@@ -59,8 +59,7 @@ export class AgentSession {
     projectId,
     projectName,
     folderPath,
-    apiKey,
-    model,
+    provider,
     isFirstRun,
     systemContext = "",
     langfuseEnabled,
@@ -85,9 +84,9 @@ export class AgentSession {
     this.agent = new Agent({
       initialState: {
         systemPrompt,
-        model: createModel(model, langfuseEnabled),
+        model: createModel({ provider, langfuseEnabled }),
       },
-      getApiKey: async () => apiKey,
+      getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),
       beforeToolCall: async (ctx) => {
         const allowed = new Set(this.agent.state.tools.map((t) => t.name));
         if (!allowed.has(ctx.toolCall.name)) {
@@ -102,8 +101,8 @@ export class AgentSession {
       projectName,
       folderPath,
       homePath,
-      apiKey,
-      model,
+      apiKey: provider.type === "ollama" ? "ollama" : provider.apiKey,
+      model: provider.model,
       emitBlocked: eventBus
         ? (payload) => eventBus.emit({ type: "bash:blocked", payload })
         : undefined,
@@ -116,8 +115,7 @@ export class AgentSession {
         projectName,
         folderPath,
         homePath,
-        apiKey,
-        model,
+        provider,
       }),
     });
 

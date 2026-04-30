@@ -53,8 +53,15 @@ function makeArtifactService() {
 function makeSettingsService() {
   return {
     getSettings: vi.fn().mockResolvedValue({
-      openrouterApiKey: "sk-or-test",
-      model: "anthropic/claude-sonnet-4-5",
+      activeProvider: "openrouter",
+      defaultCloudProvider: "openrouter",
+      providerCredentials: {
+        openrouter: { apiKey: "sk-or-test", defaultModel: "anthropic/claude-sonnet-4-5" },
+        openai: { apiKey: null, defaultModel: "gpt-4o" },
+        anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
+        ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
+      },
+      langfuseEnabled: false,
     }),
   };
 }

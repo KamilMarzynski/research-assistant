@@ -1,6 +1,7 @@
 import { Agent } from "@mariozechner/pi-agent-core";
-import { getModel } from "@mariozechner/pi-ai";
 import { loadSkillsByContent } from "./context";
+import { createModel } from "./model-factory";
+import type { ModelProvider } from "./model-provider";
 import type { AgentToolName, AgentType, EvaluationVerdict, SpawnResult } from "./tools";
 import { createAgentTools } from "./tools";
 
@@ -34,8 +35,7 @@ export interface WorkerAgentConfig {
   projectName: string;
   folderPath: string | null;
   homePath: string;
-  apiKey: string;
-  model: string;
+  provider: ModelProvider;
   remainingDepth?: number; // defaults to 0 (leaf)
   saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
@@ -53,8 +53,7 @@ export interface EvaluatorBaseConfig {
   projectName: string;
   folderPath: string | null;
   homePath: string;
-  apiKey: string;
-  model: string;
+  provider: ModelProvider;
 }
 
 export function makeEvaluatorFn(
@@ -113,8 +112,7 @@ type WorkerAgentBase = Pick<
   | "projectName"
   | "folderPath"
   | "homePath"
-  | "apiKey"
-  | "model"
+  | "provider"
   | "saveArtifactFn"
   | "proposeToolFn"
   | "onProgress"
@@ -156,8 +154,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     projectName,
     folderPath,
     homePath,
-    apiKey,
-    model,
+    provider,
     remainingDepth = 0,
     saveArtifactFn,
     proposeToolFn,
@@ -184,8 +181,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       projectName,
       folderPath,
       homePath,
-      apiKey,
-      model,
+      provider,
       saveArtifactFn,
       proposeToolFn,
       onProgress,
@@ -225,9 +221,9 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
   const agent = new Agent({
     initialState: {
       systemPrompt,
-      model: getModel("openrouter", model as never),
+      model: createModel({ provider, langfuseEnabled: false }),
     },
-    getApiKey: async () => apiKey,
+    getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),
   });
 
   agent.state.tools = createAgentTools({
@@ -235,8 +231,8 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     projectName,
     folderPath,
     homePath,
-    apiKey,
-    model,
+    apiKey: provider.type === "ollama" ? "ollama" : provider.apiKey,
+    model: provider.model,
     toolNames: effectiveToolNames,
     // requestEvaluationFn is provided unconditionally, but the toolNames filter in
     // createAgentTools will exclude request_evaluation unless "request_evaluation"
@@ -247,8 +243,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       projectName,
       folderPath,
       homePath,
-      apiKey,
-      model,
+      provider,
     }),
     saveArtifactFn,
     proposeToolFn,

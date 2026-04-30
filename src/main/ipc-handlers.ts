@@ -2,6 +2,7 @@ import { type BrowserWindow, dialog, ipcMain } from "electron";
 import type { DependencyContainer } from "tsyringe";
 import { IPC } from "../shared/ipc-channels";
 import { buildSystemContext } from "./agent/context";
+import { resolveProvider } from "./agent/model-provider";
 import { AgentSession } from "./agent/session";
 import { EventBus } from "./event-bus";
 import { ArtifactService } from "./services/ArtifactService";
@@ -274,11 +275,11 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
         const { projectId, content } = payload as { projectId: string; content: string };
 
         const settings = await settingsService.getSettings();
-        const cloudCreds = settings.providerCredentials.openrouter;
-        if (!cloudCreds.apiKey) {
+        const provider = resolveProvider({ settings });
+        if (provider.type !== "ollama" && !provider.apiKey) {
           win.webContents.send(
             IPC.MESSAGE_CHUNK,
-            "⚠️ No API key configured. Open Settings to add your OpenRouter API key.",
+            "⚠️ No API key configured. Open Settings to add your API key.",
           );
           win.webContents.send(IPC.MESSAGE_DONE);
           return;
@@ -306,8 +307,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
               projectId,
               projectName: project.name,
               folderPath: project.folderPath,
-              apiKey: cloudCreds.apiKey,
-              model: cloudCreds.defaultModel,
+              provider,
               isFirstRun,
               systemContext,
               langfuseEnabled: settings.langfuseEnabled,

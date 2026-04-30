@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { injectable } from "tsyringe";
+import type { ModelProvider } from "../agent/model-provider";
 import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
 import type { EventBus } from "../event-bus";
@@ -99,7 +100,7 @@ export class ResearchService {
     outputFileName: string,
     buildPartialConfig: (
       workspacePath: string,
-    ) => Omit<WorkerAgentConfig, "apiKey" | "model" | "onProgress">,
+    ) => Omit<WorkerAgentConfig, "provider" | "onProgress">,
   ): Promise<{ taskId: string }> {
     const taskId = crypto.randomUUID();
     const settings = await this.settingsService.getSettings();
@@ -130,10 +131,15 @@ export class ResearchService {
       }
     };
 
-    const workerConfig: WorkerAgentConfig = {
-      ...buildPartialConfig(workspacePath),
+    const provider: ModelProvider = {
+      type: "openrouter",
       apiKey: cloudCreds.apiKey,
       model: cloudCreds.defaultModel,
+    };
+
+    const workerConfig: WorkerAgentConfig = {
+      ...buildPartialConfig(workspacePath),
+      provider,
       onProgress,
     };
 
