@@ -141,6 +141,7 @@ export class ResearchService {
       ...buildPartialConfig(workspacePath),
       provider,
       onProgress,
+      webAccessEnabled: settings.webAccessEnabled,
     };
 
     const { agent } = await createWorkerAgent(workerConfig);

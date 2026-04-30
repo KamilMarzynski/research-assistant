@@ -37,6 +37,7 @@ export interface AgentSessionOptions {
   isFirstRun: boolean;
   systemContext?: string;
   langfuseEnabled: boolean;
+  webAccessEnabled?: boolean;
 }
 
 export class AgentSession {
@@ -63,6 +64,7 @@ export class AgentSession {
     isFirstRun,
     systemContext = "",
     langfuseEnabled,
+    webAccessEnabled,
   }: AgentSessionOptions) {
     this.win = win;
     this.messageService = messageService;
@@ -103,6 +105,7 @@ export class AgentSession {
       homePath,
       apiKey: provider.type === "ollama" ? "ollama" : provider.apiKey,
       model: provider.model,
+      webAccessEnabled,
       emitBlocked: eventBus
         ? (payload) => eventBus.emit({ type: "bash:blocked", payload })
         : undefined,
@@ -116,6 +119,7 @@ export class AgentSession {
         folderPath,
         homePath,
         provider,
+        webAccessEnabled,
       }),
     });
 

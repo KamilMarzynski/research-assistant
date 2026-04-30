@@ -41,6 +41,7 @@ export interface WorkerAgentConfig {
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
   agentLabel?: string;
   onProgress?: (label: string, delta: string) => void;
+  webAccessEnabled?: boolean;
 }
 
 export interface WorkerAgent {
@@ -54,6 +55,7 @@ export interface EvaluatorBaseConfig {
   folderPath: string | null;
   homePath: string;
   provider: ModelProvider;
+  webAccessEnabled?: boolean;
 }
 
 export function makeEvaluatorFn(
@@ -65,6 +67,7 @@ export function makeEvaluatorFn(
       systemPromptAddition:
         "You are a research evaluator. Read the file at the given path, assess it against the criteria, and respond with ONLY a JSON object. No preamble. No explanation.",
       skills: ["evaluate-research"],
+      webAccessEnabled: base.webAccessEnabled,
       ...base,
     });
     const prompt = [
@@ -116,6 +119,7 @@ type WorkerAgentBase = Pick<
   | "saveArtifactFn"
   | "proposeToolFn"
   | "onProgress"
+  | "webAccessEnabled"
 >;
 
 type PresetBuilder = (
@@ -159,6 +163,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     saveArtifactFn,
     proposeToolFn,
     onProgress,
+    webAccessEnabled,
   } = config;
 
   // Depth-guard: remove orchestrator-only tools when at leaf depth
@@ -185,6 +190,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       saveArtifactFn,
       proposeToolFn,
       onProgress,
+      webAccessEnabled,
     };
 
     spawnAgentFn = async (
@@ -234,6 +240,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     apiKey: provider.type === "ollama" ? "ollama" : provider.apiKey,
     model: provider.model,
     toolNames: effectiveToolNames,
+    webAccessEnabled,
     // requestEvaluationFn is provided unconditionally, but the toolNames filter in
     // createAgentTools will exclude request_evaluation unless "request_evaluation"
     // is in toolNames. Evaluator agents always use ["read_file", "safe_bash"], so
@@ -244,6 +251,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       folderPath,
       homePath,
       provider,
+      webAccessEnabled,
     }),
     saveArtifactFn,
     proposeToolFn,

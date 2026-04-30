@@ -319,6 +319,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
               isFirstRun,
               systemContext,
               langfuseEnabled: settings.langfuseEnabled,
+              webAccessEnabled: settings.webAccessEnabled,
             }),
           );
         }
