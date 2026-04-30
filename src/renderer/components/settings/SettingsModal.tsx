@@ -22,13 +22,6 @@ import { useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
 import { glassSx } from "../../styles/glass";
 
-const MODELS = [
-  { id: "anthropic/claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
-  { id: "anthropic/claude-opus-4-6", label: "Claude Opus 4.6" },
-  { id: "anthropic/claude-haiku-4-5", label: "Claude Haiku 4.5" },
-  { id: "openai/gpt-4o", label: "GPT-4o" },
-];
-
 interface AuditLogEntry {
   ts: string;
   projectId: string;
@@ -58,8 +51,15 @@ function getStatus(entry: AuditLogEntry): string {
 
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [tab, setTab] = useState(0);
-  const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState("anthropic/claude-sonnet-4-6");
+  const [activeProvider, setActiveProvider] = useState<string>("openrouter");
+  const [defaultCloudProvider, setDefaultCloudProvider] = useState<string>("openrouter");
+  const [credentials, setCredentials] = useState({
+    openrouter: { apiKey: "", defaultModel: "anthropic/claude-sonnet-4-6" },
+    openai: { apiKey: "", defaultModel: "gpt-4o" },
+    anthropic: { apiKey: "", defaultModel: "claude-3-5-sonnet-20241022" },
+    ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
+  });
+  const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "ok" | "error">("idle");
   const [langfuseEnabled, setLangfuseEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
@@ -70,12 +70,38 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     if (!open) return;
     window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => {
       const settings = s as {
-        openrouterApiKey: string | null;
-        model: string;
+        activeProvider: string;
+        defaultCloudProvider: string;
+        providerCredentials: {
+          openrouter: { apiKey: string | null; defaultModel: string };
+          openai: { apiKey: string | null; defaultModel: string };
+          anthropic: { apiKey: string | null; defaultModel: string };
+          ollama: { host: string; defaultModel: string };
+        };
         langfuseEnabled: boolean;
       };
-      setApiKey(settings.openrouterApiKey ?? "");
-      setModel(settings.model);
+      setActiveProvider(settings.activeProvider ?? "openrouter");
+      setDefaultCloudProvider(settings.defaultCloudProvider ?? "openrouter");
+      setCredentials({
+        openrouter: {
+          apiKey: settings.providerCredentials?.openrouter?.apiKey ?? "",
+          defaultModel:
+            settings.providerCredentials?.openrouter?.defaultModel ?? "anthropic/claude-sonnet-4-6",
+        },
+        openai: {
+          apiKey: settings.providerCredentials?.openai?.apiKey ?? "",
+          defaultModel: settings.providerCredentials?.openai?.defaultModel ?? "gpt-4o",
+        },
+        anthropic: {
+          apiKey: settings.providerCredentials?.anthropic?.apiKey ?? "",
+          defaultModel:
+            settings.providerCredentials?.anthropic?.defaultModel ?? "claude-3-5-sonnet-20241022",
+        },
+        ollama: {
+          host: settings.providerCredentials?.ollama?.host ?? "http://localhost:11434",
+          defaultModel: settings.providerCredentials?.ollama?.defaultModel ?? "llama3.2:3b",
+        },
+      });
       setLangfuseEnabled(settings.langfuseEnabled ?? false);
     });
   }, [open]);
@@ -86,7 +112,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   };
 
   useEffect(() => {
-    if (open && tab === 1) {
+    if (open && tab === 2) {
       void window.electronAPI.invoke(IPC.GET_AUDIT_LOG).then((entries) => {
         setAuditEntries(entries as AuditLogEntry[]);
       });
@@ -96,12 +122,37 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const handleSave = async () => {
     setSaving(true);
     await window.electronAPI.invoke(IPC.SAVE_SETTINGS, {
-      openrouterApiKey: apiKey.trim() || null,
-      model,
+      activeProvider,
+      defaultCloudProvider,
+      providerCredentials: {
+        openrouter: {
+          apiKey: credentials.openrouter.apiKey.trim() || null,
+          defaultModel: credentials.openrouter.defaultModel,
+        },
+        openai: {
+          apiKey: credentials.openai.apiKey.trim() || null,
+          defaultModel: credentials.openai.defaultModel,
+        },
+        anthropic: {
+          apiKey: credentials.anthropic.apiKey.trim() || null,
+          defaultModel: credentials.anthropic.defaultModel,
+        },
+        ollama: {
+          host: credentials.ollama.host,
+          defaultModel: credentials.ollama.defaultModel,
+        },
+      },
       langfuseEnabled,
     });
     setSaving(false);
     onClose();
+  };
+
+  const testOllama = async () => {
+    setOllamaTestStatus("idle");
+    const host = credentials.ollama.host;
+    const result = await window.electronAPI.invoke(IPC.CHECK_OLLAMA, host);
+    setOllamaTestStatus((result as { available: boolean }).available ? "ok" : "error");
   };
 
   const handleClearAuditLog = async () => {
@@ -124,31 +175,12 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       <DialogTitle>Settings</DialogTitle>
       <Tabs value={tab} onChange={(_, v) => setTab(v)}>
         <Tab label="General" />
+        <Tab label="Model Provider" />
         <Tab label="Audit Log" />
       </Tabs>
       <DialogContent>
         {tab === 0 && (
           <Box sx={{ pt: 2 }}>
-            <TextField
-              label="OpenRouter API Key"
-              type="password"
-              fullWidth
-              margin="normal"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-or-..."
-              helperText="Get your key at openrouter.ai/keys"
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Model</InputLabel>
-              <Select value={model} onChange={(e) => setModel(e.target.value)} label="Model">
-                {MODELS.map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
             <FormControlLabel
               control={
                 <Switch
@@ -161,7 +193,154 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             />
           </Box>
         )}
+
         {tab === 1 && (
+          <Box sx={{ pt: 2 }}>
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Active Provider</InputLabel>
+              <Select
+                value={activeProvider}
+                onChange={(e) => setActiveProvider(e.target.value)}
+                label="Active Provider"
+              >
+                <MenuItem value="openrouter">OpenRouter</MenuItem>
+                <MenuItem value="ollama">Ollama</MenuItem>
+                <MenuItem value="openai">OpenAI</MenuItem>
+                <MenuItem value="anthropic">Anthropic</MenuItem>
+              </Select>
+            </FormControl>
+
+            {activeProvider === "anthropic" && (
+              <Chip
+                label="Direct Anthropic not supported — use OpenRouter"
+                color="error"
+                sx={{ mt: 1 }}
+              />
+            )}
+
+            {activeProvider === "openrouter" && (
+              <>
+                <TextField
+                  label="OpenRouter API Key"
+                  type="password"
+                  fullWidth
+                  margin="normal"
+                  value={credentials.openrouter.apiKey}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({
+                      ...prev,
+                      openrouter: { ...prev.openrouter, apiKey: e.target.value },
+                    }))
+                  }
+                  placeholder="sk-or-..."
+                  helperText="Get your key at openrouter.ai/keys"
+                />
+                <TextField
+                  label="Model"
+                  fullWidth
+                  margin="normal"
+                  value={credentials.openrouter.defaultModel}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({
+                      ...prev,
+                      openrouter: { ...prev.openrouter, defaultModel: e.target.value },
+                    }))
+                  }
+                  helperText="e.g. anthropic/claude-sonnet-4-6"
+                />
+              </>
+            )}
+
+            {activeProvider === "openai" && (
+              <>
+                <TextField
+                  label="OpenAI API Key"
+                  type="password"
+                  fullWidth
+                  margin="normal"
+                  value={credentials.openai.apiKey}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({
+                      ...prev,
+                      openai: { ...prev.openai, apiKey: e.target.value },
+                    }))
+                  }
+                />
+                <TextField
+                  label="Model"
+                  fullWidth
+                  margin="normal"
+                  value={credentials.openai.defaultModel}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({
+                      ...prev,
+                      openai: { ...prev.openai, defaultModel: e.target.value },
+                    }))
+                  }
+                  helperText="e.g. gpt-4o"
+                />
+              </>
+            )}
+
+            {activeProvider === "ollama" && (
+              <>
+                <TextField
+                  label="Host"
+                  fullWidth
+                  margin="normal"
+                  value={credentials.ollama.host}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({
+                      ...prev,
+                      ollama: { ...prev.ollama, host: e.target.value },
+                    }))
+                  }
+                  helperText="e.g. http://localhost:11434"
+                />
+                <TextField
+                  label="Model"
+                  fullWidth
+                  margin="normal"
+                  value={credentials.ollama.defaultModel}
+                  onChange={(e) =>
+                    setCredentials((prev) => ({
+                      ...prev,
+                      ollama: { ...prev.ollama, defaultModel: e.target.value },
+                    }))
+                  }
+                  helperText="e.g. llama3.2:3b"
+                />
+                <Button variant="outlined" onClick={testOllama} sx={{ mt: 1 }}>
+                  Test connection
+                </Button>
+                {ollamaTestStatus === "ok" && (
+                  <Typography component="span" color="success.main" sx={{ ml: 1 }}>
+                    Connected
+                  </Typography>
+                )}
+                {ollamaTestStatus === "error" && (
+                  <Typography component="span" color="error.main" sx={{ ml: 1 }}>
+                    Not reachable
+                  </Typography>
+                )}
+
+                <FormControl fullWidth margin="normal" sx={{ mt: 2 }}>
+                  <InputLabel>Fallback provider</InputLabel>
+                  <Select
+                    value={defaultCloudProvider}
+                    onChange={(e) => setDefaultCloudProvider(e.target.value)}
+                    label="Fallback provider"
+                  >
+                    <MenuItem value="openrouter">OpenRouter</MenuItem>
+                    <MenuItem value="openai">OpenAI</MenuItem>
+                  </Select>
+                </FormControl>
+              </>
+            )}
+          </Box>
+        )}
+
+        {tab === 2 && (
           <Box sx={{ pt: 2 }}>
             <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
               {(["all", "executed", "blocked"] as const).map((f) => (
@@ -252,7 +431,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           </Box>
         )}
       </DialogContent>
-      {tab === 0 && (
+      {(tab === 0 || tab === 1) && (
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving} variant="contained">
