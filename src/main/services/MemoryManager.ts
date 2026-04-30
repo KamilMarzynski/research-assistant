@@ -1,8 +1,10 @@
 import { join } from "node:path";
-import { complete, getModel } from "@mariozechner/pi-ai";
+import { complete } from "@mariozechner/pi-ai";
 import { LibSQLStore } from "@mastra/libsql";
 import { inject, injectable } from "tsyringe";
 import { USER_DATA_PATH_TOKEN } from "../di/tokens";
+import { createModel } from "../agent/model-factory";
+import { isCloudProvider, resolveProvider } from "../agent/model-provider";
 import type { SettingsService } from "./SettingsService";
 
 /** Model used for Observer compression — haiku for cost. Not user-configurable in Run 7. */
@@ -152,10 +154,15 @@ export class MemoryManager implements IMemoryManager {
       if (totalChars / CHARS_PER_TOKEN < OBSERVER_TOKEN_THRESHOLD) return;
 
       const settings = await this.settingsService.getSettings();
-      const cloudCreds = settings.providerCredentials.openrouter;
-      if (!cloudCreds.apiKey) return;
+      const provider = resolveProvider({
+        settings,
+        forceCloud: true,
+        projectModelOverride: `openrouter:${COMPRESSION_MODEL_ID}`,
+      });
 
-      const model = getModel("openrouter", COMPRESSION_MODEL_ID);
+      if (!isCloudProvider(provider) || !provider.apiKey) return;
+
+      const model = createModel({ provider, langfuseEnabled: false });
 
       const conversationText = result.messages
         .map((m) => {
@@ -177,7 +184,7 @@ export class MemoryManager implements IMemoryManager {
             },
           ],
         },
-        { apiKey: cloudCreds.apiKey },
+        { apiKey: provider.apiKey },
       );
 
       const summaryText =

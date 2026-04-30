@@ -6,7 +6,9 @@ export type ModelProvider =
   | { type: "openai"; apiKey: string; model: string }
   | { type: "anthropic"; apiKey: string; model: string };
 
-export function isCloudProvider(provider: ModelProvider): boolean {
+export function isCloudProvider(
+  provider: ModelProvider,
+): provider is Extract<ModelProvider, { apiKey: string }> {
   return provider.type !== "ollama";
 }
 

@@ -48,8 +48,14 @@ const { MemoryManager } = await import("../MemoryManager");
 function makeSettingsService(apiKey: string | null = "sk-or-test") {
   return {
     getSettings: vi.fn().mockResolvedValue({
-      openrouterApiKey: apiKey,
-      model: "anthropic/claude-sonnet-4-6",
+      activeProvider: "openrouter",
+      defaultCloudProvider: "openrouter",
+      providerCredentials: {
+        openrouter: { apiKey, defaultModel: "anthropic/claude-sonnet-4-6" },
+        openai: { apiKey: null, defaultModel: "gpt-4o" },
+        anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
+        ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
+      },
       langfuseEnabled: false,
     }),
   };
