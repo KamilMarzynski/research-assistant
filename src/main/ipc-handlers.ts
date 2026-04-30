@@ -2,7 +2,7 @@ import { type BrowserWindow, dialog, ipcMain } from "electron";
 import type { DependencyContainer } from "tsyringe";
 import { IPC } from "../shared/ipc-channels";
 import { buildSystemContext } from "./agent/context";
-import { resolveProvider } from "./agent/model-provider";
+import { resolveProviderWithFallback } from "./agent/model-provider";
 import { AgentSession } from "./agent/session";
 import { EventBus } from "./event-bus";
 import { ArtifactService } from "./services/ArtifactService";
@@ -66,11 +66,14 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
 
   ipcMain.handle(IPC.GET_SETTINGS, async () => {
     const settings = await settingsService.getSettings();
-    const cloudCreds = settings.providerCredentials.openrouter;
+    const activeCreds = settings.providerCredentials[settings.activeProvider];
+    const activeApiKey = "apiKey" in activeCreds ? (activeCreds.apiKey ?? null) : null;
+
     return {
-      hasApiKey: cloudCreds.apiKey !== null && cloudCreds.apiKey !== "",
-      openrouterApiKey: cloudCreds.apiKey,
-      model: cloudCreds.defaultModel,
+      hasApiKey: activeApiKey !== null && activeApiKey !== "",
+      activeProvider: settings.activeProvider,
+      defaultCloudProvider: settings.defaultCloudProvider,
+      providerCredentials: settings.providerCredentials,
       langfuseEnabled: settings.langfuseEnabled,
     };
   });
@@ -80,43 +83,38 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
       throw new Error("Invalid payload");
     }
     const p = payload as Record<string, unknown>;
-    if ("model" in p && typeof p.model !== "string") {
-      throw new Error("model must be a string");
+
+    if ("activeProvider" in p && typeof p.activeProvider !== "string") {
+      throw new Error("activeProvider must be a string");
     }
-    if (
-      "openrouterApiKey" in p &&
-      p.openrouterApiKey !== null &&
-      typeof p.openrouterApiKey !== "string"
-    ) {
-      throw new Error("openrouterApiKey must be a string or null");
+    if ("defaultCloudProvider" in p && typeof p.defaultCloudProvider !== "string") {
+      throw new Error("defaultCloudProvider must be a string");
     }
     if ("langfuseEnabled" in p && typeof p.langfuseEnabled !== "boolean") {
       throw new Error("langfuseEnabled must be a boolean");
     }
 
-    const patch: Parameters<typeof settingsService.saveSettings>[0] = {};
-    if ("langfuseEnabled" in p) {
-      patch.langfuseEnabled = p.langfuseEnabled as boolean;
-    }
-    if ("model" in p || "openrouterApiKey" in p) {
-      const current = await settingsService.getSettings();
-      patch.providerCredentials = {
-        openrouter: {
-          ...current.providerCredentials.openrouter,
-          ...(p.model !== undefined && { defaultModel: p.model as string }),
-          ...(p.openrouterApiKey !== undefined && { apiKey: p.openrouterApiKey as string | null }),
-        },
-        openai: current.providerCredentials.openai,
-        anthropic: current.providerCredentials.anthropic,
-        ollama: current.providerCredentials.ollama,
-      };
-    }
+    await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
 
-    await settingsService.saveSettings(patch);
-    // If model or langfuseEnabled changed, clear sessions so next message creates a fresh session with the new config
-    if ("model" in p || "langfuseEnabled" in p) {
+    // Clear sessions if model-related or provider settings change
+    if (
+      "activeProvider" in p ||
+      "defaultCloudProvider" in p ||
+      "providerCredentials" in p ||
+      "langfuseEnabled" in p
+    ) {
       sessions.clear();
     }
+  });
+
+  ipcMain.handle(IPC.CHECK_OLLAMA, async (_event, payload: unknown) => {
+    if (typeof payload !== "string") {
+      throw new Error("Invalid payload: expected string (host URL)");
+    }
+    const host = payload;
+    const { checkOllamaAvailable } = await import("./agent/model-provider");
+    const available = await checkOllamaAvailable(host);
+    return { available, host };
   });
 
   ipcMain.handle(IPC.OPEN_FOLDER_DIALOG, async () => {
@@ -171,6 +169,10 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
 
   eventBus.on("bash:blocked", (payload) => {
     win.webContents.send(IPC.BASH_BLOCKED, payload);
+  });
+
+  eventBus.on("model:fallback", (payload) => {
+    win.webContents.send(IPC.MODEL_FALLBACK, payload);
   });
 
   ipcMain.handle(IPC.RESOLVE_BLOCKED_COMMAND, async (_event, payload: unknown) => {
@@ -275,7 +277,13 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
         const { projectId, content } = payload as { projectId: string; content: string };
 
         const settings = await settingsService.getSettings();
-        const provider = resolveProvider({ settings });
+        const provider = await resolveProviderWithFallback(
+          { settings },
+          eventBus as unknown as {
+            emit: (event: { type: string; payload: Record<string, unknown> }) => void;
+          },
+        );
+
         if (provider.type !== "ollama" && !provider.apiKey) {
           win.webContents.send(
             IPC.MESSAGE_CHUNK,

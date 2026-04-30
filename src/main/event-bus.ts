@@ -28,6 +28,10 @@ type AppEvent =
         intent: string;
         timestamp: string;
       };
+    }
+  | {
+      type: "model:fallback";
+      payload: { reason: string; requestedModel: string; fallbackProvider: string };
     };
 
 @injectable()

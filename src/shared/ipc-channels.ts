@@ -32,6 +32,10 @@ export const IPC = {
   // Audit log
   GET_AUDIT_LOG: "get-audit-log",
   CLEAR_AUDIT_LOG: "clear-audit-log",
+
+  // Model provider
+  CHECK_OLLAMA: "check-ollama",
+  MODEL_FALLBACK: "model-fallback",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
