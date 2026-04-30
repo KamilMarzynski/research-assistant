@@ -1,3 +1,5 @@
+import type { AppSettings } from "../services/SettingsService";
+
 export type ModelProvider =
   | { type: "openrouter"; apiKey: string; model: string }
   | { type: "ollama"; host: string; model: string }
@@ -54,10 +56,6 @@ function parseModelOverride(raw: string, settings: AppSettings): ModelProvider {
 
 function buildDefaultProvider(settings: AppSettings): ModelProvider {
   const creds = settings.providerCredentials[settings.defaultCloudProvider];
-  const isOllama = settings.defaultCloudProvider === "ollama"; // should not happen but safe
-  if (isOllama) {
-    return { type: "ollama", host: "http://localhost:11434", model: "llama3.2:3b" };
-  }
   const cloudCreds = getCloudCreds(creds);
   return {
     type: settings.defaultCloudProvider,

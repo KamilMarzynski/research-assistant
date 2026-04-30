@@ -65,10 +65,11 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
 
   ipcMain.handle(IPC.GET_SETTINGS, async () => {
     const settings = await settingsService.getSettings();
+    const cloudCreds = settings.providerCredentials.openrouter;
     return {
-      hasApiKey: settings.openrouterApiKey !== null && settings.openrouterApiKey !== "",
-      openrouterApiKey: settings.openrouterApiKey,
-      model: settings.model,
+      hasApiKey: cloudCreds.apiKey !== null && cloudCreds.apiKey !== "",
+      openrouterApiKey: cloudCreds.apiKey,
+      model: cloudCreds.defaultModel,
       langfuseEnabled: settings.langfuseEnabled,
     };
   });
@@ -91,7 +92,26 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     if ("langfuseEnabled" in p && typeof p.langfuseEnabled !== "boolean") {
       throw new Error("langfuseEnabled must be a boolean");
     }
-    await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
+
+    const patch: Parameters<typeof settingsService.saveSettings>[0] = {};
+    if ("langfuseEnabled" in p) {
+      patch.langfuseEnabled = p.langfuseEnabled as boolean;
+    }
+    if ("model" in p || "openrouterApiKey" in p) {
+      const current = await settingsService.getSettings();
+      patch.providerCredentials = {
+        openrouter: {
+          ...current.providerCredentials.openrouter,
+          ...(p.model !== undefined && { defaultModel: p.model as string }),
+          ...(p.openrouterApiKey !== undefined && { apiKey: p.openrouterApiKey as string | null }),
+        },
+        openai: current.providerCredentials.openai,
+        anthropic: current.providerCredentials.anthropic,
+        ollama: current.providerCredentials.ollama,
+      };
+    }
+
+    await settingsService.saveSettings(patch);
     // If model or langfuseEnabled changed, clear sessions so next message creates a fresh session with the new config
     if ("model" in p || "langfuseEnabled" in p) {
       sessions.clear();
@@ -254,7 +274,8 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
         const { projectId, content } = payload as { projectId: string; content: string };
 
         const settings = await settingsService.getSettings();
-        if (!settings.openrouterApiKey) {
+        const cloudCreds = settings.providerCredentials.openrouter;
+        if (!cloudCreds.apiKey) {
           win.webContents.send(
             IPC.MESSAGE_CHUNK,
             "⚠️ No API key configured. Open Settings to add your OpenRouter API key.",
@@ -285,8 +306,8 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
               projectId,
               projectName: project.name,
               folderPath: project.folderPath,
-              apiKey: settings.openrouterApiKey,
-              model: settings.model,
+              apiKey: cloudCreds.apiKey,
+              model: cloudCreds.defaultModel,
               isFirstRun,
               systemContext,
               langfuseEnabled: settings.langfuseEnabled,

@@ -4,6 +4,7 @@ export const projects = sqliteTable("projects", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   folderPath: text("folder_path"),
+  modelOverride: text("model_override"),
   maxRecentMessages: integer("max_recent_messages").notNull().default(20),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),

@@ -103,7 +103,8 @@ export class ResearchService {
   ): Promise<{ taskId: string }> {
     const taskId = crypto.randomUUID();
     const settings = await this.settingsService.getSettings();
-    if (!settings.openrouterApiKey) {
+    const cloudCreds = settings.providerCredentials.openrouter;
+    if (!cloudCreds.apiKey) {
       throw new Error("No API key configured");
     }
 
@@ -131,8 +132,8 @@ export class ResearchService {
 
     const workerConfig: WorkerAgentConfig = {
       ...buildPartialConfig(workspacePath),
-      apiKey: settings.openrouterApiKey,
-      model: settings.model,
+      apiKey: cloudCreds.apiKey,
+      model: cloudCreds.defaultModel,
       onProgress,
     };
 

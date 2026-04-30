@@ -46,4 +46,11 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   } catch {
     // column already exists — safe to ignore
   }
+
+  // Run 12: add model_override
+  try {
+    await db.run(sql`ALTER TABLE projects ADD COLUMN model_override TEXT`);
+  } catch {
+    // column already exists — safe to ignore
+  }
 }

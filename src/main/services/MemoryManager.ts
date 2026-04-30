@@ -152,7 +152,8 @@ export class MemoryManager implements IMemoryManager {
       if (totalChars / CHARS_PER_TOKEN < OBSERVER_TOKEN_THRESHOLD) return;
 
       const settings = await this.settingsService.getSettings();
-      if (!settings.openrouterApiKey) return;
+      const cloudCreds = settings.providerCredentials.openrouter;
+      if (!cloudCreds.apiKey) return;
 
       const model = getModel("openrouter", COMPRESSION_MODEL_ID);
 
@@ -176,7 +177,7 @@ export class MemoryManager implements IMemoryManager {
             },
           ],
         },
-        { apiKey: settings.openrouterApiKey },
+        { apiKey: cloudCreds.apiKey },
       );
 
       const summaryText =
