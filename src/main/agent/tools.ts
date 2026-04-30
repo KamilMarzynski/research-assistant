@@ -6,6 +6,8 @@ import type { DockerSandboxInput } from "./extensions/docker-sandbox";
 import { runInDocker } from "./extensions/docker-sandbox";
 import { runSafeBash } from "./extensions/safe-bash";
 import { PathJail } from "./path-jail";
+import { createFetchUrlTool } from "./tools/web/fetch-url";
+import { createWebSearchTool } from "./tools/web/web-search";
 
 /** Helper to build a fully-typed AgentTool without losing parameter generics. */
 function makeTool<TParams extends TSchema, TDetails>(
@@ -19,6 +21,8 @@ export type AgentToolName =
   | "write_file"
   | "list_dir"
   | "safe_bash"
+  | "fetch_url"
+  | "web_search"
   | "request_evaluation"
   | "start_research"
   | "run_in_docker"
@@ -51,6 +55,7 @@ export interface AgentToolsOptions {
   ) => Promise<SpawnResult[]>;
   saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  webAccessEnabled?: boolean;
   emitBlocked?: (payload: {
     commandId: string;
     command: string;
@@ -162,6 +167,11 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
       },
     }),
   ];
+
+  if (opts.webAccessEnabled !== false) {
+    tools.push(createFetchUrlTool());
+    tools.push(createWebSearchTool());
+  }
 
   tools.push(
     makeTool({

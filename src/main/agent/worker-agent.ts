@@ -127,7 +127,7 @@ type PresetBuilder = (
 const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
   researcher: (base, outputPath) => ({
     ...base,
-    toolNames: ["read_file", "write_file", "list_dir", "safe_bash"],
+    toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "fetch_url", "web_search"],
     systemPromptAddition: `You are a background researcher. Investigate thoroughly using the available tools, then write your complete findings to: ${outputPath}. When done, respond with a final summary.`,
     remainingDepth: 0,
   }),
