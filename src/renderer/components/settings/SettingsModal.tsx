@@ -61,6 +61,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   });
   const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "ok" | "error">("idle");
   const [langfuseEnabled, setLangfuseEnabled] = useState(false);
+  const [webAccessEnabled, setWebAccessEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
   const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
   const [auditFilter, setAuditFilter] = useState<"all" | "executed" | "blocked">("all");
@@ -79,6 +80,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           ollama: { host: string; defaultModel: string };
         };
         langfuseEnabled: boolean;
+        webAccessEnabled: boolean;
       };
       setActiveProvider(settings.activeProvider ?? "openrouter");
       setDefaultCloudProvider(settings.defaultCloudProvider ?? "openrouter");
@@ -103,6 +105,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         },
       });
       setLangfuseEnabled(settings.langfuseEnabled ?? false);
+      setWebAccessEnabled(settings.webAccessEnabled ?? true);
     });
   }, [open]);
 
@@ -143,6 +146,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         },
       },
       langfuseEnabled,
+      webAccessEnabled,
     });
     setSaving(false);
     onClose();
@@ -189,6 +193,16 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                 />
               }
               label="LangFuse tracing"
+              sx={{ mt: 1 }}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={webAccessEnabled}
+                  onChange={(e) => setWebAccessEnabled(e.target.checked)}
+                />
+              }
+              label="Enable web access for agents (fetch_url, web_search)"
               sx={{ mt: 1 }}
             />
           </Box>
