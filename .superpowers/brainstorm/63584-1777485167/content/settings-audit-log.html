@@ -1,0 +1,102 @@
+<h2>SettingsModal Redesign + Audit Log Tab</h2>
+<p class="subtitle">Current "one-page" settings → tabbed layout; Audit Log as new tab</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Current (Tab-less)</div>
+    <div class="mockup-body">
+      <div class="mock-nav"><span style="font-weight:bold"u003eSettings</span>  |  Close</div>
+      <div style="padding:16px">
+        <div style="margin-bottom:16px">
+          <span class="label">API KEY</span><br/>
+          <input class="mock-input" type="password" placeholder="sk-or-v1-..."/>
+        </div>
+        <div style="margin-bottom:16px">
+          <span class="label">MODEL</span>><br/>
+          <select class="mock-input"><option>Claude Sonnet 4.6</option></select>
+        </div>
+        <div style="margin-bottom:16px">
+          <span class="label">LANGFUSE TRACING</span><br/>
+          <input type="checkbox"/> Enable
+        </div>
+        <div class="placeholder" style="height:20px;background:>#333"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Proposed (Tabbed)</div>
+    <div class="mockup-body">
+      <div class="mock-nav">
+        <span style="font-weight:bold;border-bottom:2px solid #2196f3;padding-bottom:2px">General</span>  |
+        <span>Audit Log</span>
+      </div>
+      <div style="padding:16px">
+        <div style="margin-bottom:16px">
+          <span class="label">API KEY</span><br/>
+          <input class="mock-input" type="password" placeholder="sk-or-v1-..."/>
+        </div>
+        <div style="margin-bottom:16px">
+          <span class="label">MODEL</span><br/>
+          <select class="mock-input"><option>Claude Sonnet 4.6</option></select>
+        </div>
+        <div style="margin-bottom:16px">
+          <span class="label">LANGFUSE TRACING</span><br/>
+          <input type="checkbox"/> Enable
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Audit Log Tab Design</h3>
+  <div class="mockup">
+    <div class="mockup-header">Audit Log Tab</div>
+    <div class="mockup-body">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="mock-button" style="background:#2196f3;color:#fff;border:none">All</button>
+        <button class="mock-button" style="border:1px solid #555">Executed</button>
+        <button class="mock-button" style="border:1px solid #555">Blocked</button>
+        <button class="mock-button" style="border:1px solid #555">Docker</button>
+        <div style="flex:1"></div>
+        <button class="mock-button" style="border:1px solid #f44336;color:#f44336">Clear Log</button>
+      </div>
+
+      <div style="font-family:monospace;font-size:11px;background:#1a1a1a;border-radius:4px;padding:12px;max-height:300px;overflow-y:auto">
+        <div style="color:#66bb6a;display:flex;gap:12px;border-bottom:1px solid #333;padding:4px 0">
+          <span style="color:#888;width:120px">2026-04-29 10:23:01</span>
+          <span style="color:#2196f3;width:60px">[exec]</span>
+          <span>ls -la</span>
+          <span style="color:#888;flex:1;text-align:right">p1 · exit:0</span>
+        </div>
+        <div style="color:#ffa500;display:flex;gap:12px;border-bottom:1px solid #333;padding:4px 0">
+          <span style="color:#888;width:120px">2026-04-29 10:25:43</span>
+          <span style="color:#f44336;width:60px">[block]</span>
+          <span>curl https://example.com</span>
+          <span style="color:#888;flex:1;text-align:right">p1 · Reason: network outbound blocked</span>
+        </div>
+        <div style="color:#4fc3f7;display:flex;gap:12px;border-bottom:1px solid #333;padding:4px 0">
+          <span style="color:#888;width:120px">2026-04-29 10:30:12</span>
+          <span style="color:#4fc3f7;width:60px">[docker]</span>
+          <span>node --version</span>
+          <span style="color:#888;flex:1;text-align:right">p1 · exit:0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>IPC Channel: Audit Log</h3>
+  <div style="font-family:monospace;font-size:11px;background:#2d2d2d;padding:12px;border-radius:4px;color:#ccc">
+    <strong style="color:#4fc3f7">GET_AUDIT_LOG</strong> (invoke) — main><br/>
+    renderer → main: { }  → reads <strong>~/.research-assistant/audit.log</strong><br/>
+    returns: Array<{ ts, projectId, intent, command, exitCode, blocked?, blockReason? }><br/>
+    <br/>
+    <strong style="color:#4fc3f7">CLEAR_AUDIT_LOG</strong> (invoke) — main<br/>
+    renderer → main: { }  → truncates audit.log to 0 bytes<br/>
+    <br/>
+    <span style="color:#888">Note: safe_bash.ts already writes to audit.log. We just need to read it.</span>
+  </div>
+</div>

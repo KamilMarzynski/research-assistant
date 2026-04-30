@@ -1,0 +1,101 @@
+<h2>Run 11: Data Flow + Blocklist Design</h2>
+<p class="subtitle">Promise-based pause at tool level; EventBus + IPC bridge; session-scoped allowlist</p>
+
+<div class="section">
+  <h3>Data Flow: Blocked Command → Approval → Resume</h3>
+
+  <div class="mockup">
+    <div class="mockup-header">End-to-End Flow</div>
+    <div class="mockup-body">
+      <div style="display:flex;flex-direction:column;gap:8px;font-family:monospace;font-size:11px">
+
+        <!-- Agent -->
+        <div style="background:#37474f;border-radius:6px;padding:10px;color:#fff">
+          <div style="color:#4fc3f7;font-weight:bold;margin-bottom:4px">1. Agent calls safe_bash("curl https://...")</div>
+          <div style="color:#ffa500">   checkBlocklist(command) → matches /\\bcurl\\b/</div>
+        </div>
+
+        <div style="text-align:center;color:#888">↓</div>
+
+        <!-- safe_bash.ts -->
+        <div style="background:#2d2d2d;border-radius:6px;padding:10px;color:#fff">
+          <div style="color:#ffa500;font-weight:bold;margin-bottom:4px">2. runSafeBash: instead of throwing, create promise + return pending sentinel</div>
+          <div style="color:#ccc">   - store { command, reason, projectId } in in-memory blocked-queue</div>
+          <div style="color:#ccc">   - EventBus.emit("bash:blocked", payload)</div>
+          <div style="color:#ccc">   - return { pending: true, commandId } (sentinel)</div>
+        </div>
+
+        <div style="text-align:center;color:#888">↓</div>
+
+        <!-- EventBus -->
+        <div style="background:#263238;border-radius:6px;padding:10px;color:#fff">
+          <div style="color:#4fc3f7;font-weight:bold;margin-bottom:4px">3. EventBus → ipc-handlers.ts</div>
+          <div style="color:#ccc">   eventBus.on("bash:blocked") → win.webContents.send(IPC.BLOCKED_COMMAND, payload)</div>
+        </div>
+
+        <div style="text-align:center;color:#888">↓</div>
+
+        <!-- Renderer -->
+        <div style="background:#1a237e;border-radius:6px;padding:10px;color:#fff">
+          <div style="color:#a5d6a7;font-weight:bold;margin-bottom:4px">4. Renderer: PendingCommandBanner + Modal</div>
+          <div style="color:#ccc">   - Banner appears (like PendingToolBanner)</div>
+          <div style="color:#ccc">   - User clicks Review → Modal shows: command + reason + buttons</div>
+          <div style="color:#ccc">   - User clicks Approve/Deny → invoke(IPC.RESOLVE_BLOCKED_COMMAND, { commandId, action })</div>
+        </div>
+
+        <div style="text-align:center;color:#888">↓</div>
+
+        <!-- Back to main -->
+        <div style="background:#2d2d2d;border-radius:6px;padding:10px;color:#fff">
+          <div style="color:#66bb6a;font-weight:bold;margin-bottom:4px">5. IPC handler resolves blocked promise</div>
+          <div style="color:#ccc">   - Lookup blocked promise by commandId</div>
+          <div style="color:#ccc">   - If "approve_once": execute via runSafeBashInternal(command) → resolve promise with result</div>
+          <div style="color:#ccc">   - If "approve_session": add command hash to session allowlist → execute → resolve</div>
+          <div style="color:#ccc">   - If "deny": resolve promise with reject(errorWithReason)</div>
+        </div>
+
+        <div style="text-align:center;color:#888">↓</div>
+
+        <!-- Agent -->
+        <div style="background:#37474f;border-radius:6px;padding:10px;color:#fff">
+          <div style="color:#4fc3f7;font-weight:bold;margin-bottom:4px">6. Agent</div>
+          <div style="color:#ccc">   - Await resolves → gets stdout/stderr or rejection</div>
+          <div style="color:#ccc">   - Continues normally</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Blocklist Refactor: New Shape</h3>
+  <p>Each blocklist entry gains a human-readable reason + category for the UI and for the agent</p>
+
+  <div style="background:#2d2d2d;border-radius:6px;padding:12px;font-family:monospace;font-size:11px;color:#ccc;white-space:pre">
+interface BlocklistEntry {
+  pattern: RegExp;
+  key: string;            // e.g. "recursive_delete"
+  reason: string;         // e.g. "Would recursively delete files"
+  category: 'destructive' | 'privilege_escalation' | 'exfiltration' | 'persistence';
+}
+
+Explanations are returned to:
+- <strong>User</strong> in PendingCommandModal
+- <strong>Agent</strong> in the rejection error, so it can self-correct
+  </div>
+</div>
+
+<div class="section">
+  <h3>Session Allowlist</h3>
+  <p>Per-session in-memory Set of command hashes. Cleared on app restart. "Approve session" means future exact-match commands pass through without blocking.</p>
+</div>
+
+<div class="section">
+  <h3>IPC Channels Needed</h3>
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:12px">
+    <div><strong>BLOCKED_COMMAND</strong></div><div>main → renderer: { command, reason, commandId, timestamp, agentId }</div>
+    <div><strong>RESOLVE_BLOCKED_COMMAND</strong></div><div>renderer → main: { commandId, action: 'approve_once' | 'approve_session' | 'deny' }</div>
+    <div><strong>GET_AUDIT_LOG</strong></div><div>renderer → main: { limit? } → returns Array<AuditLogEntry></div>
+  </div>
+</div>

@@ -1,0 +1,67 @@
+<h2>Run 11: safe_bash Approval Gate — Data Flow</h2>
+<p class="subtitle">Mirroring the proven propose_tool → PendingToolBanner → PendingToolModal pattern</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Current: Silent Block</div>
+    <div class="mockup-body">
+      <div style="background:#2d2d2d;border-radius:6px;padding:12px;font-family:monospace;font-size:11px;line-height:1.6">
+        <span style="color:#888">Agent calls safe_bash("curl ...")</span><br>
+        <span style="color:#ff6b6b">↓ throws Error</span><br>
+        <span style="color:#888">Agent receives: "Command blocked</span><br>
+        <span style="color:#888">by safe_bash policy (matched:</span><br>
+        <span style="color:#888">/\\bcurl\\b/)"</span><br>
+        <span style="color:#888">— User sees NOTHING</span><br>
+        <span style="color:#888">— Agent may retry endlessly</span><br>
+        <span style="color:#888">— No chance to override</span>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Proposed: Async Approval Gate</div>
+    <div class="mockup-body">
+      <div style="background:#2d2d2d;border-radius:6px;padding:12px;font-family:monospace;font-size:11px;line-height:1.6">
+        <span style="color:#888">Agent calls safe_bash("curl ...")</span><br>
+        <span style="color:#ffa500">↓ matches blocklist</span><br>
+        <span style="color:#4fc3f7">→ EventBus.emit("bash:blocked")</span><br>
+        <span style="color:#4fc3f7">→ IPC TO RENDERER</span><br>
+        <span style="color:#fff">→ PendingCommandBanner appears</span><br>
+        <span style="color:#fff">→ agent loop PAUSED (promise)</span><br>
+        <span style="color:#888">  (user can keep chatting)</span><br>
+        <span style="color:#66bb6a">→ User clicks "Approve"</span><br>
+        <span style="color:#4fc3f7">→ IPC back to main</span><br>
+        <span style="color:#66bb6a">→ command executes</span><br>
+        <span style="color:#66bb6a">→ agent gets stdout</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Key Design Questions</h3>
+
+  <div class="options">
+    <div class="option" data-choice="q-promise" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Promise-based pause at tool handler level</h3>
+        <p>The safe_bash extension returns a Promise that resolves when user approves/rejects. The Pi agent loop naturally awaits tool results — no special sentinel needed. Cleanest fit with existing pattern.</p>
+        <div class="pros-cons">
+          <div class="pros"><h4>Pros</h4><ul><li>Natural fit — Pi SDK already awaits tool results</li><li>No special error types or sentinels</li><li>Agent continues seamlessly after resolution</li></ul></div>
+          <div class="cons"><h4>Cons</h4><ul><li>Blocked commands accumulate open promises</li><li>Need timeout fallback (e.g. 5 min auto-reject)</li></ul></div>
+        </div>
+      </div>
+    </div>
+    <div class="option" data-choice="q-event" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Event-driven with tool re-invocation</h3>
+        <p>Blocked command fails immediately with a special error. User approval triggers a separate "retry with allowlist" flow. Agent gets told to call safe_bash again.</p>
+        <div class="pros-cons">
+          <div class="pros"><h4>Pros</h4><ul><li>No long-lived promises</li><li>Agent explicitly knows it was blocked and re-requests</li></ul></div>
+          <div class="cons"><h4>Cons</h4><ul><li>Agent may not understand to retry</li><li>Duplicates flow — error + retry vs single await</li><li>Breaks existing tool return pattern</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
