@@ -17,6 +17,7 @@ const baseSettings: AppSettings = {
     ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
   },
   langfuseEnabled: false,
+  webAccessEnabled: true,
 };
 
 describe("isCloudProvider", () => {

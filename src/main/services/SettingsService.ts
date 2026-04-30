@@ -19,6 +19,7 @@ export interface AppSettings {
     ollama: { host: string; defaultModel: string };
   };
   langfuseEnabled: boolean;
+  webAccessEnabled: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
   },
   langfuseEnabled: false,
+  webAccessEnabled: true,
 };
 
 interface StoredProviderCredentials {
@@ -54,6 +56,7 @@ interface StoredSettings {
     ollama?: StoredOllamaCredentials;
   };
   langfuseEnabled?: boolean;
+  webAccessEnabled?: boolean;
   // Legacy fields (migrated then removed)
   encryptedApiKey?: string;
   model?: string;
@@ -126,6 +129,7 @@ export class SettingsService {
         },
       },
       langfuseEnabled: stored.langfuseEnabled ?? false,
+      webAccessEnabled: stored.langfuseEnabled ?? true,
     };
 
     delete migrated.encryptedApiKey;
@@ -174,6 +178,7 @@ export class SettingsService {
         },
       },
       langfuseEnabled: migrated.langfuseEnabled ?? false,
+      webAccessEnabled: migrated.webAccessEnabled ?? true,
     };
   }
 
@@ -219,6 +224,7 @@ export class SettingsService {
         },
       },
       langfuseEnabled: next.langfuseEnabled,
+      webAccessEnabled: next.webAccessEnabled,
     };
 
     await this.writeStored(stored);

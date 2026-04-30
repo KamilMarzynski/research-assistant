@@ -57,6 +57,7 @@ function makeSettingsService(apiKey: string | null = "sk-or-test") {
         ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
       },
       langfuseEnabled: false,
+      webAccessEnabled: true,
     }),
   };
 }

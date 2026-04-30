@@ -43,11 +43,13 @@ describe("SettingsService", () => {
       expect(settings.providerCredentials.anthropic.apiKey).toBeNull();
       expect(settings.providerCredentials.ollama.host).toBe("http://localhost:11434");
       expect(settings.langfuseEnabled).toBe(false);
+      expect(settings.webAccessEnabled).toBe(true);
     });
 
     it("returns langfuseEnabled false when no settings file exists", async () => {
       const settings = await service.getSettings();
       expect(settings.langfuseEnabled).toBe(false);
+      expect(settings.webAccessEnabled).toBe(true);
     });
   });
 
@@ -107,6 +109,7 @@ describe("SettingsService", () => {
       );
       const settings = await service.getSettings();
       expect(settings.langfuseEnabled).toBe(false);
+      expect(settings.webAccessEnabled).toBe(true);
     });
 
     it("allows clearing API key by passing null", async () => {
@@ -147,7 +150,7 @@ describe("SettingsService", () => {
   describe("safeStorage unavailable fallback", () => {
     it("stores and retrieves API key as plain base64 when encryption is unavailable", async () => {
       const { safeStorage } = await import("electron");
-      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+      (safeStorage.isEncryptionAvailable as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
       await service.saveSettings({
         providerCredentials: {
@@ -162,12 +165,12 @@ describe("SettingsService", () => {
       expect(settings.providerCredentials.openrouter.apiKey).toBe("sk-plain-key");
 
       // Restore default
-      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      (safeStorage.isEncryptionAvailable as ReturnType<typeof vi.fn>).mockReturnValue(true);
     });
 
     it("emits console.warn when saving without encryption", async () => {
       const { safeStorage } = await import("electron");
-      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
+      (safeStorage.isEncryptionAvailable as ReturnType<typeof vi.fn>).mockReturnValue(false);
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       await service.saveSettings({
@@ -182,7 +185,7 @@ describe("SettingsService", () => {
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("safeStorage unavailable"));
 
       warnSpy.mockRestore();
-      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
+      (safeStorage.isEncryptionAvailable as ReturnType<typeof vi.fn>).mockReturnValue(true);
     });
   });
 
@@ -207,6 +210,7 @@ describe("SettingsService", () => {
       );
       expect(settings.providerCredentials.ollama.host).toBe("http://localhost:11434");
       expect(settings.langfuseEnabled).toBe(true);
+      expect(settings.webAccessEnabled).toBe(true);
 
       // Verify stored file was rewritten to v1
       const raw = await readFile(join(tmpDir, "settings.json"), "utf-8");
@@ -214,6 +218,7 @@ describe("SettingsService", () => {
       expect(stored.version).toBe(1);
       expect(stored.encryptedApiKey).toBeUndefined();
       expect(stored.model).toBeUndefined();
+      expect(stored.webAccessEnabled).toBe(true);
     });
   });
 });
