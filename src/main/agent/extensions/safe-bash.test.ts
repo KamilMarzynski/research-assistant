@@ -121,6 +121,8 @@ describe("runSafeBash", () => {
       workspacePath: workDir,
       auditLogPath,
     });
+    // appendFile is fire-and-forget; brief wait for disk flush
+    await new Promise((r) => setTimeout(r, 100));
     const log = await readFile(auditLogPath, "utf-8");
     expect(log).toContain("testing audit");
     expect(log).toContain("echo audit-test");
