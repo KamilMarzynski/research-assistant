@@ -2,9 +2,9 @@ import { join } from "node:path";
 import { complete } from "@mariozechner/pi-ai";
 import { LibSQLStore } from "@mastra/libsql";
 import { inject, injectable } from "tsyringe";
-import { USER_DATA_PATH_TOKEN } from "../di/tokens";
 import { createModel } from "../agent/model-factory";
 import { isCloudProvider, resolveProvider } from "../agent/model-provider";
+import { USER_DATA_PATH_TOKEN } from "../di/tokens";
 import type { SettingsService } from "./SettingsService";
 
 /** Model used for Observer compression — haiku for cost. Not user-configurable in Run 7. */
