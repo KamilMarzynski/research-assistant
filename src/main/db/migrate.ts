@@ -53,4 +53,19 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   } catch {
     // column already exists — safe to ignore
   }
+
+  // Run 14: tasks table
+  await db.run(sql`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      project_name TEXT NOT NULL,
+      query TEXT NOT NULL,
+      folder_path TEXT,
+      status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('pending','in_progress','complete','failed')),
+      error TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
 }

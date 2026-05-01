@@ -173,7 +173,7 @@ export class ResearchService {
             title: `Research: ${config.query.slice(0, 60)}`,
             filePath: outputPath,
           });
-          await this.homeService.deleteTask(taskId);
+          await this.homeService.updateTaskStatus(taskId, "complete");
           this.eventBus.emit({
             type: "research:complete",
             payload: {
@@ -185,7 +185,7 @@ export class ResearchService {
             },
           });
         } catch (err) {
-          await this.homeService.deleteTask(taskId);
+          await this.homeService.updateTaskStatus(taskId, "failed", String(err));
           this.eventBus.emit({
             type: "research:failed",
             payload: { taskId, error: String(err) },
@@ -196,7 +196,7 @@ export class ResearchService {
 
     agent.prompt(config.query).catch(async (err) => {
       console.error("[ResearchService] worker error:", err);
-      await this.homeService.deleteTask(taskId);
+      await this.homeService.updateTaskStatus(taskId, "failed", String(err));
       this.eventBus.emit({
         type: "research:failed",
         payload: { taskId, error: String(err) },

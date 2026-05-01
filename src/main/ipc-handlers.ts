@@ -276,8 +276,13 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     await homeService.rejectPendingTool((payload as { name: string }).name);
   });
 
-  // Auto-resume in-progress research tasks from the previous session
+  // Migrate JSON tasks to DB, then auto-resume in-progress research
   void (async () => {
+    try {
+      await homeService.migrateTasksFromJson();
+    } catch (err) {
+      console.error("[startup] Failed to migrate JSON tasks:", err);
+    }
     try {
       const tasks = await homeService.getInProgressTasks();
       for (const task of tasks) {

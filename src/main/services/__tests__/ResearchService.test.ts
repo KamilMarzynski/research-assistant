@@ -73,6 +73,7 @@ function makeHomeService() {
     ensureWorkspaceForProject: vi.fn().mockResolvedValue("/tmp/home/workspace/p1"),
     saveTask: vi.fn().mockResolvedValue(undefined),
     deleteTask: vi.fn().mockResolvedValue(undefined),
+    updateTaskStatus: vi.fn().mockResolvedValue(undefined),
     savePendingTool: vi.fn().mockResolvedValue(undefined),
   };
 }
@@ -124,7 +125,7 @@ describe("ResearchService", () => {
     );
   });
 
-  it("calls homeService.deleteTask on research:complete", async () => {
+  it("calls updateTaskStatus with complete on research:complete", async () => {
     const home = makeHomeService();
     const artifacts = makeArtifactService();
     const bus = makeEventBus();
@@ -138,10 +139,10 @@ describe("ResearchService", () => {
 
     await capturedSubscriber?.({ type: "agent_end" });
 
-    expect(home.deleteTask).toHaveBeenCalledWith(taskId);
+    expect(home.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
   });
 
-  it("calls homeService.deleteTask on research:failed", async () => {
+  it("calls updateTaskStatus with failed on research error", async () => {
     const home = makeHomeService();
     const bus = makeEventBus();
     const { createWorkerAgent } = await import("../../agent/worker-agent");
@@ -167,7 +168,7 @@ describe("ResearchService", () => {
     // Let the promise rejection propagate
     await new Promise((r) => setTimeout(r, 10));
 
-    expect(home.deleteTask).toHaveBeenCalledWith(taskId);
+    expect(home.updateTaskStatus).toHaveBeenCalledWith(taskId, "failed", expect.any(String));
   });
 
   it("emits research:complete and saves artifact on agent_end", async () => {
@@ -290,7 +291,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
   });
 
-  it("calls homeService.deleteTask on agent_end", async () => {
+  it("calls updateTaskStatus with complete on agent_end", async () => {
     const home = makeHomeService();
     const svc = new ResearchService(
       makeEventBus() as never,
@@ -305,7 +306,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       null,
     );
     await capturedSubscriber?.({ type: "agent_end" });
-    expect(home.deleteTask).toHaveBeenCalledWith(taskId);
+    expect(home.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
   });
 });
 

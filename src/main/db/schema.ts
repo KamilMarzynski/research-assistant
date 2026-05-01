@@ -31,3 +31,21 @@ export const artifacts = sqliteTable("artifacts", {
   filePath: text("file_path").notNull(),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+export const tasks = sqliteTable("tasks", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  projectName: text("project_name").notNull(),
+  query: text("query").notNull(),
+  folderPath: text("folder_path"),
+  status: text("status", {
+    enum: ["pending", "in_progress", "complete", "failed"],
+  })
+    .notNull()
+    .default("in_progress"),
+  error: text("error"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});

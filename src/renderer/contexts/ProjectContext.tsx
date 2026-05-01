@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext, useState } from "react";
 
-interface ProjectContextValue {
+export interface ProjectContextValue {
   activeProjectId: string | null;
   setActiveProjectId: (id: string | null) => void;
 }

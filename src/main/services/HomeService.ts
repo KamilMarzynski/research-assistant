@@ -1,12 +1,16 @@
 import { access, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { injectable } from "tsyringe";
+import { eq } from "drizzle-orm";
+import { inject, injectable } from "tsyringe";
 import {
   DISCOVER_PROJECT_SKILL,
   EVALUATE_RESEARCH_SKILL,
   START_RESEARCH_SKILL,
 } from "../agent/builtin-skills";
+import type { DrizzleDB } from "../db/client";
+import { tasks } from "../db/schema";
+import { DB_TOKEN } from "../di/tokens";
 
 export interface ResearchTask {
   taskId: string;
@@ -19,6 +23,7 @@ export interface ResearchTask {
 
 @injectable()
 export class HomeService {
+  constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
   getHomePath(): string {
     return join(homedir(), ".research-assistant");
   }
@@ -64,37 +69,63 @@ export class HomeService {
   }
 
   async saveTask(task: ResearchTask): Promise<void> {
-    const dir = join(this.getHomePath(), "tasks");
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, `${task.taskId}.json`), JSON.stringify(task, null, 2), "utf-8");
+    await this.db.insert(tasks).values({
+      id: task.taskId,
+      projectId: task.projectId,
+      projectName: task.projectName,
+      query: task.query,
+      folderPath: task.folderPath,
+      status: "in_progress",
+      createdAt: new Date(task.startedAt),
+      updatedAt: new Date(task.startedAt),
+    });
   }
 
   async deleteTask(taskId: string): Promise<void> {
-    try {
-      await unlink(join(this.getHomePath(), "tasks", `${taskId}.json`));
-    } catch {
-      // already gone — idempotent
-    }
+    await this.db.delete(tasks).where(eq(tasks.id, taskId));
   }
 
   async getInProgressTasks(): Promise<ResearchTask[]> {
+    const rows = await this.db.select().from(tasks).where(eq(tasks.status, "in_progress"));
+    return rows.map((r) => ({
+      taskId: r.id,
+      projectId: r.projectId,
+      projectName: r.projectName,
+      query: r.query,
+      folderPath: r.folderPath,
+      startedAt: new Date(r.createdAt).toISOString(),
+    }));
+  }
+
+  async updateTaskStatus(
+    taskId: string,
+    status: "pending" | "in_progress" | "complete" | "failed",
+    error?: string,
+  ): Promise<void> {
+    await this.db
+      .update(tasks)
+      .set({ status, error: error ?? null, updatedAt: new Date() })
+      .where(eq(tasks.id, taskId));
+  }
+
+  async migrateTasksFromJson(): Promise<void> {
     const dir = join(this.getHomePath(), "tasks");
     let entries: string[] = [];
     try {
       entries = (await readdir(dir)).filter((e) => e.endsWith(".json"));
     } catch {
-      return [];
+      return; // no JSON tasks directory — nothing to migrate
     }
-    const tasks: ResearchTask[] = [];
     for (const entry of entries) {
       try {
         const raw = await readFile(join(dir, entry), "utf-8");
-        tasks.push(JSON.parse(raw) as ResearchTask);
+        const task = JSON.parse(raw) as ResearchTask;
+        await this.saveTask(task);
+        await unlink(join(dir, entry));
       } catch {
-        // skip malformed file
+        // skip malformed files
       }
     }
-    return tasks;
   }
 
   async savePendingTool(name: string, skillContent: string, script?: string): Promise<void> {
