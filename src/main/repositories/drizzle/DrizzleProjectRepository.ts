@@ -63,6 +63,22 @@ export class DrizzleProjectRepository implements IProjectRepository {
     }
   }
 
+  async rename(id: string, name: string): Promise<void> {
+    const result = await this.db
+      .update(projects)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(projects.id, id));
+    if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
+  }
+
+  async unlinkFolder(id: string): Promise<void> {
+    const result = await this.db
+      .update(projects)
+      .set({ folderPath: null, updatedAt: new Date() })
+      .where(eq(projects.id, id));
+    if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
+  }
+
   private rowToProject = (row: typeof projects.$inferSelect): Project => ({
     id: row.id,
     name: row.name,

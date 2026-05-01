@@ -13,4 +13,6 @@ export interface IProjectRepository {
   get(id: string): Promise<Project | null>;
   delete(id: string): Promise<void>;
   linkFolder(id: string, folderPath: string): Promise<void>;
+  rename(id: string, name: string): Promise<void>;
+  unlinkFolder(id: string): Promise<void>;
 }

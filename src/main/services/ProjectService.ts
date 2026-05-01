@@ -37,4 +37,14 @@ export class ProjectService {
     }
     await this.repo.linkFolder(id, folderPath);
   }
+
+  async renameProject(id: string, name: string): Promise<void> {
+    await this.getProject(id);
+    await this.repo.rename(id, name);
+  }
+
+  async unlinkFolder(id: string): Promise<void> {
+    await this.getProject(id);
+    await this.repo.unlinkFolder(id);
+  }
 }

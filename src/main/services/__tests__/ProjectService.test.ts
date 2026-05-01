@@ -26,6 +26,8 @@ function makeMockRepo(overrides: Partial<IProjectRepository> = {}): IProjectRepo
     get: vi.fn().mockResolvedValue(null),
     delete: vi.fn().mockResolvedValue(undefined),
     linkFolder: vi.fn().mockResolvedValue(undefined),
+    rename: vi.fn().mockResolvedValue(undefined),
+    unlinkFolder: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
