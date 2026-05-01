@@ -1,8 +1,7 @@
 import { Box } from "@mui/material";
-import ArtifactPanel from "./artifacts/ArtifactPanel";
 import ChatPanel from "./chat/ChatPanel";
+import DetailsPanel from "./DetailsPanel";
 import LeftSidebar from "./LeftSidebar";
-import RightSidebar from "./RightSidebar";
 
 interface AppShellProps {
   onOpenSettings: () => void;
@@ -24,17 +23,8 @@ export default function AppShell({ onOpenSettings }: AppShellProps) {
       <Box sx={{ flex: 1, overflow: "hidden", height: "100%" }}>
         <ChatPanel />
       </Box>
-      <Box
-        sx={{
-          width: 320,
-          flexShrink: 0,
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <RightSidebar />
-        <ArtifactPanel />
+      <Box sx={{ width: 320, flexShrink: 0, height: "100%" }}>
+        <DetailsPanel />
       </Box>
     </Box>
   );

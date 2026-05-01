@@ -10,6 +10,8 @@ const ProjectContext = createContext<ProjectContextValue>({
   setActiveProjectId: () => {},
 });
 
+export { ProjectContext };
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   return (

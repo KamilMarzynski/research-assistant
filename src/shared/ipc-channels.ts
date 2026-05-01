@@ -8,6 +8,7 @@ export const IPC = {
   SAVE_SETTINGS: "SAVE_SETTINGS",
   OPEN_FOLDER_DIALOG: "OPEN_FOLDER_DIALOG",
   LINK_FOLDER: "LINK_FOLDER",
+  READ_ARTIFACT_FILE: "READ_ARTIFACT_FILE",
 
   // renderer → main (send — fire-and-forget)
   SEND_MESSAGE: "SEND_MESSAGE",

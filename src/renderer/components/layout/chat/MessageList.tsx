@@ -1,6 +1,7 @@
 import { Box, Paper, Typography } from "@mui/material";
 import { useEffect, useRef } from "react";
 import type { Message } from "../../../../shared/types";
+import MarkdownRenderer from "../../shared/MarkdownRenderer";
 
 interface MessageListProps {
   messages: Message[];
@@ -43,13 +44,17 @@ export default function MessageList({ messages, streamingContent }: MessageListP
               borderRadius: 2,
             }}
           >
-            <Typography
-              variant="body2"
-              color={msg.role === "user" ? "primary.contrastText" : "text.primary"}
-              sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-            >
-              {msg.content}
-            </Typography>
+            {msg.role === "user" ? (
+              <Typography
+                variant="body2"
+                color="primary.contrastText"
+                sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+              >
+                {msg.content}
+              </Typography>
+            ) : (
+              <MarkdownRenderer content={msg.content} />
+            )}
           </Paper>
         </Box>
       ))}
@@ -57,8 +62,8 @@ export default function MessageList({ messages, streamingContent }: MessageListP
       {streamingContent !== null && (
         <Box sx={{ alignSelf: "flex-start", maxWidth: "75%" }}>
           <Paper elevation={0} sx={{ p: 1.5, bgcolor: "action.selected", borderRadius: 2 }}>
-            <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-              {streamingContent}
+            <Box sx={{ position: "relative" }}>
+              <MarkdownRenderer content={streamingContent} />
               <Box
                 component="span"
                 data-testid="streaming-cursor"
@@ -73,7 +78,7 @@ export default function MessageList({ messages, streamingContent }: MessageListP
                   "@keyframes blink": { "50%": { opacity: 0 } },
                 }}
               />
-            </Typography>
+            </Box>
           </Paper>
         </Box>
       )}

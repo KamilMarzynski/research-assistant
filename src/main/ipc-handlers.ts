@@ -53,6 +53,41 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     return artifactService.listArtifacts((payload as { projectId: string }).projectId);
   });
 
+  ipcMain.handle(IPC.READ_ARTIFACT_FILE, async (_event, payload: unknown) => {
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof (payload as { filePath?: unknown }).filePath !== "string"
+    ) {
+      throw new Error("Invalid payload: expected { filePath: string }");
+    }
+    const { filePath } = payload as { filePath: string };
+
+    // Path traversal guard
+    if (filePath.includes("..") || filePath.includes("~") || filePath.includes("\0")) {
+      throw new Error("Invalid file path: traversal detected");
+    }
+
+    const { access, readFile } = await import("node:fs/promises");
+    const { resolve, normalize } = await import("node:path");
+
+    const resolvedPath = normalize(resolve(filePath));
+
+    // Check file exists
+    try {
+      await access(resolvedPath);
+    } catch {
+      throw new Error("File not found");
+    }
+
+    // Read with 500KB cap
+    const content = await readFile(resolvedPath, { encoding: "utf-8" });
+    if (content.length > 512_000) {
+      return `${content.slice(0, 512_000)}\n\n<!-- Content truncated at 500KB -->`;
+    }
+    return content;
+  });
+
   ipcMain.handle(IPC.GET_MESSAGES, async (_event, payload: unknown) => {
     if (
       typeof payload !== "object" ||

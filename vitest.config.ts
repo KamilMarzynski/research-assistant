@@ -7,8 +7,8 @@ export default defineConfig({
     swc.vite({
       module: { type: 'es6' },
       jsc: {
-        parser: { syntax: 'typescript', decorators: true },
-        transform: { legacyDecorator: true, decoratorMetadata: true },
+        parser: { syntax: 'typescript', tsx: true, decorators: true },
+        transform: { legacyDecorator: true, decoratorMetadata: true, react: { runtime: 'automatic' } },
       },
     }),
     {
@@ -28,7 +28,12 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
-    include: ['src/**/__tests__/**/*.ts', 'src/**/*.test.ts'],
+    include: ['src/**/__tests__/**/*.{ts,tsx}', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
+    server: {
+      deps: {
+        fallbackCJS: true,
+      },
+    },
     coverage: {
       provider: 'v8',
       thresholds: { branches: 90, functions: 90, lines: 90, statements: 90 },
