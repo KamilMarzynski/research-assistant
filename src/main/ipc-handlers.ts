@@ -163,12 +163,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     }
     const { projectId, query } = payload as { projectId: string; query: string };
     const project = await projectService.getProject(projectId);
-    return researchService.startResearch(
-      projectId,
-      project.name,
-      query,
-      project.folderPath,
-    );
+    return researchService.startResearch(projectId, project.name, query, project.folderPath);
   });
 
   ipcMain.handle(IPC.OPEN_FOLDER_DIALOG, async () => {
