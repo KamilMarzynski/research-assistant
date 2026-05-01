@@ -11,9 +11,9 @@
 
 ## 2. Stream Recovery
 
-- [ ] 2.1 Wrap `session.send()` in `SEND_MESSAGE` handler with 120s timeout timer
-- [ ] 2.2 Clear timeout on `agent_end` event (subscriber catch block already emits `MESSAGE_DONE`)
-- [ ] 2.3 On timeout fire: send timeout error message via `MESSAGE_CHUNK` then emit `MESSAGE_DONE`
+- [x] 2.1 Wrap `session.send()` in `SEND_MESSAGE` handler with 120s timeout timer
+- [x] 2.2 Clear timeout on `agent_end` event (subscriber catch block already emits `MESSAGE_DONE`)
+- [x] 2.3 On timeout fire: send timeout error message via `MESSAGE_CHUNK` then emit `MESSAGE_DONE`
 
 ## 3. Research Error UX
 

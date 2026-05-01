@@ -304,6 +304,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
 
   ipcMain.on(IPC.SEND_MESSAGE, (_event, payload: unknown) => {
     void (async () => {
+      let projectId: string | undefined;
       try {
         if (
           typeof payload !== "object" ||
@@ -314,7 +315,8 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
           console.error("[IPC] SEND_MESSAGE: invalid payload", payload);
           return;
         }
-        const { projectId, content } = payload as { projectId: string; content: string };
+        const content = (payload as { content: string }).content;
+        projectId = (payload as { projectId: string }).projectId;
 
         const settings = await settingsService.getSettings();
         const provider = await resolveProviderWithFallback(
@@ -366,10 +368,25 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
 
         const session = sessions.get(projectId);
         if (!session) return;
-        await session.send(content);
+
+        // Stream timeout: 120s, prevents stuck cursor if agent_end never fires
+        const timeout = AbortSignal.timeout(120_000);
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeout.addEventListener("abort", () => reject(new Error("stream_timeout")));
+        });
+
+        await Promise.race([session.send(content), timeoutPromise]);
       } catch (err) {
-        console.error("[IPC] SEND_MESSAGE error:", err);
-        win.webContents.send(IPC.MESSAGE_CHUNK, "⚠️ An error occurred. Please try again.");
+        if (err instanceof Error && err.message === "stream_timeout") {
+          if (projectId) {
+            const session = sessions.get(projectId);
+            session?.abort();
+          }
+          win.webContents.send(IPC.MESSAGE_CHUNK, "⚠️ The response timed out. Please try again.");
+        } else {
+          console.error("[IPC] SEND_MESSAGE error:", err);
+          win.webContents.send(IPC.MESSAGE_CHUNK, "⚠️ An error occurred. Please try again.");
+        }
         win.webContents.send(IPC.MESSAGE_DONE);
       }
     })();
