@@ -9,6 +9,8 @@ import {
   START_RESEARCH_SKILL,
 } from "../agent/builtin-skills";
 import type { DrizzleDB } from "../db/client";
+import type { SkillInfo } from "../../shared/ipc-channels";
+import { parse } from "yaml";
 import { tasks } from "../db/schema";
 import { DB_TOKEN } from "../di/tokens";
 
@@ -166,6 +168,62 @@ export class HomeService {
 
   async rejectPendingTool(name: string): Promise<void> {
     await rm(join(this.getHomePath(), "pending-tools", name), { recursive: true, force: true });
+  }
+
+  async getSkills(): Promise<SkillInfo[]> {
+    const dir = join(this.getHomePath(), "skills");
+    let entries: string[] = [];
+    try {
+      entries = await readdir(dir);
+    } catch {
+      return [];
+    }
+
+    const skills: SkillInfo[] = [];
+    for (const entry of entries) {
+      const skillDir = join(dir, entry);
+      const skillMdPath = join(skillDir, "SKILL.md");
+      try {
+        const content = await readFile(skillMdPath, "utf-8");
+        const match = content.match(/^---\r?\n([\s\S]+?)\r?\n---/);
+        const meta = match ? (parse(match[1]) as { name?: string; description?: string }) : {};
+        const disabledFile = join(skillDir, ".disabled");
+        let enabled = true;
+        try {
+          await access(disabledFile);
+          enabled = false;
+        } catch {
+          // not disabled
+        }
+        skills.push({
+          name: meta.name ?? entry,
+          description: meta.description ?? "",
+          enabled,
+          content,
+        });
+      } catch {
+        // skip malformed
+      }
+    }
+    return skills;
+  }
+
+  async toggleSkill(name: string, enabled: boolean): Promise<void> {
+    const dir = join(this.getHomePath(), "skills", name);
+    const disabledFile = join(dir, ".disabled");
+    if (enabled) {
+      try {
+        await rm(disabledFile);
+      } catch {
+        /* already not disabled */
+      }
+    } else {
+      await writeFile(disabledFile, "");
+    }
+  }
+
+  async deleteSkill(name: string): Promise<void> {
+    await rm(join(this.getHomePath(), "skills", name), { recursive: true, force: true });
   }
 
   private async copyBuiltinSkillsIfNeeded(): Promise<void> {

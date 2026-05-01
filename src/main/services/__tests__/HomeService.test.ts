@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -304,5 +304,96 @@ describe("builtin skills", () => {
       "utf-8",
     );
     expect(content).toContain("evaluate-research");
+  });
+});
+
+describe("skill management", () => {
+  beforeEach(async () => {
+    tmpHome = await mkdtemp(join(tmpdir(), "home-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpHome, { recursive: true, force: true });
+  });
+
+  it("getSkills returns array (builtin skills present after ensureDirectories)", async () => {
+    const db = mockDb();
+    const svc = new HomeService(db);
+    await svc.ensureDirectories();
+    const skills = await svc.getSkills();
+    expect(Array.isArray(skills)).toBe(true);
+    expect(skills.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("getSkills returns skills with parsed frontmatter", async () => {
+    const db = mockDb();
+    const svc = new HomeService(db);
+    await svc.ensureDirectories();
+    const skillDir = join(svc.getHomePath(), "skills", "test-skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      `---\nname: test-skill\ndescription: A test skill.\n---\n\n# Test Skill\n\nSome content.`,
+    );
+
+    const skills = await svc.getSkills();
+    const ourSkill = skills.find((s) => s.name === "test-skill");
+    expect(ourSkill).toBeDefined();
+    expect(ourSkill!.name).toBe("test-skill");
+    expect(ourSkill!.description).toBe("A test skill.");
+    expect(ourSkill!.enabled).toBe(true);
+    expect(ourSkill!.content).toContain("Some content.");
+  });
+
+  it("getSkills returns enabled=false when .disabled file exists", async () => {
+    const db = mockDb();
+    const svc = new HomeService(db);
+    await svc.ensureDirectories();
+    const skillDir = join(svc.getHomePath(), "skills", "disabled-skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: disabled-skill\ndescription: Disabled.\n---\n# Content",
+    );
+    await writeFile(join(skillDir, ".disabled"), "");
+
+    const skills = await svc.getSkills();
+    const disabledSkill = skills.find((s) => s.name === "disabled-skill");
+    expect(disabledSkill).toBeDefined();
+    expect(disabledSkill!.enabled).toBe(false);
+  });
+
+  it("toggleSkill creates and removes .disabled file", async () => {
+    const db = mockDb();
+    const svc = new HomeService(db);
+    await svc.ensureDirectories();
+    const skillDir = join(svc.getHomePath(), "skills", "togglable");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: togglable\ndescription: Togglable.\n---\n# Content",
+    );
+
+    await svc.toggleSkill("togglable", false);
+    const disabledFile = join(skillDir, ".disabled");
+    await expect(access(disabledFile)).resolves.toBeUndefined();
+
+    await svc.toggleSkill("togglable", true);
+    await expect(access(disabledFile)).rejects.toThrow();
+  });
+
+  it("deleteSkill removes the skill directory", async () => {
+    const db = mockDb();
+    const svc = new HomeService(db);
+    await svc.ensureDirectories();
+    const skillDir = join(svc.getHomePath(), "skills", "deletable");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: deletable\ndescription: Deletable.\n---\n# Content",
+    );
+
+    await svc.deleteSkill("deletable");
+    await expect(readdir(join(svc.getHomePath(), "skills"))).resolves.not.toContain("deletable");
   });
 });
