@@ -23,6 +23,9 @@ export const IPC = {
   GET_PENDING_TOOLS: "GET_PENDING_TOOLS",
   APPROVE_TOOL: "APPROVE_TOOL",
   REJECT_TOOL: "REJECT_TOOL",
+  GET_SKILLS: "GET_SKILLS",
+  TOGGLE_SKILL: "TOGGLE_SKILL",
+  DELETE_SKILL: "DELETE_SKILL",
 
   // main → renderer (push via webContents.send)
   MESSAGE_CHUNK: "MESSAGE_CHUNK",
@@ -51,4 +54,11 @@ export interface ResearchProgressPayload {
   taskId: string;
   message: string;
   label?: string;
+}
+
+export interface SkillInfo {
+  name: string;
+  description: string;
+  enabled: boolean;
+  content: string;
 }
