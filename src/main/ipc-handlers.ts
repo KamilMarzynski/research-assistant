@@ -189,6 +189,44 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     sessions.delete(projectId); // Invalidate session so next message picks up new folderPath
   });
 
+  ipcMain.handle(IPC.RENAME_PROJECT, async (_event, payload: unknown) => {
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof (payload as { id?: unknown }).id !== "string" ||
+      typeof (payload as { name?: unknown }).name !== "string"
+    ) {
+      throw new Error("Invalid payload: expected { id: string, name: string }");
+    }
+    const { id, name } = payload as { id: string; name: string };
+    if (!name.trim()) throw new Error("Name cannot be empty");
+    await projectService.renameProject(id, name.trim());
+  });
+
+  ipcMain.handle(IPC.DELETE_PROJECT, async (_event, payload: unknown) => {
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof (payload as { id?: unknown }).id !== "string"
+    ) {
+      throw new Error("Invalid payload: expected { id: string }");
+    }
+    const { id } = payload as { id: string };
+    await projectService.deleteProject(id);
+  });
+
+  ipcMain.handle(IPC.UNLINK_FOLDER, async (_event, payload: unknown) => {
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof (payload as { id?: unknown }).id !== "string"
+    ) {
+      throw new Error("Invalid payload: expected { id: string }");
+    }
+    const { id } = payload as { id: string };
+    await projectService.unlinkFolder(id);
+  });
+
   // EventBus → IPC forwarding
   eventBus.on("research:started", (payload) => {
     win.webContents.send(IPC.RESEARCH_STATUS_UPDATE, { status: "started", ...payload });
