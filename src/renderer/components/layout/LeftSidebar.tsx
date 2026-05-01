@@ -182,33 +182,33 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
           ))}
         </List>
 
-          <Menu
-            anchorEl={contextMenu?.anchor ?? null}
-            open={!!contextMenu}
-            onClose={handleCloseMenu}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          >
-            <MenuItem onClick={handleRenameClick}>
+        <Menu
+          anchorEl={contextMenu?.anchor ?? null}
+          open={!!contextMenu}
+          onClose={handleCloseMenu}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+          <MenuItem onClick={handleRenameClick}>
+            <ListItemIcon>
+              <DriveFileRenameOutlineIcon fontSize="small" />
+            </ListItemIcon>
+            Rename
+          </MenuItem>
+          <MenuItem onClick={handleDeleteClick}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" />
+            </ListItemIcon>
+            Delete
+          </MenuItem>
+          {contextMenu?.project.folderPath && (
+            <MenuItem onClick={handleUnlinkFolder}>
               <ListItemIcon>
-                <DriveFileRenameOutlineIcon fontSize="small" />
+                <LinkOffIcon fontSize="small" />
               </ListItemIcon>
-              Rename
+              Unlink folder
             </MenuItem>
-            <MenuItem onClick={handleDeleteClick}>
-              <ListItemIcon>
-                <DeleteIcon fontSize="small" />
-              </ListItemIcon>
-              Delete
-            </MenuItem>
-            {contextMenu?.project.folderPath && (
-              <MenuItem onClick={handleUnlinkFolder}>
-                <ListItemIcon>
-                  <LinkOffIcon fontSize="small" />
-                </ListItemIcon>
-                Unlink folder
-              </MenuItem>
-            )}
-          </Menu>
+          )}
+        </Menu>
 
         <Box sx={{ px: 1, py: 0.5 }}>
           {creating ? (
@@ -277,8 +277,8 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
         <DialogTitle>Delete Project: {deleteTarget?.name}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            This will permanently delete this project and all its messages, artifacts,
-            and research tasks.
+            This will permanently delete this project and all its messages, artifacts, and research
+            tasks.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

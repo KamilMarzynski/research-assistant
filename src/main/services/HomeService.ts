@@ -3,14 +3,14 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
+import { parse } from "yaml";
+import type { SkillInfo } from "../../shared/ipc-channels";
 import {
   DISCOVER_PROJECT_SKILL,
   EVALUATE_RESEARCH_SKILL,
   START_RESEARCH_SKILL,
 } from "../agent/builtin-skills";
 import type { DrizzleDB } from "../db/client";
-import type { SkillInfo } from "../../shared/ipc-channels";
-import { parse } from "yaml";
 import { tasks } from "../db/schema";
 import { DB_TOKEN } from "../di/tokens";
 

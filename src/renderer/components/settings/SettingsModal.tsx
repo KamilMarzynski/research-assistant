@@ -18,7 +18,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { SkillInfo } from "../../../shared/ipc-channels";
 import { IPC } from "../../../shared/ipc-channels";
 import { glassSx } from "../../styles/glass";
 
@@ -66,6 +67,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
   const [auditFilter, setAuditFilter] = useState<"all" | "executed" | "blocked">("all");
   const [confirmClear, setConfirmClear] = useState(false);
+  const [skills, setSkills] = useState<SkillInfo[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+  const [skillsError, setSkillsError] = useState<string | null>(null);
+  const [expandedSkill, setExpandedSkill] = useState<string | null>(null);
+  const [confirmDeleteSkill, setConfirmDeleteSkill] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -114,6 +120,19 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     setAuditEntries(entries);
   };
 
+  const fetchSkills = useCallback(async () => {
+    setSkillsLoading(true);
+    setSkillsError(null);
+    try {
+      const result = await window.electronAPI.invoke(IPC.GET_SKILLS);
+      setSkills(result as SkillInfo[]);
+    } catch {
+      setSkillsError("Failed to load skills");
+    } finally {
+      setSkillsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (open && tab === 2) {
       void window.electronAPI.invoke(IPC.GET_AUDIT_LOG).then((entries) => {
@@ -121,6 +140,12 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       });
     }
   }, [open, tab]);
+
+  useEffect(() => {
+    if (open && tab === 3) {
+      void fetchSkills();
+    }
+  }, [open, tab, fetchSkills]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -165,6 +190,17 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     setConfirmClear(false);
   };
 
+  const handleToggleSkill = async (name: string, enabled: boolean) => {
+    await window.electronAPI.invoke(IPC.TOGGLE_SKILL, { name, enabled });
+    setSkills((prev) => prev.map((s) => (s.name === name ? { ...s, enabled } : s)));
+  };
+
+  const handleDeleteSkill = async (name: string) => {
+    await window.electronAPI.invoke(IPC.DELETE_SKILL, { name });
+    setSkills((prev) => prev.filter((s) => s.name !== name));
+    setConfirmDeleteSkill(null);
+  };
+
   const filtered =
     auditFilter === "all" ? auditEntries : auditEntries.filter((e) => getStatus(e) === auditFilter);
 
@@ -181,6 +217,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         <Tab label="General" />
         <Tab label="Model Provider" />
         <Tab label="Audit Log" />
+        <Tab label="Skills" />
       </Tabs>
       <DialogContent>
         {tab === 0 && (
@@ -444,8 +481,116 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             </Box>
           </Box>
         )}
+
+        {tab === 3 && (
+          <Box sx={{ pt: 2 }}>
+            {skillsLoading && (
+              <Typography variant="body2" color="text.secondary">
+                Loading skills...
+              </Typography>
+            )}
+            {skillsError && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                <Typography variant="body2" color="error">
+                  {skillsError}
+                </Typography>
+                <Button size="small" onClick={fetchSkills} variant="outlined">
+                  Retry
+                </Button>
+              </Box>
+            )}
+            {!skillsLoading && !skillsError && skills.length === 0 && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ py: 4, textAlign: "center" }}
+              >
+                No skills installed. Skills are created when an agent proposes a new tool.
+              </Typography>
+            )}
+            {skills.map((skill) => (
+              <Box key={skill.name}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    py: 1,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {skill.name}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        display: "block",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {skill.description}
+                    </Typography>
+                  </Box>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={skill.enabled}
+                        onChange={(e) => handleToggleSkill(skill.name, e.target.checked)}
+                        size="small"
+                      />
+                    }
+                    label={skill.enabled ? "On" : "Off"}
+                    labelPlacement="end"
+                    sx={{ mr: 0 }}
+                  />
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={() =>
+                      setExpandedSkill(expandedSkill === skill.name ? null : skill.name)
+                    }
+                  >
+                    {expandedSkill === skill.name ? "Hide" : "View"}
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="text"
+                    onClick={() => setConfirmDeleteSkill(skill.name)}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+                {expandedSkill === skill.name && (
+                  <Box
+                    component="pre"
+                    sx={{
+                      p: 2,
+                      bgcolor: "grey.900",
+                      color: "grey.100",
+                      borderRadius: 1,
+                      overflow: "auto",
+                      fontSize: 12,
+                      maxHeight: 300,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {skill.content}
+                  </Box>
+                )}
+              </Box>
+            ))}
+          </Box>
+        )}
       </DialogContent>
-      {(tab === 0 || tab === 1) && (
+      {(tab === 0 || tab === 1 || tab === 3) && (
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving} variant="contained">
@@ -465,6 +610,25 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           <Button onClick={() => setConfirmClear(false)}>Cancel</Button>
           <Button onClick={handleClearAuditLog} color="error">
             Clear
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={confirmDeleteSkill !== null} onClose={() => setConfirmDeleteSkill(null)}>
+        <DialogTitle>Delete Skill?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This will permanently delete the skill <strong>{confirmDeleteSkill}</strong>. This
+            action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDeleteSkill(null)}>Cancel</Button>
+          <Button
+            onClick={() => confirmDeleteSkill && handleDeleteSkill(confirmDeleteSkill)}
+            color="error"
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

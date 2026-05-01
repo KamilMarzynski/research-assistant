@@ -339,10 +339,10 @@ describe("skill management", () => {
     const skills = await svc.getSkills();
     const ourSkill = skills.find((s) => s.name === "test-skill");
     expect(ourSkill).toBeDefined();
-    expect(ourSkill!.name).toBe("test-skill");
-    expect(ourSkill!.description).toBe("A test skill.");
-    expect(ourSkill!.enabled).toBe(true);
-    expect(ourSkill!.content).toContain("Some content.");
+    expect(ourSkill?.name).toBe("test-skill");
+    expect(ourSkill?.description).toBe("A test skill.");
+    expect(ourSkill?.enabled).toBe(true);
+    expect(ourSkill?.content).toContain("Some content.");
   });
 
   it("getSkills returns enabled=false when .disabled file exists", async () => {
@@ -360,7 +360,7 @@ describe("skill management", () => {
     const skills = await svc.getSkills();
     const disabledSkill = skills.find((s) => s.name === "disabled-skill");
     expect(disabledSkill).toBeDefined();
-    expect(disabledSkill!.enabled).toBe(false);
+    expect(disabledSkill?.enabled).toBe(false);
   });
 
   it("toggleSkill creates and removes .disabled file", async () => {
