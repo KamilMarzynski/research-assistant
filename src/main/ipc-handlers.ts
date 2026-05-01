@@ -1,4 +1,4 @@
-import { type BrowserWindow, dialog, ipcMain } from "electron";
+import { type BrowserWindow, dialog, ipcMain, Notification } from "electron";
 import type { DependencyContainer } from "tsyringe";
 import { IPC } from "../shared/ipc-channels";
 import { buildSystemContext } from "./agent/context";
@@ -200,6 +200,22 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
 
   eventBus.on("research:complete", (payload) => {
     win.webContents.send(IPC.RESEARCH_COMPLETE, payload);
+
+    // OS notification when window not focused
+    if (!win.isFocused()) {
+      const body =
+        typeof payload === "object" && payload !== null && "query" in payload
+          ? String((payload as { query: string }).query).slice(0, 80)
+          : "Research completed";
+      const notification = new Notification({ title: "Research Complete", body });
+      notification.show();
+
+      notification.on("click", () => {
+        if (win.isMinimized()) win.restore();
+        win.focus();
+      });
+    }
+
     const session = sessions.get(payload.projectId);
     if (session) {
       session.queueFollowUp(
