@@ -128,4 +128,38 @@ describe("ProjectService", () => {
       expect(repo.linkFolder).not.toHaveBeenCalled();
     });
   });
+
+  describe("renameProject", () => {
+    it("calls repo.rename with correct args", async () => {
+      vi.mocked(repo.get).mockResolvedValue(makeProject());
+
+      await service.renameProject("proj-1", "New Name");
+
+      expect(repo.rename).toHaveBeenCalledWith("proj-1", "New Name");
+    });
+
+    it("throws NotFoundError when project missing", async () => {
+      vi.mocked(repo.get).mockResolvedValue(null);
+
+      await expect(service.renameProject("missing", "X")).rejects.toThrow(NotFoundError);
+      expect(repo.rename).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("unlinkFolder", () => {
+    it("calls repo.unlinkFolder with correct id", async () => {
+      vi.mocked(repo.get).mockResolvedValue(makeProject());
+
+      await service.unlinkFolder("proj-1");
+
+      expect(repo.unlinkFolder).toHaveBeenCalledWith("proj-1");
+    });
+
+    it("throws NotFoundError when project missing", async () => {
+      vi.mocked(repo.get).mockResolvedValue(null);
+
+      await expect(service.unlinkFolder("missing")).rejects.toThrow(NotFoundError);
+      expect(repo.unlinkFolder).not.toHaveBeenCalled();
+    });
+  });
 });
