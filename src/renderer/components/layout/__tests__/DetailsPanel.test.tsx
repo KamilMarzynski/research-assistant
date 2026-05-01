@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
+
+import { render, screen } from "@testing-library/react";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
 import { ProjectContext, type ProjectContextValue } from "../../../contexts/ProjectContext";
 import DetailsPanel from "../DetailsPanel";
 
@@ -20,9 +21,7 @@ function renderWithProvider(element: React.ReactElement, projectId = "proj-1") {
     activeProjectId: projectId,
     setActiveProjectId: vi.fn(),
   };
-  return render(
-    <ProjectContext.Provider value={ctx}>{element}</ProjectContext.Provider>,
-  );
+  return render(<ProjectContext.Provider value={ctx}>{element}</ProjectContext.Provider>);
 }
 
 describe("ArtifactSection", () => {
@@ -41,7 +40,13 @@ describe("ArtifactSection", () => {
   it("displays artifact list when artifacts exist", async () => {
     const { invoke } = setupElectronAPI();
     invoke.mockResolvedValue([
-      { id: "1", projectId: "p1", title: "Research Report", filePath: "/x.md", createdAt: "2026-01-01" },
+      {
+        id: "1",
+        projectId: "p1",
+        title: "Research Report",
+        filePath: "/x.md",
+        createdAt: "2026-01-01",
+      },
       { id: "2", projectId: "p1", title: "Findings", filePath: "/y.md", createdAt: "2026-01-02" },
     ]);
 
@@ -58,9 +63,10 @@ describe("ArtifactViewer", () => {
   it("shows loading then content when artifact selected", async () => {
     const { invoke } = setupElectronAPI();
     invoke.mockImplementation((channel: string, payload: unknown) => {
-      if (channel === "GET_ARTIFACTS") return Promise.resolve([
-        { id: "1", projectId: "p1", title: "Report", filePath: "/r.md", createdAt: "2026-01-01" },
-      ]);
+      if (channel === "GET_ARTIFACTS")
+        return Promise.resolve([
+          { id: "1", projectId: "p1", title: "Report", filePath: "/r.md", createdAt: "2026-01-01" },
+        ]);
       if (channel === "READ_ARTIFACT_FILE") return Promise.resolve("# Report\n\nContent here.");
       return Promise.resolve(null);
     });
@@ -82,9 +88,16 @@ describe("ArtifactViewer", () => {
   it("shows file not found on read error", async () => {
     const { invoke } = setupElectronAPI();
     invoke.mockImplementation((channel: string) => {
-      if (channel === "GET_ARTIFACTS") return Promise.resolve([
-        { id: "1", projectId: "p1", title: "Report", filePath: "/missing.md", createdAt: "2026-01-01" },
-      ]);
+      if (channel === "GET_ARTIFACTS")
+        return Promise.resolve([
+          {
+            id: "1",
+            projectId: "p1",
+            title: "Report",
+            filePath: "/missing.md",
+            createdAt: "2026-01-01",
+          },
+        ]);
       if (channel === "READ_ARTIFACT_FILE") return Promise.reject(new Error("File not found"));
       return Promise.resolve(null);
     });

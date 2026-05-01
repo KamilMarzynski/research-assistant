@@ -188,7 +188,7 @@ export class ResearchService {
           await this.homeService.updateTaskStatus(taskId, "failed", String(err));
           this.eventBus.emit({
             type: "research:failed",
-            payload: { taskId, error: String(err) },
+            payload: { taskId, projectId: config.projectId, query: config.query, error: String(err) },
           });
         }
       }
@@ -199,7 +199,7 @@ export class ResearchService {
       await this.homeService.updateTaskStatus(taskId, "failed", String(err));
       this.eventBus.emit({
         type: "research:failed",
-        payload: { taskId, error: String(err) },
+        payload: { taskId, projectId: config.projectId, query: config.query, error: String(err) },
       });
     });
 

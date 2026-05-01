@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
+
 import { render } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import MarkdownRenderer from "../MarkdownRenderer";
 
 describe("MarkdownRenderer", () => {
@@ -28,8 +29,6 @@ describe("MarkdownRenderer", () => {
   });
 
   it("handles malformed markdown without crashing", () => {
-    expect(() =>
-      render(<MarkdownRenderer content="# Unclosed <tag> **bold *** " />),
-    ).not.toThrow();
+    expect(() => render(<MarkdownRenderer content="# Unclosed <tag> **bold *** " />)).not.toThrow();
   });
 });

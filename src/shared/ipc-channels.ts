@@ -13,6 +13,9 @@ export const IPC = {
   // renderer → main (send — fire-and-forget)
   SEND_MESSAGE: "SEND_MESSAGE",
 
+  // renderer → main (retry failed research)
+  RETRY_RESEARCH: "RETRY_RESEARCH",
+
   // renderer → main (pending tools)
   GET_PENDING_TOOLS: "GET_PENDING_TOOLS",
   APPROVE_TOOL: "APPROVE_TOOL",

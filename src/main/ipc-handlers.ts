@@ -152,6 +152,25 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     return { available, host };
   });
 
+  ipcMain.handle(IPC.RETRY_RESEARCH, async (_event, payload: unknown) => {
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      typeof (payload as { projectId?: unknown }).projectId !== "string" ||
+      typeof (payload as { query?: unknown }).query !== "string"
+    ) {
+      throw new Error("Invalid payload: expected { projectId, query, ... }");
+    }
+    const { projectId, query } = payload as { projectId: string; query: string };
+    const project = await projectService.getProject(projectId);
+    return researchService.startResearch(
+      projectId,
+      project.name,
+      query,
+      project.folderPath,
+    );
+  });
+
   ipcMain.handle(IPC.OPEN_FOLDER_DIALOG, async () => {
     const result = await dialog.showOpenDialog(win, {
       properties: ["openDirectory"],

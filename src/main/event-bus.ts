@@ -14,7 +14,10 @@ type AppEvent =
         filePath: string;
       };
     }
-  | { type: "research:failed"; payload: { taskId: string; error: string } }
+  | {
+      type: "research:failed";
+      payload: { taskId: string; projectId: string; query: string; error: string };
+    }
   | { type: "tool:pending"; payload: { name: string; skillContent: string } }
   | {
       type: "bash:blocked";

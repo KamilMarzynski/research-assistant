@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { access, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
+import { access, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 
 describe("READ_ARTIFACT_FILE handler logic", () => {
   const MAX_FILE_SIZE = 512_000;
@@ -50,9 +50,10 @@ describe("READ_ARTIFACT_FILE handler logic", () => {
     await writeFile(largePath, largeContent, "utf-8");
 
     const content = await readFile(largePath, { encoding: "utf-8" });
-    const truncated = content.length > MAX_FILE_SIZE
-      ? `${content.slice(0, MAX_FILE_SIZE)}\n\n<!-- Content truncated at 500KB -->`
-      : content;
+    const truncated =
+      content.length > MAX_FILE_SIZE
+        ? `${content.slice(0, MAX_FILE_SIZE)}\n\n<!-- Content truncated at 500KB -->`
+        : content;
 
     expect(truncated.length).toBeLessThanOrEqual(MAX_FILE_SIZE + 43); // 43 = truncation message length
   });
