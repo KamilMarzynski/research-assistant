@@ -181,7 +181,7 @@ describe("task persistence", () => {
 
   it("migrateTasksFromJson does nothing when no JSON dir", async () => {
     const db = mockDb();
-    const insertFn = db.insert as ReturnType<typeof vi.fn>;
+    const _insertFn = db.insert as ReturnType<typeof vi.fn>;
     const svc = new HomeService(db);
     await svc.ensureDirectories();
     await svc.migrateTasksFromJson();

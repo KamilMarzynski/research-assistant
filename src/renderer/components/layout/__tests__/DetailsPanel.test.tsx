@@ -62,7 +62,7 @@ describe("ArtifactSection", () => {
 describe("ArtifactViewer", () => {
   it("shows loading then content when artifact selected", async () => {
     const { invoke } = setupElectronAPI();
-    invoke.mockImplementation((channel: string, payload: unknown) => {
+    invoke.mockImplementation((channel: string, _payload: unknown) => {
       if (channel === "GET_ARTIFACTS")
         return Promise.resolve([
           { id: "1", projectId: "p1", title: "Report", filePath: "/r.md", createdAt: "2026-01-01" },
