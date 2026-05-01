@@ -344,6 +344,26 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     await homeService.rejectPendingTool((payload as { name: string }).name);
   });
 
+  ipcMain.handle(IPC.GET_SKILLS, async () => {
+    return homeService.getSkills();
+  });
+
+  ipcMain.handle(IPC.TOGGLE_SKILL, async (_event, payload: unknown) => {
+    const p = payload as { name: string; enabled: boolean };
+    if (typeof p?.name !== "string" || typeof p?.enabled !== "boolean") {
+      throw new Error("Invalid payload: expected { name: string, enabled: boolean }");
+    }
+    await homeService.toggleSkill(p.name, p.enabled);
+  });
+
+  ipcMain.handle(IPC.DELETE_SKILL, async (_event, payload: unknown) => {
+    const p = payload as { name: string };
+    if (typeof p?.name !== "string") {
+      throw new Error("Invalid payload: expected { name: string }");
+    }
+    await homeService.deleteSkill(p.name);
+  });
+
   // Migrate JSON tasks to DB, then auto-resume in-progress research
   void (async () => {
     try {
