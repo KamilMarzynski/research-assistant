@@ -63,6 +63,19 @@ describe("loadSkills", () => {
 
     await rm("/tmp/myproject-ctx-test", { recursive: true, force: true });
   });
+
+  it("skips skill directories that contain .disabled file", async () => {
+    const skillDir = join(tmpHome, ".research-assistant", "skills", "disabled-skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: disabled-skill\ndescription: Should not appear.\n---\n# Content",
+    );
+    await writeFile(join(skillDir, ".disabled"), "");
+
+    const result = await loadSkills(undefined);
+    expect(result).not.toContain("disabled-skill");
+  });
 });
 
 describe("toSlug", () => {

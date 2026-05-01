@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { parse } from "yaml";
@@ -19,8 +19,16 @@ async function readSkillsFromDir(dir: string): Promise<SkillMeta[]> {
 
   const skills: SkillMeta[] = [];
   for (const entry of entries) {
-    const skillMdPath = join(dir, entry, "SKILL.md");
+    const skillDirPath = join(dir, entry);
+    const skillMdPath = join(skillDirPath, "SKILL.md");
     try {
+      // Skip disabled skills
+      try {
+        await access(join(skillDirPath, ".disabled"));
+        continue;
+      } catch {
+        // not disabled, proceed
+      }
       const content = await readFile(skillMdPath, "utf-8");
       const meta = parseFrontmatter(content);
       if (meta.name && meta.description) {
