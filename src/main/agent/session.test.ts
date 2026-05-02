@@ -34,7 +34,7 @@ vi.mock("./model-factory", () => ({
 vi.mock("electron", () => ({}));
 
 vi.mock("./tools", () => ({
-  createAgentTools: vi.fn().mockReturnValue([]),
+  createAgentTools: vi.fn().mockReturnValue([{ name: "read_file" }, { name: "write_file" }]),
 }));
 
 vi.mock("./worker-agent", () => ({
@@ -243,6 +243,30 @@ describe("AgentSession", () => {
       const key = await options.getApiKey();
       expect(key).toBe("sk-or-test");
     });
+
+    it("beforeToolCall blocks unregistered tools", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      const constructorCall = vi.mocked(Agent).mock.calls[0];
+      const options = constructorCall[0] as {
+        beforeToolCall: (ctx: {
+          toolCall: { name: string };
+        }) => Promise<{ block?: boolean; reason?: string } | undefined>;
+      };
+      const result = await options.beforeToolCall({ toolCall: { name: "malicious_tool" } });
+      expect(result).toEqual({ block: true, reason: 'Tool "malicious_tool" is not registered.' });
+    });
+
+    it("beforeToolCall allows registered tools", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      const constructorCall = vi.mocked(Agent).mock.calls[0];
+      const options = constructorCall[0] as {
+        beforeToolCall: (ctx: {
+          toolCall: { name: string };
+        }) => Promise<{ block?: boolean; reason?: string } | undefined>;
+      };
+      const result = await options.beforeToolCall({ toolCall: { name: "read_file" } });
+      expect(result).toBeUndefined();
+    });
   });
 
   describe("first-run prompt injection", () => {
@@ -306,6 +330,49 @@ describe("AgentSession", () => {
       await session.queueFollowUp("Research complete: found 5 files.");
       expect(mockAgent.followUp).toHaveBeenCalledWith(
         expect.objectContaining({ role: "user", content: "Research complete: found 5 files." }),
+      );
+    });
+
+    it("defers followUp while send() is processing and runs it after send completes", async () => {
+      mockAgent.prompt.mockImplementation(async () => {
+        // While prompt is running, queue a follow-up
+        await session.queueFollowUp("deferred follow-up");
+      });
+
+      await session.send("hello");
+      // followUp should have been called after prompt resolved
+      expect(mockAgent.followUp).toHaveBeenCalledWith(
+        expect.objectContaining({ content: "deferred follow-up" }),
+      );
+    });
+
+    it("defers followUp when another followUp is in progress", async () => {
+      let resolveFollowUp: (() => void) | undefined;
+      mockAgent.followUp.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveFollowUp = resolve;
+          }),
+      );
+
+      const firstPromise = session.queueFollowUp("first");
+      // immediately queue a second follow-up while first is still processing
+      const secondPromise = session.queueFollowUp("second");
+
+      expect(mockAgent.followUp).toHaveBeenCalledTimes(1);
+      expect(mockAgent.followUp).toHaveBeenCalledWith(
+        expect.objectContaining({ content: "first" }),
+      );
+
+      // resolve the first followUp
+      resolveFollowUp?.();
+      await firstPromise;
+      await secondPromise;
+
+      // second should now have run too
+      expect(mockAgent.followUp).toHaveBeenCalledTimes(2);
+      expect(mockAgent.followUp).toHaveBeenLastCalledWith(
+        expect.objectContaining({ content: "second" }),
       );
     });
   });

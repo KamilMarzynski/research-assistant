@@ -49,6 +49,7 @@ export class AgentSession {
   private assistantContent = "";
   private lastUserContent = "";
   private processing = false;
+  private pendingFollowUp: string | null = null;
 
   constructor({
     win,
@@ -116,6 +117,13 @@ export class AgentSession {
         tools,
       },
       getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),
+      beforeToolCall: async (ctx) => {
+        const allowed = new Set(tools.map((t) => t.name));
+        if (!allowed.has(ctx.toolCall.name)) {
+          return { block: true, reason: `Tool "${ctx.toolCall.name}" is not registered.` };
+        }
+        return undefined;
+      },
     });
 
     this.agent.subscribe(async (event) => {
@@ -172,15 +180,32 @@ export class AgentSession {
       await this.agent.prompt(content);
     } finally {
       this.processing = false;
+      const pending = this.pendingFollowUp;
+      this.pendingFollowUp = null;
+      if (pending !== null) {
+        await this.queueFollowUp(pending);
+      }
     }
   }
 
   async queueFollowUp(content: string): Promise<void> {
+    if (this.processing) {
+      this.pendingFollowUp = content;
+      return;
+    }
     try {
+      this.processing = true;
       await this.agent.followUp({ role: "user", content, timestamp: Date.now() });
     } catch (err) {
       console.error("[AgentSession] followUp failed:", err);
       throw err;
+    } finally {
+      this.processing = false;
+      const pending = this.pendingFollowUp;
+      this.pendingFollowUp = null;
+      if (pending !== null) {
+        await this.queueFollowUp(pending);
+      }
     }
   }
 
