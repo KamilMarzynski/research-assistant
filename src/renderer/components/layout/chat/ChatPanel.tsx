@@ -17,8 +17,7 @@ export default function ChatPanel() {
 
   // Check API key once on mount
   useEffect(() => {
-    window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => {
-      const settings = s as { hasApiKey: boolean };
+    window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
       setHasApiKey(settings.hasApiKey);
     });
   }, []);
@@ -33,7 +32,7 @@ export default function ChatPanel() {
     setStreamingContent(null);
     window.electronAPI
       .invoke(IPC.GET_MESSAGES, { projectId: activeProjectId })
-      .then((msgs) => setMessages(msgs as Message[]));
+      .then((msgs) => setMessages(msgs));
   }, [activeProjectId]);
 
   // Subscribe to streaming events

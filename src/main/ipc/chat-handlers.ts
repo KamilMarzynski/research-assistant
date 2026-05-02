@@ -52,12 +52,7 @@ export function registerChatHandler(
         const content = parsed.content;
 
         const settings = await settingsService.getSettings();
-        const provider = await resolveProviderWithFallback(
-          { settings },
-          eventBus as unknown as {
-            emit: (event: { type: string; payload: Record<string, unknown> }) => void;
-          },
-        );
+        const provider = await resolveProviderWithFallback({ settings }, eventBus);
 
         if (provider.type !== "ollama" && !provider.apiKey) {
           win.webContents.send(

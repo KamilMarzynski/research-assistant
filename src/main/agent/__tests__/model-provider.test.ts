@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { EventBus } from "../../event-bus";
 import type { AppSettings } from "../../services/SettingsService";
 import {
   checkOllamaAvailable,
@@ -126,10 +127,10 @@ describe("resolveProviderWithFallback", () => {
   it("emits fallback event when ollama is down", async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("Connection refused"));
     const settings = { ...baseSettings, activeProvider: "ollama" as const };
-    const emitMock = vi.fn();
-    const eventBus = { emit: emitMock };
+    const eventBus = new EventBus();
+    const emitSpy = vi.spyOn(eventBus, "emit");
     await resolveProviderWithFallback({ settings }, eventBus);
-    expect(emitMock).toHaveBeenCalledWith({
+    expect(emitSpy).toHaveBeenCalledWith({
       type: "model:fallback",
       payload: {
         reason: "ollama_unavailable",

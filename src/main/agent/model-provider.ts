@@ -1,3 +1,4 @@
+import type { EventBus } from "../event-bus";
 import type { AppSettings } from "../services/SettingsService";
 
 export type ModelProvider =
@@ -125,7 +126,7 @@ export async function checkOllamaAvailable(host: string): Promise<boolean> {
 
 export async function resolveProviderWithFallback(
   opts: ResolveProviderOpts,
-  eventBus?: { emit: (event: { type: string; payload: Record<string, unknown> }) => void },
+  eventBus?: EventBus,
 ): Promise<ModelProvider> {
   const primary = resolveProvider({ ...opts });
 

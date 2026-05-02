@@ -7,12 +7,8 @@ import {
   DialogTitle,
   Typography,
 } from "@mui/material";
+import type { PendingTool } from "../../../../shared/ipc-channels";
 import { glassSx } from "../../../styles/glass";
-
-interface PendingTool {
-  name: string;
-  skillContent: string;
-}
 
 interface PendingToolModalProps {
   tool: PendingTool;

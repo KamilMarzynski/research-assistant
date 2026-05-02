@@ -23,7 +23,7 @@ export default function ArtifactViewer({ artifact, onBack }: ArtifactViewerProps
         filePath: artifact.filePath,
         projectId: artifact.projectId,
       })
-      .then((text) => setContent(text as string))
+      .then((text) => setContent(text))
       .catch((err) => setError((err as Error).message ?? "Failed to read file"));
   }, [artifact]);
 

@@ -5,6 +5,7 @@ import "@fontsource/manrope/500.css";
 import "@fontsource/manrope/700.css";
 import { Alert, CssBaseline, Snackbar, ThemeProvider } from "@mui/material";
 import { useEffect, useState } from "react";
+import type { ModelFallbackPayload } from "../shared/ipc-channels";
 import { IPC } from "../shared/ipc-channels";
 import AppShell from "./components/layout/AppShell";
 import SettingsModal from "./components/settings/SettingsModal";
@@ -19,7 +20,7 @@ export default function App() {
 
   useEffect(() => {
     const remove = window.electronAPI.on(IPC.MODEL_FALLBACK, (payload: unknown) => {
-      const p = payload as { reason: string; fallbackProvider: string };
+      const p = payload as ModelFallbackPayload;
       if (p.reason === "ollama_unavailable") {
         setFallbackAlert(`Ollama is offline. Switched to ${p.fallbackProvider}.`);
       }

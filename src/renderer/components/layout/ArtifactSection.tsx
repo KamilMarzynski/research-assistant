@@ -30,7 +30,7 @@ export default function ArtifactSection({ onSelectArtifact }: ArtifactSectionPro
     }
     window.electronAPI
       .invoke(IPC.GET_ARTIFACTS, { projectId: activeProjectId })
-      .then((list) => setArtifacts(list as Artifact[]));
+      .then((list) => setArtifacts(list));
   }, [activeProjectId]);
 
   return (

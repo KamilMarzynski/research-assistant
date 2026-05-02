@@ -17,7 +17,7 @@ test("send a message and see the user bubble in the message list", async () => {
   // Skip if no API key is configured
   const raw = await page.evaluate(() => window.electronAPI.invoke("GET_SETTINGS"));
   const hasApiKey =
-    typeof raw === "object" && raw !== null && (raw as Record<string, unknown>).hasApiKey === true;
+    typeof raw === "object" && raw !== null && "hasApiKey" in raw && raw.hasApiKey === true;
   test.skip(!hasApiKey, "No API key configured");
   if (!hasApiKey) return;
 

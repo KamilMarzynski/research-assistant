@@ -19,21 +19,9 @@ import {
   Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
-import type { SkillInfo } from "../../../shared/ipc-channels";
+import type { AuditLogEntry, SkillInfo } from "../../../shared/ipc-channels";
 import { IPC } from "../../../shared/ipc-channels";
 import { glassSx } from "../../styles/glass";
-
-interface AuditLogEntry {
-  ts: string;
-  projectId: string;
-  intent: string;
-  command: string;
-  exitCode: number | null;
-  blocked?: boolean;
-  blockReason?: string;
-  blockKey?: string;
-  blockCategory?: string;
-}
 
 interface SettingsModalProps {
   open: boolean;
@@ -75,48 +63,36 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
 
   useEffect(() => {
     if (!open) return;
-    window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => {
-      const settings = s as {
-        activeProvider: string;
-        defaultCloudProvider: string;
-        providerCredentials: {
-          openrouter: { apiKey: string | null; defaultModel: string };
-          openai: { apiKey: string | null; defaultModel: string };
-          anthropic: { apiKey: string | null; defaultModel: string };
-          ollama: { host: string; defaultModel: string };
-        };
-        langfuseEnabled: boolean;
-        webAccessEnabled: boolean;
-      };
+    window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
       setActiveProvider(settings.activeProvider ?? "openrouter");
       setDefaultCloudProvider(settings.defaultCloudProvider ?? "openrouter");
       setCredentials({
         openrouter: {
-          apiKey: settings.providerCredentials?.openrouter?.apiKey ?? "",
+          apiKey: settings.providerCredentials.openrouter.apiKey ?? "",
           defaultModel:
-            settings.providerCredentials?.openrouter?.defaultModel ?? "anthropic/claude-sonnet-4-6",
+            settings.providerCredentials.openrouter.defaultModel ?? "anthropic/claude-sonnet-4-6",
         },
         openai: {
-          apiKey: settings.providerCredentials?.openai?.apiKey ?? "",
-          defaultModel: settings.providerCredentials?.openai?.defaultModel ?? "gpt-4o",
+          apiKey: settings.providerCredentials.openai.apiKey ?? "",
+          defaultModel: settings.providerCredentials.openai.defaultModel ?? "gpt-4o",
         },
         anthropic: {
-          apiKey: settings.providerCredentials?.anthropic?.apiKey ?? "",
+          apiKey: settings.providerCredentials.anthropic.apiKey ?? "",
           defaultModel:
-            settings.providerCredentials?.anthropic?.defaultModel ?? "claude-3-5-sonnet-20241022",
+            settings.providerCredentials.anthropic.defaultModel ?? "claude-3-5-sonnet-20241022",
         },
         ollama: {
-          host: settings.providerCredentials?.ollama?.host ?? "http://localhost:11434",
-          defaultModel: settings.providerCredentials?.ollama?.defaultModel ?? "llama3.2:3b",
+          host: settings.providerCredentials.ollama.host ?? "http://localhost:11434",
+          defaultModel: settings.providerCredentials.ollama.defaultModel ?? "llama3.2:3b",
         },
       });
       setLangfuseEnabled(settings.langfuseEnabled ?? false);
-      setWebAccessEnabled(settings.webAccessEnabled ?? true);
+      setWebAccessEnabled(true);
     });
   }, [open]);
 
   const loadAuditLog = async () => {
-    const entries = (await window.electronAPI.invoke(IPC.GET_AUDIT_LOG)) as AuditLogEntry[];
+    const entries = await window.electronAPI.invoke(IPC.GET_AUDIT_LOG);
     setAuditEntries(entries);
   };
 
@@ -125,7 +101,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     setSkillsError(null);
     try {
       const result = await window.electronAPI.invoke(IPC.GET_SKILLS);
-      setSkills(result as SkillInfo[]);
+      setSkills(result);
     } catch {
       setSkillsError("Failed to load skills");
     } finally {
@@ -136,7 +112,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   useEffect(() => {
     if (open && tab === 2) {
       void window.electronAPI.invoke(IPC.GET_AUDIT_LOG).then((entries) => {
-        setAuditEntries(entries as AuditLogEntry[]);
+        setAuditEntries(entries);
       });
     }
   }, [open, tab]);
@@ -181,7 +157,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     setOllamaTestStatus("idle");
     const host = credentials.ollama.host;
     const result = await window.electronAPI.invoke(IPC.CHECK_OLLAMA, host);
-    setOllamaTestStatus((result as { available: boolean }).available ? "ok" : "error");
+    setOllamaTestStatus(result.available ? "ok" : "error");
   };
 
   const handleClearAuditLog = async () => {

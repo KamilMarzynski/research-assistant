@@ -47,21 +47,21 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
   useEffect(() => {
-    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p as Project[]));
+    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
   }, []);
 
   const handleBrowseFolder = async () => {
     const path = await window.electronAPI.invoke(IPC.OPEN_FOLDER_DIALOG);
-    setNewFolderPath(path as string | null);
+    setNewFolderPath(path);
   };
 
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) return;
-    const project = (await window.electronAPI.invoke(IPC.CREATE_PROJECT, {
+    const project = await window.electronAPI.invoke(IPC.CREATE_PROJECT, {
       name,
       folderPath: newFolderPath,
-    })) as Project;
+    });
     setProjects((prev) => [...prev, project]);
     setNewName("");
     setNewFolderPath(null);
@@ -93,7 +93,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
     try {
       await window.electronAPI.invoke(IPC.RENAME_PROJECT, { id: renamingId, name });
       const projects = await window.electronAPI.invoke(IPC.GET_PROJECTS);
-      setProjects(projects as Project[]);
+      setProjects(projects);
     } catch (err) {
       console.error("Failed to rename project:", err);
     }
@@ -112,7 +112,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
       await window.electronAPI.invoke(IPC.DELETE_PROJECT, { id: deleteTarget.id });
       if (activeProjectId === deleteTarget.id) setActiveProjectId(null);
       const projects = await window.electronAPI.invoke(IPC.GET_PROJECTS);
-      setProjects(projects as Project[]);
+      setProjects(projects);
     } catch (err) {
       console.error("Failed to delete project:", err);
     }
@@ -126,7 +126,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
     try {
       await window.electronAPI.invoke(IPC.UNLINK_FOLDER, { id });
       const projects = await window.electronAPI.invoke(IPC.GET_PROJECTS);
-      setProjects(projects as Project[]);
+      setProjects(projects);
     } catch (err) {
       console.error("Failed to unlink folder:", err);
     }

@@ -1,0 +1,102 @@
+import type { SkillInfo } from "./ipc-channels";
+import type { Artifact, Message, Project } from "./types";
+
+/** Response from GET_SETTINGS */
+export interface SettingsResponse {
+  hasApiKey: boolean;
+  activeProvider: "openrouter" | "openai" | "anthropic" | "ollama";
+  defaultCloudProvider: "openrouter" | "openai" | "anthropic";
+  providerCredentials: {
+    openrouter: { apiKey: string | null; defaultModel: string };
+    openai: { apiKey: string | null; defaultModel: string };
+    anthropic: { apiKey: string | null; defaultModel: string };
+    ollama: { host: string; defaultModel: string };
+  };
+  langfuseEnabled: boolean;
+}
+
+/** Response from CHECK_OLLAMA */
+export interface CheckOllamaResponse {
+  available: boolean;
+  host: string;
+}
+
+/** Entry in the audit log */
+export interface AuditLogEntry {
+  ts: string;
+  projectId: string;
+  intent: string;
+  command: string;
+  exitCode: number | null;
+  blocked?: boolean;
+  blockReason?: string;
+  blockKey?: string;
+  blockCategory?: string;
+}
+
+/** Pending tool from GET_PENDING_TOOLS */
+export interface PendingTool {
+  name: string;
+  skillContent: string;
+}
+
+/** Payload for BASH_BLOCKED push event */
+export interface BlockedCommandPayload {
+  commandId: string;
+  command: string;
+  reason: string;
+  category: string;
+  key: string;
+  projectId: string;
+  intent: string;
+  timestamp: string;
+}
+
+/** Payload for MODEL_FALLBACK push event */
+export interface ModelFallbackPayload {
+  reason: string;
+  requestedModel: string;
+  fallbackProvider: string;
+}
+
+/** Payload for RESEARCH_COMPLETE push event */
+export interface ResearchCompletePayload {
+  taskId: string;
+  artifactId: string;
+  projectId: string;
+  query: string;
+  filePath: string;
+}
+
+/** Payload for RESEARCH_STATUS_UPDATE push event */
+export type ResearchStatusUpdatePayload =
+  | { status: "started"; taskId: string; projectId: string; query: string }
+  | { status: "progress"; taskId: string; message: string; label?: string }
+  | { status: "failed"; taskId: string; projectId: string; query: string; error: string };
+
+/** Typed response map for invoke() channels */
+export interface IpcResponseMap {
+  GET_PROJECTS: Project[];
+  CREATE_PROJECT: Project;
+  RENAME_PROJECT: undefined;
+  DELETE_PROJECT: undefined;
+  GET_ARTIFACTS: Artifact[];
+  GET_MESSAGES: Message[];
+  GET_SETTINGS: SettingsResponse;
+  SAVE_SETTINGS: undefined;
+  OPEN_FOLDER_DIALOG: string | null;
+  LINK_FOLDER: undefined;
+  UNLINK_FOLDER: undefined;
+  RETRY_RESEARCH: { taskId: string };
+  READ_ARTIFACT_FILE: string;
+  GET_PENDING_TOOLS: PendingTool[];
+  APPROVE_TOOL: undefined;
+  REJECT_TOOL: undefined;
+  GET_SKILLS: SkillInfo[];
+  TOGGLE_SKILL: undefined;
+  DELETE_SKILL: undefined;
+  GET_AUDIT_LOG: AuditLogEntry[];
+  CLEAR_AUDIT_LOG: undefined;
+  RESOLVE_BLOCKED_COMMAND: undefined;
+  CHECK_OLLAMA: CheckOllamaResponse;
+}

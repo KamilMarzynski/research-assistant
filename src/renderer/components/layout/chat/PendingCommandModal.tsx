@@ -8,21 +8,11 @@ import {
   DialogTitle,
   Typography,
 } from "@mui/material";
+import type { BlockedCommandPayload } from "../../../../shared/ipc-channels";
 import { glassSx } from "../../../styles/glass";
 
-interface BlockedCommand {
-  commandId: string;
-  command: string;
-  reason: string;
-  category: string;
-  key: string;
-  projectId: string;
-  intent: string;
-  timestamp: string;
-}
-
 interface PendingCommandModalProps {
-  command: BlockedCommand;
+  command: BlockedCommandPayload;
   onApproveOnce: () => void;
   onApproveSession: () => void;
   onDeny: () => void;

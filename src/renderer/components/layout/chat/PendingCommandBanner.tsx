@@ -1,27 +1,17 @@
 import { Box, Button, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import type { BlockedCommandPayload } from "../../../../shared/ipc-channels";
 import { IPC } from "../../../../shared/ipc-channels";
 import { glassSx } from "../../../styles/glass";
 import PendingCommandModal from "./PendingCommandModal";
 
-interface BlockedCommand {
-  commandId: string;
-  command: string;
-  reason: string;
-  category: string;
-  key: string;
-  projectId: string;
-  intent: string;
-  timestamp: string;
-}
-
 export default function PendingCommandBanner() {
-  const [blocked, setBlocked] = useState<BlockedCommand[]>([]);
-  const [selected, setSelected] = useState<BlockedCommand | null>(null);
+  const [blocked, setBlocked] = useState<BlockedCommandPayload[]>([]);
+  const [selected, setSelected] = useState<BlockedCommandPayload | null>(null);
 
   useEffect(() => {
     const unsub = window.electronAPI.on(IPC.BASH_BLOCKED, (data) => {
-      const cmd = data as BlockedCommand;
+      const cmd = data as BlockedCommandPayload;
       setBlocked((prev) => {
         if (prev.some((c) => c.commandId === cmd.commandId)) return prev;
         return [...prev, cmd];
@@ -31,7 +21,7 @@ export default function PendingCommandBanner() {
   }, []);
 
   const handleResolve = async (
-    cmd: BlockedCommand,
+    cmd: BlockedCommandPayload,
     action: "approve_once" | "approve_session" | "deny",
   ) => {
     try {

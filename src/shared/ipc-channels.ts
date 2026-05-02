@@ -62,3 +62,5 @@ export interface SkillInfo {
   enabled: boolean;
   content: string;
 }
+
+export * from "./ipc-types";

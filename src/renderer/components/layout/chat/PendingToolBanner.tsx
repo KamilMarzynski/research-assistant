@@ -1,22 +1,16 @@
 import { Box, Button, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import type { PendingTool } from "../../../../shared/ipc-channels";
 import { IPC } from "../../../../shared/ipc-channels";
 import { glassSx } from "../../../styles/glass";
 import PendingToolModal from "./PendingToolModal";
-
-interface PendingTool {
-  name: string;
-  skillContent: string;
-}
 
 export default function PendingToolBanner() {
   const [pendingTools, setPendingTools] = useState<PendingTool[]>([]);
   const [selectedTool, setSelectedTool] = useState<PendingTool | null>(null);
 
   useEffect(() => {
-    window.electronAPI
-      .invoke(IPC.GET_PENDING_TOOLS)
-      .then((tools) => setPendingTools(tools as PendingTool[]));
+    window.electronAPI.invoke(IPC.GET_PENDING_TOOLS).then((tools) => setPendingTools(tools));
 
     const unsub = window.electronAPI.on(IPC.TOOL_PENDING, (data) => {
       const tool = data as PendingTool;

@@ -18,17 +18,22 @@ interface MessageInputProps {
 export default function MessageInput({ onSend, disabled }: MessageInputProps) {
   const [content, setContent] = useState("");
   const [model, setModel] = useState("anthropic/claude-sonnet-4-6");
+  const [activeProvider, setActiveProvider] = useState<string>("openrouter");
 
   useEffect(() => {
-    window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => {
-      const settings = s as { model: string };
-      setModel(settings.model);
+    window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
+      setActiveProvider(settings.activeProvider);
+      setModel(settings.providerCredentials[settings.activeProvider].defaultModel);
     });
   }, []);
 
   const handleModelChange = async (newModel: string) => {
     setModel(newModel);
-    await window.electronAPI.invoke(IPC.SAVE_SETTINGS, { model: newModel });
+    await window.electronAPI.invoke(IPC.SAVE_SETTINGS, {
+      providerCredentials: {
+        [activeProvider]: { defaultModel: newModel },
+      },
+    });
   };
 
   const handleSend = () => {
