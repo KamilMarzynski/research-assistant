@@ -58,7 +58,8 @@
     "reflect-metadata": "^0.2.2",
     "remark-gfm": "^4.0.1",
     "tsyringe": "^4.10.0",
-    "yaml": "^2.8.3"
+    "yaml": "^2.8.3",
+    "zod": "^4.4.2"
   },
   "trustedDependencies": [
     "@swc/core"

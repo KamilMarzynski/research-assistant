@@ -5,6 +5,23 @@ import { buildSystemContext } from "./agent/context";
 import { resolveProviderWithFallback } from "./agent/model-provider";
 import { AgentSession } from "./agent/session";
 import { EventBus } from "./event-bus";
+import {
+  ApproveRejectToolSchema,
+  CheckOllamaSchema,
+  CreateProjectSchema,
+  DeleteProjectSchema,
+  DeleteSkillSchema,
+  LinkFolderSchema,
+  ProjectIdSchema,
+  ReadArtifactFileSchema,
+  RenameProjectSchema,
+  ResolveBlockedCommandSchema,
+  RetryResearchSchema,
+  SaveSettingsSchema,
+  SendMessageSchema,
+  ToggleSkillSchema,
+  UnlinkFolderSchema,
+} from "./ipc-validation";
 import { ArtifactService } from "./services/ArtifactService";
 import { HomeService } from "./services/HomeService";
 import { MemoryManager } from "./services/MemoryManager";
@@ -12,6 +29,14 @@ import { MessageService } from "./services/MessageService";
 import { ProjectService } from "./services/ProjectService";
 import { ResearchService } from "./services/ResearchService";
 import { SettingsService } from "./services/SettingsService";
+
+function parseOrThrow<T>(schema: { safeParse: (data: unknown) => { success: false; error: unknown } | { success: true; data: T } }, payload: unknown, label: string): T {
+  const result = schema.safeParse(payload);
+  if (!result.success) {
+    throw new Error(`Invalid payload for ${label}: ${String(result.error)}`);
+  }
+  return result.data;
+}
 
 export function registerIpcHandlers(win: BrowserWindow, container: DependencyContainer): void {
   const projectService = container.resolve(ProjectService);
@@ -28,41 +53,17 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   ipcMain.handle(IPC.GET_PROJECTS, async () => projectService.listProjects());
 
   ipcMain.handle(IPC.CREATE_PROJECT, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { name?: unknown }).name !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { name: string }");
-    }
-    const p = payload as { name: string; folderPath?: unknown };
-    return projectService.createProject(
-      p.name,
-      typeof p.folderPath === "string" ? p.folderPath : null,
-    );
+    const p = parseOrThrow(CreateProjectSchema, payload, "CREATE_PROJECT");
+    return projectService.createProject(p.name, p.folderPath ?? null);
   });
 
   ipcMain.handle(IPC.GET_ARTIFACTS, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { projectId?: unknown }).projectId !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { projectId: string }");
-    }
-    return artifactService.listArtifacts((payload as { projectId: string }).projectId);
+    const p = parseOrThrow(ProjectIdSchema, payload, "GET_ARTIFACTS");
+    return artifactService.listArtifacts(p.projectId);
   });
 
   ipcMain.handle(IPC.READ_ARTIFACT_FILE, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { filePath?: unknown }).filePath !== "string" ||
-      typeof (payload as { projectId?: unknown }).projectId !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { filePath: string; projectId: string }");
-    }
-    const { filePath, projectId } = payload as { filePath: string; projectId: string };
+    const { filePath, projectId } = parseOrThrow(ReadArtifactFileSchema, payload, "READ_ARTIFACT_FILE");
 
     const { stat, readFile } = await import("node:fs/promises");
 
@@ -102,14 +103,8 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   });
 
   ipcMain.handle(IPC.GET_MESSAGES, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { projectId?: unknown }).projectId !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { projectId: string }");
-    }
-    return messageService.getHistory((payload as { projectId: string }).projectId);
+    const p = parseOrThrow(ProjectIdSchema, payload, "GET_MESSAGES");
+    return messageService.getHistory(p.projectId);
   });
 
   ipcMain.handle(IPC.GET_SETTINGS, async () => {
@@ -127,21 +122,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   });
 
   ipcMain.handle(IPC.SAVE_SETTINGS, async (_event, payload: unknown) => {
-    if (typeof payload !== "object" || payload === null) {
-      throw new Error("Invalid payload");
-    }
-    const p = payload as Record<string, unknown>;
-
-    if ("activeProvider" in p && typeof p.activeProvider !== "string") {
-      throw new Error("activeProvider must be a string");
-    }
-    if ("defaultCloudProvider" in p && typeof p.defaultCloudProvider !== "string") {
-      throw new Error("defaultCloudProvider must be a string");
-    }
-    if ("langfuseEnabled" in p && typeof p.langfuseEnabled !== "boolean") {
-      throw new Error("langfuseEnabled must be a boolean");
-    }
-
+    const p = parseOrThrow(SaveSettingsSchema, payload, "SAVE_SETTINGS");
     await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
 
     // Clear sessions if model-related or provider settings change (not tracing flags)
@@ -151,25 +132,14 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   });
 
   ipcMain.handle(IPC.CHECK_OLLAMA, async (_event, payload: unknown) => {
-    if (typeof payload !== "string") {
-      throw new Error("Invalid payload: expected string (host URL)");
-    }
-    const host = payload;
+    const host = parseOrThrow(CheckOllamaSchema, payload, "CHECK_OLLAMA");
     const { checkOllamaAvailable } = await import("./agent/model-provider");
     const available = await checkOllamaAvailable(host);
     return { available, host };
   });
 
   ipcMain.handle(IPC.RETRY_RESEARCH, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { projectId?: unknown }).projectId !== "string" ||
-      typeof (payload as { query?: unknown }).query !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { projectId, query, ... }");
-    }
-    const { projectId, query } = payload as { projectId: string; query: string };
+    const { projectId, query } = parseOrThrow(RetryResearchSchema, payload, "RETRY_RESEARCH");
     let project: Awaited<ReturnType<typeof projectService.getProject>>;
     try {
       project = await projectService.getProject(projectId);
@@ -189,54 +159,24 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   });
 
   ipcMain.handle(IPC.LINK_FOLDER, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { projectId?: unknown }).projectId !== "string" ||
-      typeof (payload as { folderPath?: unknown }).folderPath !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { projectId: string, folderPath: string }");
-    }
-    const { projectId, folderPath } = payload as { projectId: string; folderPath: string };
+    const { projectId, folderPath } = parseOrThrow(LinkFolderSchema, payload, "LINK_FOLDER");
     await projectService.linkFolder(projectId, folderPath);
     sessions.delete(projectId); // Invalidate session so next message picks up new folderPath
   });
 
   ipcMain.handle(IPC.RENAME_PROJECT, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { id?: unknown }).id !== "string" ||
-      typeof (payload as { name?: unknown }).name !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { id: string, name: string }");
-    }
-    const { id, name } = payload as { id: string; name: string };
+    const { id, name } = parseOrThrow(RenameProjectSchema, payload, "RENAME_PROJECT");
     if (!name.trim()) throw new Error("Name cannot be empty");
     await projectService.renameProject(id, name.trim());
   });
 
   ipcMain.handle(IPC.DELETE_PROJECT, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { id?: unknown }).id !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { id: string }");
-    }
-    const { id } = payload as { id: string };
+    const { id } = parseOrThrow(DeleteProjectSchema, payload, "DELETE_PROJECT");
     await projectService.deleteProject(id);
   });
 
   ipcMain.handle(IPC.UNLINK_FOLDER, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { id?: unknown }).id !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { id: string }");
-    }
-    const { id } = payload as { id: string };
+    const { id } = parseOrThrow(UnlinkFolderSchema, payload, "UNLINK_FOLDER");
     await projectService.unlinkFolder(id);
   });
 
@@ -292,28 +232,9 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   });
 
   ipcMain.handle(IPC.RESOLVE_BLOCKED_COMMAND, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { commandId?: unknown }).commandId !== "string" ||
-      typeof (payload as { action?: unknown }).action !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { commandId: string, action: string }");
-    }
-    const { commandId, action, projectId } = payload as {
-      commandId: string;
-      action: string;
-      projectId?: string;
-    };
-    if (!["approve_once", "approve_session", "deny"].includes(action)) {
-      throw new Error(`Invalid action: ${action}`);
-    }
+    const { commandId, action, projectId } = parseOrThrow(ResolveBlockedCommandSchema, payload, "RESOLVE_BLOCKED_COMMAND");
     const { resolveBlockedCommand } = await import("./agent/extensions/safe-bash");
-    resolveBlockedCommand(
-      commandId,
-      action as "approve_once" | "approve_session" | "deny",
-      projectId,
-    );
+    resolveBlockedCommand(commandId, action, projectId);
   });
 
   ipcMain.handle(IPC.GET_AUDIT_LOG, async () => {
@@ -344,25 +265,13 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   });
 
   ipcMain.handle(IPC.APPROVE_TOOL, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { name?: unknown }).name !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { name: string }");
-    }
-    await homeService.approvePendingTool((payload as { name: string }).name);
+    const { name } = parseOrThrow(ApproveRejectToolSchema, payload, "APPROVE_TOOL");
+    await homeService.approvePendingTool(name);
   });
 
   ipcMain.handle(IPC.REJECT_TOOL, async (_event, payload: unknown) => {
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      typeof (payload as { name?: unknown }).name !== "string"
-    ) {
-      throw new Error("Invalid payload: expected { name: string }");
-    }
-    await homeService.rejectPendingTool((payload as { name: string }).name);
+    const { name } = parseOrThrow(ApproveRejectToolSchema, payload, "REJECT_TOOL");
+    await homeService.rejectPendingTool(name);
   });
 
   ipcMain.handle(IPC.GET_SKILLS, async () => {
@@ -370,19 +279,13 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   });
 
   ipcMain.handle(IPC.TOGGLE_SKILL, async (_event, payload: unknown) => {
-    const p = payload as { name: string; enabled: boolean };
-    if (typeof p?.name !== "string" || typeof p?.enabled !== "boolean") {
-      throw new Error("Invalid payload: expected { name: string, enabled: boolean }");
-    }
+    const p = parseOrThrow(ToggleSkillSchema, payload, "TOGGLE_SKILL");
     await homeService.toggleSkill(p.name, p.enabled);
   });
 
   ipcMain.handle(IPC.DELETE_SKILL, async (_event, payload: unknown) => {
-    const p = payload as { name: string };
-    if (typeof p?.name !== "string") {
-      throw new Error("Invalid payload: expected { name: string }");
-    }
-    await homeService.deleteSkill(p.name);
+    const { name } = parseOrThrow(DeleteSkillSchema, payload, "DELETE_SKILL");
+    await homeService.deleteSkill(name);
   });
 
   // Migrate JSON tasks to DB, then auto-resume in-progress research
@@ -424,17 +327,9 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     void (async () => {
       let projectId: string | undefined;
       try {
-        if (
-          typeof payload !== "object" ||
-          payload === null ||
-          typeof (payload as { projectId?: unknown }).projectId !== "string" ||
-          typeof (payload as { content?: unknown }).content !== "string"
-        ) {
-          console.error("[IPC] SEND_MESSAGE: invalid payload", payload);
-          return;
-        }
-        const content = (payload as { content: string }).content;
-        projectId = (payload as { projectId: string }).projectId;
+        const parsed = parseOrThrow(SendMessageSchema, payload, "SEND_MESSAGE");
+        projectId = parsed.projectId;
+        const content = parsed.content;
 
         const settings = await settingsService.getSettings();
         const provider = await resolveProviderWithFallback(
