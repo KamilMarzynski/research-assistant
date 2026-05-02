@@ -4,17 +4,12 @@ import type { Message, MessageRole } from "../../../shared/types";
 import type { DrizzleDB } from "../../db/client";
 import { messages } from "../../db/schema";
 import { DB_TOKEN } from "../../di/tokens";
+import { MonotonicClock } from "../../utils/time";
 import type { IMessageRepository } from "../IMessageRepository";
 
 @injectable()
 export class DrizzleMessageRepository implements IMessageRepository {
-  private lastTimestamp = 0;
-
-  private monotonicNow(): Date {
-    const ts = Math.max(Date.now(), this.lastTimestamp + 1);
-    this.lastTimestamp = ts;
-    return new Date(ts);
-  }
+  private readonly clock = new MonotonicClock();
 
   constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
 
@@ -24,7 +19,7 @@ export class DrizzleMessageRepository implements IMessageRepository {
       projectId: data.projectId,
       role: data.role,
       content: data.content,
-      createdAt: this.monotonicNow(),
+      createdAt: this.clock.now(),
     };
     await this.db.insert(messages).values({
       id: message.id,

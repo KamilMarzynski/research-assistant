@@ -2,7 +2,7 @@ import { access, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from 
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
-import { parse } from "yaml";
+import { z } from "zod/v4";
 import type { SkillInfo } from "../../shared/ipc-channels";
 import {
   DISCOVER_PROJECT_SKILL,
@@ -13,6 +13,7 @@ import type { DrizzleDB } from "../db/client";
 import { tasks } from "../db/schema";
 import { DB_TOKEN } from "../di/tokens";
 import { getAgentsPath, getHomePath } from "../paths";
+import { parseFrontmatter } from "../utils/frontmatter";
 
 export interface ResearchTask {
   taskId: string;
@@ -22,6 +23,15 @@ export interface ResearchTask {
   folderPath: string | null;
   startedAt: string;
 }
+
+const ResearchTaskSchema = z.object({
+  taskId: z.string(),
+  projectId: z.string(),
+  projectName: z.string(),
+  query: z.string(),
+  folderPath: z.string().nullable(),
+  startedAt: z.string(),
+});
 
 @injectable()
 export class HomeService {
@@ -124,7 +134,8 @@ export class HomeService {
     for (const entry of entries) {
       try {
         const raw = await readFile(join(dir, entry), "utf-8");
-        const task = JSON.parse(raw) as ResearchTask;
+        const parsed = JSON.parse(raw);
+        const task = ResearchTaskSchema.parse(parsed);
         await this.saveTask(task);
         await unlink(join(dir, entry));
       } catch (err) {
@@ -188,8 +199,7 @@ export class HomeService {
       const skillMdPath = join(skillDir, "SKILL.md");
       try {
         const content = await readFile(skillMdPath, "utf-8");
-        const match = content.match(/^---\r?\n([\s\S]+?)\r?\n---/);
-        const meta = match ? (parse(match[1]) as { name?: string; description?: string }) : {};
+        const meta = parseFrontmatter(content);
         const disabledFile = join(skillDir, ".disabled");
         let enabled = true;
         try {
@@ -231,22 +241,26 @@ export class HomeService {
 
   private async copyBuiltinSkillsIfNeeded(): Promise<void> {
     const skillsDir = join(this.getHomePath(), "skills");
-    const builtins: Array<[string, string]> = [
+    const builtins: Array<[name: string, content: string]> = [
       ["start_research", START_RESEARCH_SKILL],
       ["discover_project", DISCOVER_PROJECT_SKILL],
       ["evaluate-research", EVALUATE_RESEARCH_SKILL],
     ];
 
     for (const [name, content] of builtins) {
-      const skillDir = join(skillsDir, name);
-      const skillMdPath = join(skillDir, "SKILL.md");
-      try {
-        await access(skillMdPath);
-        // Already exists — skip
-      } catch {
-        await mkdir(skillDir, { recursive: true });
-        await writeFile(skillMdPath, content, "utf-8");
-      }
+      await this.ensureSkillFile(skillsDir, name, content);
+    }
+  }
+
+  private async ensureSkillFile(skillsDir: string, name: string, content: string): Promise<void> {
+    const skillDir = join(skillsDir, name);
+    const skillMdPath = join(skillDir, "SKILL.md");
+    try {
+      await access(skillMdPath);
+      // Already exists — skip
+    } catch {
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(skillMdPath, content, "utf-8");
     }
   }
 }

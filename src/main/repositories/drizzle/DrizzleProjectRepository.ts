@@ -4,22 +4,17 @@ import { inject, injectable } from "tsyringe";
 import type { DrizzleDB } from "../../db/client";
 import { projects } from "../../db/schema";
 import { DB_TOKEN } from "../../di/tokens";
+import { MonotonicClock } from "../../utils/time";
 import type { CreateProjectData, IProjectRepository } from "../IProjectRepository";
 
 @injectable()
 export class DrizzleProjectRepository implements IProjectRepository {
-  private lastTimestamp = 0;
-
-  private monotonicNow(): Date {
-    const ts = Math.max(Date.now(), this.lastTimestamp + 1);
-    this.lastTimestamp = ts;
-    return new Date(ts);
-  }
+  private readonly clock = new MonotonicClock();
 
   constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
 
   async create(data: CreateProjectData): Promise<Project> {
-    const now = this.monotonicNow();
+    const now = this.clock.now();
     const project: Project = {
       id: crypto.randomUUID(),
       name: data.name,

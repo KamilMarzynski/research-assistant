@@ -238,18 +238,30 @@ export class MemoryManager implements IMemoryManager {
   }
 }
 
+interface TextPart {
+  type?: string;
+  text?: string;
+}
+
+interface MastraContentV2 {
+  format?: number;
+  parts?: TextPart[];
+}
+
 /**
  * Extract plain text from MastraMessageContentV2 (format 2, parts array).
  * Falls back to JSON serialization if content is not the expected format.
  */
 function extractTextContent(content: unknown): string {
   if (typeof content === "string") return content;
-  const v2 = content as { format?: number; parts?: Array<{ type?: string; text?: string }> };
+
+  const v2 = content as MastraContentV2;
   if (v2?.format === 2 && Array.isArray(v2.parts)) {
     return v2.parts
-      .filter((p) => p.type === "text")
+      .filter((p): p is TextPart & { type: "text" } => p?.type === "text")
       .map((p) => p.text ?? "")
       .join("");
   }
+
   return JSON.stringify(content);
 }

@@ -1,7 +1,7 @@
 import { access, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { parse } from "yaml";
 import { getAgentsHome, getResearchAssistantHome } from "../paths";
+import { parseFrontmatter } from "../utils/frontmatter";
 
 interface SkillMeta {
   name: string;
@@ -39,16 +39,6 @@ async function readSkillsFromDir(dir: string): Promise<SkillMeta[]> {
     }
   }
   return skills;
-}
-
-function parseFrontmatter(content: string): { name?: string; description?: string } {
-  const match = content.match(/^---\r?\n([\s\S]+?)\r?\n---/);
-  if (!match) return {};
-  try {
-    return (parse(match[1]) as { name?: string; description?: string }) ?? {};
-  } catch {
-    return {};
-  }
 }
 
 function escapeXml(s: string): string {

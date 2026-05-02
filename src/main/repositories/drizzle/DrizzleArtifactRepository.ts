@@ -4,17 +4,12 @@ import { inject, injectable } from "tsyringe";
 import type { DrizzleDB } from "../../db/client";
 import { artifacts } from "../../db/schema";
 import { DB_TOKEN } from "../../di/tokens";
+import { MonotonicClock } from "../../utils/time";
 import type { IArtifactRepository } from "../IArtifactRepository";
 
 @injectable()
 export class DrizzleArtifactRepository implements IArtifactRepository {
-  private lastTimestamp = 0;
-
-  private monotonicNow(): Date {
-    const ts = Math.max(Date.now(), this.lastTimestamp + 1);
-    this.lastTimestamp = ts;
-    return new Date(ts);
-  }
+  private readonly clock = new MonotonicClock();
 
   constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
 
@@ -24,7 +19,7 @@ export class DrizzleArtifactRepository implements IArtifactRepository {
       projectId: data.projectId,
       title: data.title,
       filePath: data.filePath,
-      createdAt: this.monotonicNow(),
+      createdAt: this.clock.now(),
     };
     await this.db.insert(artifacts).values({
       id: artifact.id,
