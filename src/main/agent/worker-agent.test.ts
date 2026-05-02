@@ -362,6 +362,6 @@ describe("makeEvaluatorFn", () => {
     const result = await fn("/some/path/output.md", ["completeness"]);
     expect(result.pass).toBe(false);
     expect(result.criteria[0].name).toBe("parse-error");
-    expect(result.criteria[0].rationale).toContain("malformed JSON");
+    expect(result.criteria[0].rationale).toContain("return valid JSON");
   });
 });

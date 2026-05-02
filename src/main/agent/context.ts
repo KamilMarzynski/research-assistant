@@ -1,7 +1,7 @@
 import { access, readdir, readFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { parse } from "yaml";
+import { getAgentsHome, getResearchAssistantHome } from "../paths";
 
 interface SkillMeta {
   name: string;
@@ -61,13 +61,12 @@ function escapeXml(s: string): string {
 }
 
 export async function loadSkills(projectFolderPath: string | undefined): Promise<string> {
-  const home = join(homedir(), ".research-assistant");
-  const agents = join(homedir(), ".agents");
-
   // Load in priority order — later entries win on name collision
+  const agentsHome = getAgentsHome();
+  const raHome = getResearchAssistantHome();
   const dirs = [
-    join(agents, "skills"),
-    join(home, "skills"),
+    join(agentsHome, "skills"),
+    join(raHome, "skills"),
     ...(projectFolderPath ? [join(projectFolderPath, ".agents", "skills")] : []),
     ...(projectFolderPath ? [join(projectFolderPath, ".research-assistant", "skills")] : []),
   ];
@@ -111,13 +110,12 @@ export async function loadSkillsByContent(
 ): Promise<string> {
   if (skillNames.length === 0) return "";
 
-  const home = join(homedir(), ".research-assistant");
-  const agents = join(homedir(), ".agents");
-
   // Same priority order as loadSkills — later dirs have higher priority
+  const agentsHome = getAgentsHome();
+  const raHome = getResearchAssistantHome();
   const dirs = [
-    join(agents, "skills"),
-    join(home, "skills"),
+    join(agentsHome, "skills"),
+    join(raHome, "skills"),
     ...(projectFolderPath ? [join(projectFolderPath, ".agents", "skills")] : []),
     ...(projectFolderPath ? [join(projectFolderPath, ".research-assistant", "skills")] : []),
   ];
@@ -145,13 +143,13 @@ export async function buildSystemContext(
   projectName: string,
   folderPath: string | undefined,
 ): Promise<string> {
-  const home = join(homedir(), ".research-assistant");
+  const raHome = getResearchAssistantHome();
   const slug = toSlug(projectName);
   const parts: string[] = [];
 
   // 1. config.md
   try {
-    const config = await readFile(join(home, "config.md"), "utf-8");
+    const config = await readFile(join(raHome, "config.md"), "utf-8");
     if (config.trim()) {
       parts.push("<!-- User working style (config.md) -->", config.trim());
     }
@@ -165,9 +163,9 @@ export async function buildSystemContext(
 
   // 3. AGENTS.md
   try {
-    const agents = await readFile(join(home, "projects", slug, "AGENTS.md"), "utf-8");
-    if (agents.trim()) {
-      parts.push("<!-- Project context (AGENTS.md) -->", agents.trim());
+    const agentsFile = await readFile(join(raHome, "projects", slug, "AGENTS.md"), "utf-8");
+    if (agentsFile.trim()) {
+      parts.push("<!-- Project context (AGENTS.md) -->", agentsFile.trim());
     }
   } catch {
     // not yet discovered

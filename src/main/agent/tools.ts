@@ -74,7 +74,7 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
   const workspacePath = join(homePath, "workspace", projectId);
   const auditLogPath = join(homePath, "audit.log");
 
-  // biome-ignore lint/suspicious/noExplicitAny: AgentTool generic is covariant in TDetails but contravariant in TParams; any[] is the correct erasure for a heterogeneous collection
+  // biome-ignore lint/suspicious/noExplicitAny: AgentTool generic is covariant in TDetails but contravariant in TParams; any is the correct erasure for a heterogeneous collection
   const tools: AgentTool<any>[] = [
     makeTool({
       name: "read_file",

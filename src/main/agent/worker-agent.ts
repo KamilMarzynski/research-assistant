@@ -58,6 +58,32 @@ export interface EvaluatorBaseConfig {
   webAccessEnabled?: boolean;
 }
 
+/**
+ * Extract a JSON object from text using balanced-brace matching.
+ * More robust than regex: handles nested braces in string values.
+ */
+function extractJson(text: string): unknown {
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "{") {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (text[i] === "}") {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        const candidate = text.slice(start, i + 1);
+        try {
+          return JSON.parse(candidate) as Record<string, unknown>;
+        } catch {
+          start = -1;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 export function makeEvaluatorFn(
   base: EvaluatorBaseConfig,
 ): (filePath: string, criteria: string[]) => Promise<EvaluationVerdict> {
@@ -79,8 +105,8 @@ export function makeEvaluatorFn(
       "Respond with JSON only.",
     ].join("\n");
     const output = await run(prompt);
-    const match = output.match(/\{[\s\S]*\}/);
-    if (!match) {
+    const parsed = extractJson(output);
+    if (!parsed) {
       return {
         pass: false,
         criteria: [
@@ -92,34 +118,13 @@ export function makeEvaluatorFn(
         ],
       };
     }
-    try {
-      return JSON.parse(match[0]) as EvaluationVerdict;
-    } catch {
-      return {
-        pass: false,
-        criteria: [
-          {
-            name: "parse-error",
-            pass: false,
-            rationale: "evaluator returned malformed JSON",
-          },
-        ],
-      };
-    }
+    return parsed as EvaluationVerdict;
   };
 }
 
-type WorkerAgentBase = Pick<
+type WorkerAgentBase = Omit<
   WorkerAgentConfig,
-  | "projectId"
-  | "projectName"
-  | "folderPath"
-  | "homePath"
-  | "provider"
-  | "saveArtifactFn"
-  | "proposeToolFn"
-  | "onProgress"
-  | "webAccessEnabled"
+  "toolNames" | "systemPromptAddition" | "skills" | "remainingDepth" | "agentLabel"
 >;
 
 type PresetBuilder = (

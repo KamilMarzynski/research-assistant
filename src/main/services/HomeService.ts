@@ -1,5 +1,4 @@
 import { access, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
@@ -13,6 +12,7 @@ import {
 import type { DrizzleDB } from "../db/client";
 import { tasks } from "../db/schema";
 import { DB_TOKEN } from "../di/tokens";
+import { getHomePath, getAgentsPath } from "../paths";
 
 export interface ResearchTask {
   taskId: string;
@@ -27,11 +27,11 @@ export interface ResearchTask {
 export class HomeService {
   constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
   getHomePath(): string {
-    return join(homedir(), ".research-assistant");
+    return getHomePath();
   }
 
   getAgentsPath(): string {
-    return join(homedir(), ".agents");
+    return getAgentsPath();
   }
 
   async ensureDirectories(): Promise<void> {

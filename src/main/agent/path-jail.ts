@@ -1,5 +1,5 @@
-import { homedir } from "node:os";
 import { join, normalize, resolve } from "node:path";
+import { getAgentsHome, getResearchAssistantHome } from "../paths";
 
 export class PathJail {
   private readonly workspace: string;
@@ -14,10 +14,10 @@ export class PathJail {
     readonly projectId: string,
     folderPath: string | null,
   ) {
-    this.home = join(homedir(), ".research-assistant");
+    this.home = getResearchAssistantHome();
     this.workspace = join(this.home, "workspace", projectId);
     this.homeSkills = join(this.home, "skills");
-    this.agentsSkills = join(homedir(), ".agents", "skills");
+    this.agentsSkills = join(getAgentsHome(), "skills");
     this.projectFolder = folderPath ? resolve(normalize(folderPath)) : null;
     this.projectAgentsSkills = this.projectFolder
       ? join(this.projectFolder, ".agents", "skills")
