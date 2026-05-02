@@ -69,7 +69,7 @@ export async function runInDocker(input: DockerSandboxInput): Promise<DockerSand
     let timedOut = false;
     const timer = setTimeout(async () => {
       timedOut = true;
-      await (container as Docker.Container).stop({ t: 0 }).catch(() => {});
+      await (container as Docker.Container).stop({ t: 5 }).catch(() => {});
     }, TIMEOUT_MS);
 
     try {

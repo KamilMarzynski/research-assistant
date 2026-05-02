@@ -18,10 +18,16 @@ export interface ResolveProviderOpts {
   forceCloud?: boolean;
 }
 
-function getCloudCreds(creds: unknown) {
+interface CloudCreds {
+  apiKey: string | null;
+  defaultModel: string;
+}
+
+function getCloudCreds(creds: unknown): { apiKey: string; defaultModel: string } {
+  const c = creds as CloudCreds | null | undefined;
   return {
-    apiKey: (creds as { apiKey: string | null }).apiKey ?? "",
-    defaultModel: (creds as { defaultModel: string }).defaultModel,
+    apiKey: c?.apiKey ?? "",
+    defaultModel: c?.defaultModel ?? "",
   };
 }
 
@@ -59,11 +65,13 @@ function parseModelOverride(raw: string, settings: AppSettings): ModelProvider {
 function buildDefaultProvider(settings: AppSettings): ModelProvider {
   const creds = settings.providerCredentials[settings.defaultCloudProvider];
   const cloudCreds = getCloudCreds(creds);
-  return {
-    type: settings.defaultCloudProvider,
+  const providerType = settings.defaultCloudProvider;
+  const provider: ModelProvider = {
+    type: providerType,
     apiKey: cloudCreds.apiKey,
     model: cloudCreds.defaultModel,
-  } as ModelProvider;
+  };
+  return provider;
 }
 
 export function resolveProvider(opts: ResolveProviderOpts): ModelProvider {

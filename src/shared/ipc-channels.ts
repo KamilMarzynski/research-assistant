@@ -34,18 +34,18 @@ export const IPC = {
   RESEARCH_STATUS_UPDATE: "RESEARCH_STATUS_UPDATE",
   RESEARCH_COMPLETE: "RESEARCH_COMPLETE",
   TOOL_PENDING: "TOOL_PENDING",
-  BASH_BLOCKED: "bash-blocked",
+  BASH_BLOCKED: "BASH_BLOCKED",
 
   // renderer → main (blocked command resolution)
-  RESOLVE_BLOCKED_COMMAND: "resolve-blocked-command",
+  RESOLVE_BLOCKED_COMMAND: "RESOLVE_BLOCKED_COMMAND",
 
   // Audit log
-  GET_AUDIT_LOG: "get-audit-log",
-  CLEAR_AUDIT_LOG: "clear-audit-log",
+  GET_AUDIT_LOG: "GET_AUDIT_LOG",
+  CLEAR_AUDIT_LOG: "CLEAR_AUDIT_LOG",
 
   // Model provider
-  CHECK_OLLAMA: "check-ollama",
-  MODEL_FALLBACK: "model-fallback",
+  CHECK_OLLAMA: "CHECK_OLLAMA",
+  MODEL_FALLBACK: "MODEL_FALLBACK",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

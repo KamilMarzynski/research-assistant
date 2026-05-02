@@ -197,7 +197,7 @@ describe("createWorkerAgent – AGENT_TYPE_PRESETS (spawn label propagation)", (
     // don't clobber each other's subscriber reference.
     const { Agent } = await import("@mariozechner/pi-agent-core");
     vi.mocked(Agent).mockImplementation(function (this: unknown) {
-      const sub = vi.fn(() => vi.fn()); // returns unsubscribe
+      const sub = vi.fn().mockReturnValue(vi.fn()); // returns unsubscribe
       const prom = vi.fn();
       const childAgent = { subscribe: sub, prompt: prom, state: { tools: [] as never[] } };
       prom.mockImplementation(async () => {
