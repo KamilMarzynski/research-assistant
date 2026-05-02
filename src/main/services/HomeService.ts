@@ -71,16 +71,19 @@ export class HomeService {
   }
 
   async saveTask(task: ResearchTask): Promise<void> {
-    await this.db.insert(tasks).values({
-      id: task.taskId,
-      projectId: task.projectId,
-      projectName: task.projectName,
-      query: task.query,
-      folderPath: task.folderPath,
-      status: "in_progress",
-      createdAt: new Date(task.startedAt),
-      updatedAt: new Date(task.startedAt),
-    });
+    await this.db
+      .insert(tasks)
+      .values({
+        id: task.taskId,
+        projectId: task.projectId,
+        projectName: task.projectName,
+        query: task.query,
+        folderPath: task.folderPath,
+        status: "in_progress",
+        createdAt: new Date(task.startedAt),
+        updatedAt: new Date(task.startedAt),
+      })
+      .onConflictDoNothing();
   }
 
   async deleteTask(taskId: string): Promise<void> {

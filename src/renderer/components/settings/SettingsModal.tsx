@@ -257,7 +257,9 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                 <MenuItem value="openrouter">OpenRouter</MenuItem>
                 <MenuItem value="ollama">Ollama</MenuItem>
                 <MenuItem value="openai">OpenAI</MenuItem>
-                <MenuItem value="anthropic">Anthropic</MenuItem>
+                <MenuItem value="anthropic" disabled>
+                  Anthropic (not supported — use OpenRouter instead)
+                </MenuItem>
               </Select>
             </FormControl>
 

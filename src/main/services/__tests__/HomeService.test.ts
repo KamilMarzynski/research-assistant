@@ -15,7 +15,11 @@ vi.mock("node:os", async (importOriginal) => {
 });
 
 function mockDb() {
-  const insertFn = vi.fn(() => ({ values: vi.fn().mockResolvedValue(undefined) }));
+  const insertFn = vi.fn(() => ({
+    values: vi.fn().mockReturnValue({
+      onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+    }),
+  }));
   const deleteFn = vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) }));
   const selectFn = vi.fn(() => ({ from: () => ({ where: vi.fn().mockResolvedValue([]) }) }));
   const updateFn = vi.fn(() => ({ set: () => ({ where: vi.fn().mockResolvedValue(undefined) }) }));

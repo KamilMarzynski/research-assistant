@@ -129,7 +129,7 @@ export class SettingsService {
         },
       },
       langfuseEnabled: stored.langfuseEnabled ?? false,
-      webAccessEnabled: stored.langfuseEnabled ?? true,
+      webAccessEnabled: stored.webAccessEnabled ?? true,
     };
 
     delete migrated.encryptedApiKey;

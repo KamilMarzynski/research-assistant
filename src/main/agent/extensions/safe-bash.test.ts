@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BlockedCommandError,
   checkBlocklist,
+  clearAllowlists,
   resolveBlockedCommand,
   runSafeBash,
-  sessionAllowlist,
 } from "./safe-bash";
 
 let testCounter = 0;
@@ -161,7 +161,7 @@ describe("approval gate", () => {
 
   afterEach(async () => {
     await rm(workDir, { recursive: true, force: true });
-    sessionAllowlist.clear();
+    clearAllowlists();
   });
 
   async function getBlockedPayload(emitBlocked: ReturnType<typeof vi.fn>) {
@@ -266,5 +266,38 @@ describe("approval gate", () => {
 
     await expect(promise).rejects.toThrow(/timed out/i);
     vi.useRealTimers();
+  });
+
+  it("approve_session is scoped per project", async () => {
+    const emitBlocked = vi.fn();
+    const command = "curl https://example.com";
+
+    // Approve in project "p1"
+    const promise1 = runSafeBash({
+      command,
+      intent: "test",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+      emitBlocked,
+    });
+    const payload = await getBlockedPayload(emitBlocked);
+    resolveBlockedCommand(payload.commandId, "approve_session", "p1");
+    await promise1;
+
+    // Same command in project "p2" should still be blocked
+    const emitBlocked2 = vi.fn();
+    const promise2 = runSafeBash({
+      command,
+      intent: "test",
+      projectId: "p2",
+      workspacePath: workDir,
+      auditLogPath,
+      emitBlocked: emitBlocked2,
+    });
+    const payload2 = await getBlockedPayload(emitBlocked2);
+    expect(payload2.projectId).toBe("p2");
+    resolveBlockedCommand(payload2.commandId, "deny", "p2");
+    await expect(promise2).rejects.toThrow("Blocked:");
   });
 });

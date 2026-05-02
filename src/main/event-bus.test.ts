@@ -68,8 +68,16 @@ describe("EventBus", () => {
     const handler = vi.fn();
 
     bus.on("research:failed", handler);
-    bus.emit({ type: "research:failed", payload: { taskId: "t2", error: "timeout" } });
+    bus.emit({
+      type: "research:failed",
+      payload: { taskId: "t2", projectId: "p1", query: "Q", error: "timeout" },
+    });
 
-    expect(handler).toHaveBeenCalledWith({ taskId: "t2", error: "timeout" });
+    expect(handler).toHaveBeenCalledWith({
+      taskId: "t2",
+      projectId: "p1",
+      query: "Q",
+      error: "timeout",
+    });
   });
 });

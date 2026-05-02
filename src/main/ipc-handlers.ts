@@ -57,27 +57,40 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     if (
       typeof payload !== "object" ||
       payload === null ||
-      typeof (payload as { filePath?: unknown }).filePath !== "string"
+      typeof (payload as { filePath?: unknown }).filePath !== "string" ||
+      typeof (payload as { projectId?: unknown }).projectId !== "string"
     ) {
-      throw new Error("Invalid payload: expected { filePath: string }");
+      throw new Error("Invalid payload: expected { filePath: string; projectId: string }");
     }
-    const { filePath } = payload as { filePath: string };
+    const { filePath, projectId } = payload as { filePath: string; projectId: string };
 
-    // Path traversal guard
-    if (filePath.includes("..") || filePath.includes("~") || filePath.includes("\0")) {
-      throw new Error("Invalid file path: traversal detected");
-    }
+    const { stat, readFile } = await import("node:fs/promises");
 
-    const { access, readFile } = await import("node:fs/promises");
-    const { resolve, normalize } = await import("node:path");
-
-    const resolvedPath = normalize(resolve(filePath));
-
-    // Check file exists
+    // Resolve project to get folder path for PathJail
+    let project: Awaited<ReturnType<typeof projectService.getProject>>;
     try {
-      await access(resolvedPath);
+      project = await projectService.getProject(projectId);
+    } catch {
+      throw new Error("Project not found");
+    }
+
+    const { PathJail } = await import("./agent/path-jail");
+    const jail = new PathJail(projectId, project.folderPath);
+
+    // PathJail validates the path is within allowed zones
+    const resolvedPath = jail.validate(filePath, "read");
+
+    // Check file exists and get size
+    let fileStats: import("node:fs").Stats;
+    try {
+      fileStats = await stat(resolvedPath);
     } catch {
       throw new Error("File not found");
+    }
+
+    // Check size before reading — reject files over 10MB
+    if (fileStats.size > 10 * 1024 * 1024) {
+      throw new Error("File too large to display (max 10MB)");
     }
 
     // Read with 500KB cap
@@ -131,13 +144,8 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
 
     await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
 
-    // Clear sessions if model-related or provider settings change
-    if (
-      "activeProvider" in p ||
-      "defaultCloudProvider" in p ||
-      "providerCredentials" in p ||
-      "langfuseEnabled" in p
-    ) {
+    // Clear sessions if model-related or provider settings change (not tracing flags)
+    if ("activeProvider" in p || "defaultCloudProvider" in p || "providerCredentials" in p) {
       sessions.clear();
     }
   });
@@ -162,7 +170,12 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
       throw new Error("Invalid payload: expected { projectId, query, ... }");
     }
     const { projectId, query } = payload as { projectId: string; query: string };
-    const project = await projectService.getProject(projectId);
+    let project: Awaited<ReturnType<typeof projectService.getProject>>;
+    try {
+      project = await projectService.getProject(projectId);
+    } catch {
+      throw new Error(`Project not found: ${projectId}`);
+    }
     return researchService.startResearch(projectId, project.name, query, project.folderPath);
   });
 
@@ -287,12 +300,20 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     ) {
       throw new Error("Invalid payload: expected { commandId: string, action: string }");
     }
-    const { commandId, action } = payload as { commandId: string; action: string };
+    const { commandId, action, projectId } = payload as {
+      commandId: string;
+      action: string;
+      projectId?: string;
+    };
     if (!["approve_once", "approve_session", "deny"].includes(action)) {
       throw new Error(`Invalid action: ${action}`);
     }
     const { resolveBlockedCommand } = await import("./agent/extensions/safe-bash");
-    resolveBlockedCommand(commandId, action as "approve_once" | "approve_session" | "deny");
+    resolveBlockedCommand(
+      commandId,
+      action as "approve_once" | "approve_session" | "deny",
+      projectId,
+    );
   });
 
   ipcMain.handle(IPC.GET_AUDIT_LOG, async () => {

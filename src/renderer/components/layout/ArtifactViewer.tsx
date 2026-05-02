@@ -19,7 +19,10 @@ export default function ArtifactViewer({ artifact, onBack }: ArtifactViewerProps
     setError(null);
 
     window.electronAPI
-      .invoke(IPC.READ_ARTIFACT_FILE, { filePath: artifact.filePath })
+      .invoke(IPC.READ_ARTIFACT_FILE, {
+        filePath: artifact.filePath,
+        projectId: artifact.projectId,
+      })
       .then((text) => setContent(text as string))
       .catch((err) => setError((err as Error).message ?? "Failed to read file"));
   }, [artifact]);

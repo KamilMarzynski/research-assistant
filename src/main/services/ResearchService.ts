@@ -1,7 +1,8 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { injectable } from "tsyringe";
 import type { ModelProvider } from "../agent/model-provider";
+import { resolveProvider } from "../agent/model-provider";
 import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
 import type { EventBus } from "../event-bus";
@@ -18,6 +19,9 @@ interface RunResearchConfig {
 
 @injectable()
 export class ResearchService {
+  /** Workspace dirs older than this get cleaned up on next research start. */
+  private static readonly WORKSPACE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
   constructor(
     private readonly eventBus: EventBus,
     private readonly artifactService: ArtifactService,
@@ -95,6 +99,34 @@ export class ResearchService {
     );
   }
 
+  /** Remove workspace directories older than WORKSPACE_MAX_AGE_MS. Fire-and-forget. */
+  private async cleanupOldWorkspaces(): Promise<void> {
+    try {
+      const homePath = this.homeService.getHomePath();
+      const workspaceRoot = join(homePath, "workspace");
+      let entries: string[];
+      try {
+        entries = await readdir(workspaceRoot);
+      } catch {
+        return; // No workspace dir yet
+      }
+      const now = Date.now();
+      for (const entry of entries) {
+        const fullPath = join(workspaceRoot, entry);
+        try {
+          const stats = await stat(fullPath);
+          if (stats.isDirectory() && now - stats.mtimeMs > ResearchService.WORKSPACE_MAX_AGE_MS) {
+            await rm(fullPath, { recursive: true, force: true });
+          }
+        } catch {
+          // Skip entries we can't stat or delete
+        }
+      }
+    } catch (err) {
+      console.error("[ResearchService] workspace cleanup failed:", err);
+    }
+  }
+
   private async _runResearch(
     config: RunResearchConfig,
     outputFileName: string,
@@ -104,13 +136,13 @@ export class ResearchService {
   ): Promise<{ taskId: string }> {
     const taskId = crypto.randomUUID();
     const settings = await this.settingsService.getSettings();
-    const cloudCreds = settings.providerCredentials.openrouter;
-    if (!cloudCreds.apiKey) {
-      throw new Error("No API key configured");
-    }
 
     const homePath = this.homeService.getHomePath();
     const workspacePath = join(homePath, "workspace", config.projectId, taskId);
+
+    // Fire cleanup in background — don't block research start
+    void this.cleanupOldWorkspaces();
+
     await mkdir(workspacePath, { recursive: true });
 
     await this.homeService.saveTask({
@@ -131,11 +163,10 @@ export class ResearchService {
       }
     };
 
-    const provider: ModelProvider = {
-      type: "openrouter",
-      apiKey: cloudCreds.apiKey,
-      model: cloudCreds.defaultModel,
-    };
+    const provider = resolveProvider({ settings, forceCloud: true });
+    if (provider.type !== "ollama" && !provider.apiKey) {
+      throw new Error("No API key configured for the active provider");
+    }
 
     const workerConfig: WorkerAgentConfig = {
       ...buildPartialConfig(workspacePath),

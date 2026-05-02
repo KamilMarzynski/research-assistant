@@ -435,4 +435,22 @@ describe("MemoryManager", () => {
       expect(mockComplete).not.toHaveBeenCalled();
     });
   });
+
+  describe("initPromise retry", () => {
+    it("resets initPromise on store.init() failure so next call retries", async () => {
+      // Make the first init() call fail
+      mockLibSQLStoreInstance.init.mockRejectedValueOnce(new Error("DB locked"));
+
+      // First call to buildContext should fail silently (returns empty context)
+      const ctx1 = await manager.buildContext("proj-1", 10);
+      expect(ctx1).toEqual({ summary: "", recentMessages: [] });
+
+      // Reset init to succeed
+      mockLibSQLStoreInstance.init.mockResolvedValue(undefined);
+
+      // Second call should succeed (initPromise was reset)
+      const ctx2 = await manager.buildContext("proj-1", 10);
+      expect(ctx2).toEqual({ summary: "", recentMessages: [] });
+    });
+  });
 });

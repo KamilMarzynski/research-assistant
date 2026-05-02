@@ -86,10 +86,9 @@ export function resolveProvider(opts: ResolveProviderOpts): ModelProvider {
       const cloudCreds = getCloudCreds(creds);
       return { type: "openai", apiKey: cloudCreds.apiKey, model: cloudCreds.defaultModel };
     }
-    case "anthropic": {
-      const cloudCreds = getCloudCreds(creds);
-      return { type: "anthropic", apiKey: cloudCreds.apiKey, model: cloudCreds.defaultModel };
-    }
+    case "anthropic":
+      // Direct Anthropic API is not supported — fall back to default cloud provider
+      return buildDefaultProvider(opts.settings);
     case "ollama":
       return {
         type: "ollama",

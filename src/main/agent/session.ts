@@ -138,24 +138,26 @@ export class AgentSession {
             this.win.webContents.send(IPC.MESSAGE_CHUNK, ae.delta);
           }
         } else if (e.type === "agent_end") {
-          if (this.assistantContent && this.lastUserContent) {
-            await this.messageService.addMessage({
-              projectId: this.projectId,
-              role: "assistant",
-              content: this.assistantContent,
-            });
-            await this.memoryManager.save(this.projectId, [
-              { role: "user", content: this.lastUserContent },
-              { role: "assistant", content: this.assistantContent },
-            ]);
+          try {
+            if (this.assistantContent && this.lastUserContent) {
+              await this.messageService.addMessage({
+                projectId: this.projectId,
+                role: "assistant",
+                content: this.assistantContent,
+              });
+              await this.memoryManager.save(this.projectId, [
+                { role: "user", content: this.lastUserContent },
+                { role: "assistant", content: this.assistantContent },
+              ]);
+            }
+          } finally {
             this.assistantContent = "";
             this.lastUserContent = "";
+            this.win.webContents.send(IPC.MESSAGE_DONE);
           }
-          this.win.webContents.send(IPC.MESSAGE_DONE);
         }
       } catch (err) {
         console.error("[AgentSession] subscriber error:", err);
-        this.win.webContents.send(IPC.MESSAGE_DONE);
       }
     });
   }
@@ -171,7 +173,13 @@ export class AgentSession {
   }
 
   queueFollowUp(content: string): void {
-    this.agent.followUp({ role: "user", content, timestamp: Date.now() });
+    void (async () => {
+      try {
+        await this.agent.followUp({ role: "user", content, timestamp: Date.now() });
+      } catch (err) {
+        console.error("[AgentSession] followUp failed:", err);
+      }
+    })();
   }
 
   abort(): void {

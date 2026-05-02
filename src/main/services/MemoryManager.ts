@@ -35,6 +35,7 @@ export interface IMemoryManager {
 export class MemoryManager implements IMemoryManager {
   private initPromise: Promise<LibSQLStore> | null = null;
   private readonly dbPath: string;
+  private readonly compressLocks = new Map<string, Promise<void>>();
 
   constructor(
     @inject(USER_DATA_PATH_TOKEN) userDataPath: string,
@@ -46,12 +47,17 @@ export class MemoryManager implements IMemoryManager {
   private getStore(): Promise<LibSQLStore> {
     if (!this.initPromise) {
       this.initPromise = (async () => {
-        const store = new LibSQLStore({
-          id: "research-assistant-memory",
-          url: `file:${this.dbPath}`,
-        });
-        await store.init();
-        return store;
+        try {
+          const store = new LibSQLStore({
+            id: "research-assistant-memory",
+            url: `file:${this.dbPath}`,
+          });
+          await store.init();
+          return store;
+        } catch (err) {
+          this.initPromise = null; // Reset so next call retries
+          throw err;
+        }
       })();
     }
     return this.initPromise;
@@ -135,89 +141,99 @@ export class MemoryManager implements IMemoryManager {
   /**
    * Observer: when estimated token count exceeds threshold, compress all messages
    * into a summary using haiku. Non-blocking — failures logged, not surfaced.
+   * Per-project lock prevents concurrent compressions from racing.
    */
   private async maybeCompress(projectId: string, store: LibSQLStore): Promise<void> {
-    try {
-      const memoryStore = await store.getStore("memory");
-      if (!memoryStore) return;
+    if (this.compressLocks.has(projectId)) return;
 
-      const result = await memoryStore.listMessages({
-        threadId: projectId,
-        perPage: false, // all messages
-      });
+    const run = async (): Promise<void> => {
+      try {
+        const memoryStore = await store.getStore("memory");
+        if (!memoryStore) return;
 
-      const totalChars = result.messages.reduce((sum, m) => {
-        const text = extractTextContent(m.content);
-        return sum + text.length;
-      }, 0);
-
-      if (totalChars / CHARS_PER_TOKEN < OBSERVER_TOKEN_THRESHOLD) return;
-
-      const settings = await this.settingsService.getSettings();
-      const provider = resolveProvider({
-        settings,
-        forceCloud: true,
-        projectModelOverride: `openrouter:${COMPRESSION_MODEL_ID}`,
-      });
-
-      if (!isCloudProvider(provider) || !provider.apiKey) return;
-
-      const model = createModel({ provider, langfuseEnabled: false });
-
-      const conversationText = result.messages
-        .map((m) => {
-          const text = extractTextContent(m.content);
-          return `${m.role === "user" ? "User" : "Assistant"}: ${text}`;
-        })
-        .join("\n\n");
-
-      const compressionResult = await complete(
-        model,
-        {
-          systemPrompt:
-            "You compress conversation history into a concise context summary. Preserve key facts, decisions, user preferences, and project context. Output plain text — no headers, no lists, just prose.",
-          messages: [
-            {
-              role: "user",
-              content: `Compress this conversation into a concise summary (max 500 words):\n\n${conversationText}`,
-              timestamp: Date.now(),
-            },
-          ],
-        },
-        { apiKey: provider.apiKey },
-      );
-
-      const summaryText =
-        (
-          compressionResult.content.find((c) => c.type === "text") as
-            | { type: "text"; text: string }
-            | undefined
-        )?.text ?? "";
-      if (!summaryText) return;
-
-      const summaryThreadId = `${projectId}-summary`;
-      const existing = await memoryStore.getThreadById({ threadId: summaryThreadId });
-      if (existing) {
-        await memoryStore.updateThread({
-          id: summaryThreadId,
-          title: "Memory Summary",
-          metadata: { summary: summaryText },
+        const result = await memoryStore.listMessages({
+          threadId: projectId,
+          perPage: false,
         });
-      } else {
-        await memoryStore.saveThread({
-          thread: {
+
+        const totalChars = result.messages.reduce((sum, m) => {
+          const text = extractTextContent(m.content);
+          return sum + text.length;
+        }, 0);
+
+        if (totalChars / CHARS_PER_TOKEN < OBSERVER_TOKEN_THRESHOLD) return;
+
+        const settings = await this.settingsService.getSettings();
+        const provider = resolveProvider({
+          settings,
+          forceCloud: true,
+          projectModelOverride: `openrouter:${COMPRESSION_MODEL_ID}`,
+        });
+
+        if (!isCloudProvider(provider) || !provider.apiKey) return;
+
+        const model = createModel({ provider, langfuseEnabled: false });
+
+        const conversationText = result.messages
+          .map((m) => {
+            const text = extractTextContent(m.content);
+            return `${m.role === "user" ? "User" : "Assistant"}: ${text}`;
+          })
+          .join("\n\n");
+
+        const compressionResult = await complete(
+          model,
+          {
+            systemPrompt:
+              "You compress conversation history into a concise context summary. Preserve key facts, decisions, user preferences, and project context. Output plain text — no headers, no lists, just prose.",
+            messages: [
+              {
+                role: "user",
+                content: `Compress this conversation into a concise summary (max 500 words):\n\n${conversationText}`,
+                timestamp: Date.now(),
+              },
+            ],
+          },
+          { apiKey: provider.apiKey },
+        );
+
+        const summaryText =
+          (
+            compressionResult.content.find((c) => c.type === "text") as
+              | { type: "text"; text: string }
+              | undefined
+          )?.text ?? "";
+        if (!summaryText) return;
+
+        const summaryThreadId = `${projectId}-summary`;
+        const existing = await memoryStore.getThreadById({ threadId: summaryThreadId });
+        if (existing) {
+          await memoryStore.updateThread({
             id: summaryThreadId,
-            resourceId: projectId,
             title: "Memory Summary",
             metadata: { summary: summaryText },
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        });
+          });
+        } else {
+          await memoryStore.saveThread({
+            thread: {
+              id: summaryThreadId,
+              resourceId: projectId,
+              title: "Memory Summary",
+              metadata: { summary: summaryText },
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+        }
+      } catch (err) {
+        console.error("[MemoryManager] Observer compression failed:", err);
+      } finally {
+        this.compressLocks.delete(projectId);
       }
-    } catch (err) {
-      console.error("[MemoryManager] Observer compression failed:", err);
-    }
+    };
+
+    this.compressLocks.set(projectId, run());
+    await this.compressLocks.get(projectId);
   }
 }
 

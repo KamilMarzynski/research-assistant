@@ -112,6 +112,19 @@ describe("SettingsService", () => {
       expect(settings.webAccessEnabled).toBe(true);
     });
 
+    it("migration: webAccessEnabled defaults to true even when langfuseEnabled is false", async () => {
+      // V0 settings with no webAccessEnabled but explicit langfuseEnabled=false
+      await writeFile(
+        join(tmpDir, "settings.json"),
+        JSON.stringify({ langfuseEnabled: false, model: "anthropic/claude-sonnet-4-6" }),
+        "utf-8",
+      );
+      const settings = await service.getSettings();
+      expect(settings.langfuseEnabled).toBe(false);
+      // Bug was: webAccessEnabled: stored.langfuseEnabled ?? true → false when langfuseEnabled=false
+      expect(settings.webAccessEnabled).toBe(true);
+    });
+
     it("allows clearing API key by passing null", async () => {
       await service.saveSettings({
         providerCredentials: {

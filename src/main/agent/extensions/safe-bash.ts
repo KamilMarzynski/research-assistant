@@ -114,7 +114,22 @@ interface BlockedCommandPromise {
 }
 
 const blockedPromises = new Map<string, BlockedCommandPromise>();
-export const sessionAllowlist = new Set<string>();
+/** Per-project session allowlist: projectId → set of hashed commands. */
+const sessionAllowlistByProject = new Map<string, Set<string>>();
+
+function getProjectAllowlist(projectId: string): Set<string> {
+  let list = sessionAllowlistByProject.get(projectId);
+  if (!list) {
+    list = new Set<string>();
+    sessionAllowlistByProject.set(projectId, list);
+  }
+  return list;
+}
+
+/** Clear all allowlists — used in tests. */
+export function clearAllowlists(): void {
+  sessionAllowlistByProject.clear();
+}
 
 function hashCommand(command: string): string {
   return createHash("sha256")
@@ -143,7 +158,7 @@ export interface SafeBashResult {
 
 // --- Internal Execution (after approval) ---
 
-const MAX_OUTPUT_BYTES = 2048;
+const MAX_OUTPUT_CHARS = 65536;
 
 function runSafeBashInternal(opts: SafeBashOptions): Promise<SafeBashResult> {
   const { command, intent, projectId, workspacePath, auditLogPath, timeoutMs = 30_000 } = opts;
@@ -170,21 +185,21 @@ function runSafeBashInternal(opts: SafeBashOptions): Promise<SafeBashResult> {
     };
 
     proc.stdout.on("data", (chunk: Buffer) => {
-      if (stdout.length < MAX_OUTPUT_BYTES) {
+      if (Buffer.byteLength(stdout) < MAX_OUTPUT_CHARS) {
         stdout += chunk.toString();
-        if (stdout.length >= MAX_OUTPUT_BYTES) {
+        if (Buffer.byteLength(stdout) >= MAX_OUTPUT_CHARS) {
           truncated = true;
-          stdout = stdout.slice(0, MAX_OUTPUT_BYTES);
+          stdout = stdout.slice(0, MAX_OUTPUT_CHARS);
         }
       }
     });
 
     proc.stderr.on("data", (chunk: Buffer) => {
-      if (stderr.length < MAX_OUTPUT_BYTES) {
+      if (Buffer.byteLength(stderr) < MAX_OUTPUT_CHARS) {
         stderr += chunk.toString();
-        if (stderr.length >= MAX_OUTPUT_BYTES) {
+        if (Buffer.byteLength(stderr) >= MAX_OUTPUT_CHARS) {
           truncated = true;
-          stderr = stderr.slice(0, MAX_OUTPUT_BYTES);
+          stderr = stderr.slice(0, MAX_OUTPUT_CHARS);
         }
       }
     });
@@ -212,7 +227,7 @@ function runSafeBashInternal(opts: SafeBashOptions): Promise<SafeBashResult> {
     proc.on("close", (code) => {
       clearTimeout(timer);
       if (truncated) {
-        stdout += `\n[truncated — output exceeded ${MAX_OUTPUT_BYTES} bytes]`;
+        stdout += `\n[truncated — output exceeded ${MAX_OUTPUT_CHARS} chars]`;
       }
 
       const entry = JSON.stringify({
@@ -270,6 +285,7 @@ function enterApprovalGate(opts: SafeBashOptions, entry: BlocklistEntry): Promis
 export function resolveBlockedCommand(
   commandId: string,
   action: "approve_once" | "approve_session" | "deny",
+  projectId?: string,
 ): void {
   const deferred = blockedPromises.get(commandId);
   if (!deferred) return;
@@ -289,7 +305,8 @@ export function resolveBlockedCommand(
   }
 
   if (action === "approve_session") {
-    sessionAllowlist.add(hashCommand(deferred.options.command));
+    const resolvedProjectId = projectId ?? deferred.options.projectId;
+    getProjectAllowlist(resolvedProjectId).add(hashCommand(deferred.options.command));
   }
 
   void runSafeBashInternal(deferred.options).then(deferred.resolve, deferred.reject);
@@ -304,7 +321,7 @@ export async function runSafeBash(opts: SafeBashOptions): Promise<SafeBashResult
     return runSafeBashInternal(opts);
   }
 
-  if (sessionAllowlist.has(hashCommand(opts.command))) {
+  if (getProjectAllowlist(opts.projectId).has(hashCommand(opts.command))) {
     return runSafeBashInternal(opts);
   }
 

@@ -262,7 +262,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
   const run = (input: string): Promise<string> =>
     new Promise<string>((resolve, reject) => {
       let output = "";
-      agent.subscribe(async (event) => {
+      const unsubscribe = agent.subscribe(async (event) => {
         const e = event as {
           type: string;
           assistantMessageEvent?: { type: string; delta: string };
@@ -274,6 +274,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
             config.onProgress?.(config.agentLabel ?? "", ae.delta);
           }
         } else if (e.type === "agent_end") {
+          unsubscribe();
           resolve(output);
         }
       });

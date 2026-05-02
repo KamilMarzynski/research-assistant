@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Captured subscriber so tests can fire Pi events manually
 let capturedSubscriber: ((event: unknown) => Promise<void>) | null = null;
+const mockUnsubscribe = vi.fn();
 
 const mockAgent = {
   state: { tools: [] as never[], systemPrompt: "" },
   subscribe: vi.fn((cb: (event: unknown) => Promise<void>) => {
     capturedSubscriber = cb;
+    return mockUnsubscribe;
   }),
   prompt: vi.fn().mockResolvedValue(undefined),
 };
@@ -56,6 +58,7 @@ describe("createWorkerAgent", () => {
     vi.clearAllMocks();
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
       capturedSubscriber = cb;
+      return mockUnsubscribe;
     });
     mockAgent.prompt.mockResolvedValue(undefined);
   });
@@ -103,6 +106,7 @@ describe("createWorkerAgent – depth limit", () => {
     vi.clearAllMocks();
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
       capturedSubscriber = cb;
+      return mockUnsubscribe;
     });
     mockAgent.prompt.mockResolvedValue(undefined);
   });
@@ -145,6 +149,7 @@ describe("createWorkerAgent – AGENT_TYPE_PRESETS (spawn label propagation)", (
     } as never);
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
       capturedSubscriber = cb;
+      return mockUnsubscribe;
     });
     mockAgent.prompt.mockImplementation(async () => {
       await capturedSubscriber?.({ type: "agent_end" });
@@ -192,7 +197,7 @@ describe("createWorkerAgent – AGENT_TYPE_PRESETS (spawn label propagation)", (
     // don't clobber each other's subscriber reference.
     const { Agent } = await import("@mariozechner/pi-agent-core");
     vi.mocked(Agent).mockImplementation(function (this: unknown) {
-      const sub = vi.fn();
+      const sub = vi.fn(() => vi.fn()); // returns unsubscribe
       const prom = vi.fn();
       const childAgent = { subscribe: sub, prompt: prom, state: { tools: [] as never[] } };
       prom.mockImplementation(async () => {
@@ -244,6 +249,7 @@ describe("createWorkerAgent – onProgress", () => {
     vi.clearAllMocks();
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
       capturedSubscriber = cb;
+      return mockUnsubscribe;
     });
     mockAgent.prompt.mockResolvedValue(undefined);
   });
@@ -304,6 +310,7 @@ describe("makeEvaluatorFn", () => {
     } as never);
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
       capturedSubscriber = cb;
+      return mockUnsubscribe;
     });
   });
 

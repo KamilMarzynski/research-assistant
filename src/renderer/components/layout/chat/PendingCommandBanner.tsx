@@ -38,6 +38,7 @@ export default function PendingCommandBanner() {
       await window.electronAPI.invoke(IPC.RESOLVE_BLOCKED_COMMAND, {
         commandId: cmd.commandId,
         action,
+        projectId: cmd.projectId,
       });
     } catch {
       // Handler may throw if commandId already resolved
