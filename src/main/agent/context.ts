@@ -34,8 +34,8 @@ async function readSkillsFromDir(dir: string): Promise<SkillMeta[]> {
       if (meta.name && meta.description) {
         skills.push({ name: meta.name, description: meta.description, location: skillMdPath });
       }
-    } catch {
-      // skip malformed or missing SKILL.md
+    } catch (err) {
+      console.error(`[context] readSkillsFromDir: skipping malformed entry ${entry}:`, err);
     }
   }
   return skills;

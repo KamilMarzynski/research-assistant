@@ -103,7 +103,8 @@ export class MemoryManager implements IMemoryManager {
       }
 
       return { summary, recentMessages };
-    } catch {
+    } catch (err) {
+      console.error("[MemoryManager] buildContext failed — returning empty context:", err);
       return { summary: "", recentMessages: [] };
     }
   }

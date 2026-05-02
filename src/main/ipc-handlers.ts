@@ -390,7 +390,9 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     try {
       await homeService.migrateTasksFromJson();
     } catch (err) {
-      console.error("[startup] Failed to migrate JSON tasks:", err);
+      const msg = `Failed to migrate JSON tasks: ${err instanceof Error ? err.message : String(err)}`;
+      console.error("[startup]", msg);
+      eventBus.emit({ type: "startup:error", payload: { phase: "migrate-tasks", error: msg } });
     }
     try {
       const tasks = await homeService.getInProgressTasks();
@@ -403,11 +405,18 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
             task.folderPath,
           );
         } catch (err) {
-          console.error("[startup] Failed to resume task", task.taskId, err);
+          const msg = `Failed to resume task ${task.taskId}: ${err instanceof Error ? err.message : String(err)}`;
+          console.error("[startup]", msg);
+          eventBus.emit({
+            type: "startup:error",
+            payload: { phase: "resume-task", error: msg },
+          });
         }
       }
     } catch (err) {
-      console.error("[startup] Failed to load in-progress tasks:", err);
+      const msg = `Failed to load in-progress tasks: ${err instanceof Error ? err.message : String(err)}`;
+      console.error("[startup]", msg);
+      eventBus.emit({ type: "startup:error", payload: { phase: "load-tasks", error: msg } });
     }
   })();
 

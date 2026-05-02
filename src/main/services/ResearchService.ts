@@ -118,8 +118,8 @@ export class ResearchService {
           if (stats.isDirectory() && now - stats.mtimeMs > ResearchService.WORKSPACE_MAX_AGE_MS) {
             await rm(fullPath, { recursive: true, force: true });
           }
-        } catch {
-          // Skip entries we can't stat or delete
+        } catch (err) {
+          console.error(`[ResearchService] workspace cleanup: skipping entry ${entry}:`, err);
         }
       }
     } catch (err) {

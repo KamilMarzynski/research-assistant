@@ -127,8 +127,8 @@ export class HomeService {
         const task = JSON.parse(raw) as ResearchTask;
         await this.saveTask(task);
         await unlink(join(dir, entry));
-      } catch {
-        // skip malformed files
+      } catch (err) {
+        console.error(`[HomeService] migrateTasksFromJson: skipping malformed file ${entry}:`, err);
       }
     }
   }
@@ -156,8 +156,8 @@ export class HomeService {
       try {
         const skillContent = await readFile(join(dir, name, "SKILL.md"), "utf-8");
         tools.push({ name, skillContent });
-      } catch {
-        // skip malformed entries
+      } catch (err) {
+        console.error(`[HomeService] getPendingTools: skipping malformed entry ${name}:`, err);
       }
     }
     return tools;
@@ -204,8 +204,8 @@ export class HomeService {
           enabled,
           content,
         });
-      } catch {
-        // skip malformed
+      } catch (err) {
+        console.error(`[HomeService] getSkills: skipping malformed entry ${entry}:`, err);
       }
     }
     return skills;

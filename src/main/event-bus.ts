@@ -35,7 +35,8 @@ type AppEvent =
   | {
       type: "model:fallback";
       payload: { reason: string; requestedModel: string; fallbackProvider: string };
-    };
+    }
+  | { type: "startup:error"; payload: { phase: string; error: string } };
 
 @injectable()
 export class EventBus {
