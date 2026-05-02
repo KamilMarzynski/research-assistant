@@ -1,11 +1,6 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { type TSchema, Type } from "@sinclair/typebox";
-
-function makeTool<TParams extends TSchema, TDetails>(
-  tool: AgentTool<TParams, TDetails>,
-): AgentTool<TParams, TDetails> {
-  return tool;
-}
+import { Type } from "@sinclair/typebox";
+import { makeTool } from "./make-tool";
 
 export function createStartResearchTool(
   startResearchFn: (query: string, deep?: boolean) => Promise<{ taskId: string }>,

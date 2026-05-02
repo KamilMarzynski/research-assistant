@@ -1,14 +1,9 @@
 import { mkdir } from "node:fs/promises";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { type TSchema, Type } from "@sinclair/typebox";
+import { Type } from "@sinclair/typebox";
 import { runSafeBash } from "../extensions/safe-bash";
 import type { AgentToolsOptions } from "../tools";
-
-function makeTool<TParams extends TSchema, TDetails>(
-  tool: AgentTool<TParams, TDetails>,
-): AgentTool<TParams, TDetails> {
-  return tool;
-}
+import { makeTool } from "./make-tool";
 
 export function createSafeBashTool(
   projectId: string,

@@ -1,13 +1,8 @@
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
-import { type TSchema, Type } from "@sinclair/typebox";
+import { Type } from "@sinclair/typebox";
 import type { PathJail } from "../path-jail";
 import type { AgentType, SpawnResult } from "../tools";
-
-function makeTool<TParams extends TSchema, TDetails>(
-  tool: AgentTool<TParams, TDetails>,
-): AgentTool<TParams, TDetails> {
-  return tool;
-}
+import { makeTool } from "./make-tool";
 
 export function createSpawnAgentTool(
   jail: PathJail,

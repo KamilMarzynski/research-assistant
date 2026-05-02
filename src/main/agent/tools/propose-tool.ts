@@ -1,11 +1,6 @@
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
-import { type TSchema, Type } from "@sinclair/typebox";
-
-function makeTool<TParams extends TSchema, TDetails>(
-  tool: AgentTool<TParams, TDetails>,
-): AgentTool<TParams, TDetails> {
-  return tool;
-}
+import { Type } from "@sinclair/typebox";
+import { makeTool } from "./make-tool";
 
 export function createProposeToolTool(
   proposeFn: (name: string, skillContent: string, script?: string) => Promise<void>,

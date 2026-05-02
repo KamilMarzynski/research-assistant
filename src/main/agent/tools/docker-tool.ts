@@ -1,12 +1,7 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { type TSchema, Type } from "@sinclair/typebox";
+import { Type } from "@sinclair/typebox";
 import { runInDocker } from "../extensions/docker-sandbox";
-
-function makeTool<TParams extends TSchema, TDetails>(
-  tool: AgentTool<TParams, TDetails>,
-): AgentTool<TParams, TDetails> {
-  return tool;
-}
+import { makeTool } from "./make-tool";
 
 export function createDockerTool(): AgentTool<
   typeof dockerParameters,
