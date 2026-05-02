@@ -138,6 +138,18 @@ describe("AgentSession", () => {
       await session.send("hello");
       expect(order).toEqual(["addMessage", "prompt"]);
     });
+
+    it("rejects concurrent send() calls while processing", async () => {
+      mockAgent.prompt.mockImplementation(async () => {
+        // simulate a long-running prompt
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      const first = session.send("first");
+      // immediately try a second send while first is still processing
+      await expect(session.send("second")).rejects.toThrow("already processing");
+      await first;
+    });
   });
 
   describe("Pi event → IPC mapping", () => {
@@ -227,26 +239,9 @@ describe("AgentSession", () => {
       const constructorCall = vi.mocked(Agent).mock.calls[0];
       const options = constructorCall[0] as {
         getApiKey: () => Promise<string>;
-        beforeToolCall: (ctx: {
-          toolCall: { name: string };
-        }) => Promise<{ block: boolean; reason: string } | undefined>;
       };
       const key = await options.getApiKey();
       expect(key).toBe("sk-or-test");
-    });
-
-    it("beforeToolCall blocks unregistered tools", async () => {
-      const { Agent } = await import("@mariozechner/pi-agent-core");
-      const constructorCall = vi.mocked(Agent).mock.calls[0];
-      const options = constructorCall[0] as {
-        getApiKey: () => Promise<string>;
-        beforeToolCall: (ctx: {
-          toolCall: { name: string };
-        }) => Promise<{ block: boolean; reason: string } | undefined>;
-      };
-      const result = await options.beforeToolCall({ toolCall: { name: "unknown_tool" } });
-      expect(result).toBeDefined();
-      expect(result?.block).toBe(true);
     });
   });
 
@@ -307,8 +302,8 @@ describe("AgentSession", () => {
   });
 
   describe("queueFollowUp", () => {
-    it("calls agent.followUp with the message", () => {
-      session.queueFollowUp("Research complete: found 5 files.");
+    it("calls agent.followUp with the message", async () => {
+      await session.queueFollowUp("Research complete: found 5 files.");
       expect(mockAgent.followUp).toHaveBeenCalledWith(
         expect.objectContaining({ role: "user", content: "Research complete: found 5 files." }),
       );

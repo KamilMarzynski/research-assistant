@@ -49,9 +49,13 @@ export function registerEventForwarders(
 
     const session = sessionManager.get(payload.projectId);
     if (session) {
-      session.queueFollowUp(
-        `Background research complete (task ${payload.taskId}). Query: "${payload.query}". Artifact saved at ${payload.filePath}. Please briefly summarise the findings for the user.`,
-      );
+      session
+        .queueFollowUp(
+          `Background research complete (task ${payload.taskId}). Query: "${payload.query}". Artifact saved at ${payload.filePath}. Please briefly summarise the findings for the user.`,
+        )
+        .catch((err) => {
+          console.error("[event-forwarders] queueFollowUp failed:", err);
+        });
     }
   });
 

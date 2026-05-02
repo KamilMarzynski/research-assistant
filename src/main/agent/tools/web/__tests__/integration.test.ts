@@ -4,9 +4,9 @@ import { createWorkerAgent } from "../../../worker-agent";
 
 vi.mock("@mariozechner/pi-agent-core", () => ({
   // biome-ignore lint/complexity/useArrowFunction: vitest constructable mock
-  Agent: vi.fn(function () {
+  Agent: vi.fn(function (opts?: { initialState?: { tools?: unknown[] } }) {
     return {
-      state: { tools: [] as never[], systemPrompt: "" },
+      state: { tools: (opts?.initialState?.tools ?? []) as never[], systemPrompt: "" },
       subscribe: vi.fn(),
       prompt: vi.fn().mockResolvedValue(undefined),
     };

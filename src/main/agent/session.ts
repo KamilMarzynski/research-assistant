@@ -48,6 +48,7 @@ export class AgentSession {
   private readonly projectId: string;
   private assistantContent = "";
   private lastUserContent = "";
+  private processing = false;
 
   constructor({
     win,
@@ -83,22 +84,7 @@ export class AgentSession {
       .filter(Boolean)
       .join("\n\n");
 
-    this.agent = new Agent({
-      initialState: {
-        systemPrompt,
-        model: createModel({ provider, langfuseEnabled }),
-      },
-      getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),
-      beforeToolCall: async (ctx) => {
-        const allowed = new Set(this.agent.state.tools.map((t) => t.name));
-        if (!allowed.has(ctx.toolCall.name)) {
-          return { block: true, reason: `Tool "${ctx.toolCall.name}" is not registered.` };
-        }
-        return undefined;
-      },
-    });
-
-    this.agent.state.tools = createAgentTools({
+    const tools = createAgentTools({
       projectId,
       projectName,
       folderPath,
@@ -121,6 +107,15 @@ export class AgentSession {
         provider,
         webAccessEnabled,
       }),
+    });
+
+    this.agent = new Agent({
+      initialState: {
+        systemPrompt,
+        model: createModel({ provider, langfuseEnabled }),
+        tools,
+      },
+      getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),
     });
 
     this.agent.subscribe(async (event) => {
@@ -163,23 +158,30 @@ export class AgentSession {
   }
 
   async send(content: string): Promise<void> {
+    if (this.processing) {
+      throw new Error("Agent is already processing a message. Please wait for the response.");
+    }
+    this.processing = true;
     this.lastUserContent = content;
-    await this.messageService.addMessage({
-      projectId: this.projectId,
-      role: "user",
-      content,
-    });
-    await this.agent.prompt(content);
+    try {
+      await this.messageService.addMessage({
+        projectId: this.projectId,
+        role: "user",
+        content,
+      });
+      await this.agent.prompt(content);
+    } finally {
+      this.processing = false;
+    }
   }
 
-  queueFollowUp(content: string): void {
-    void (async () => {
-      try {
-        await this.agent.followUp({ role: "user", content, timestamp: Date.now() });
-      } catch (err) {
-        console.error("[AgentSession] followUp failed:", err);
-      }
-    })();
+  async queueFollowUp(content: string): Promise<void> {
+    try {
+      await this.agent.followUp({ role: "user", content, timestamp: Date.now() });
+    } catch (err) {
+      console.error("[AgentSession] followUp failed:", err);
+      throw err;
+    }
   }
 
   abort(): void {

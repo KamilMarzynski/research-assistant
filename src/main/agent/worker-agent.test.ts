@@ -15,7 +15,10 @@ const mockAgent = {
 
 vi.mock("@mariozechner/pi-agent-core", () => ({
   // biome-ignore lint/complexity/useArrowFunction: vitest constructable mock
-  Agent: vi.fn(function () {
+  Agent: vi.fn(function (opts?: { initialState?: { tools?: unknown[] } }) {
+    if (opts?.initialState?.tools) {
+      mockAgent.state.tools = opts.initialState.tools as never[];
+    }
     return mockAgent;
   }),
 }));
@@ -57,6 +60,7 @@ describe("createWorkerAgent", () => {
   beforeEach(() => {
     capturedSubscriber = null;
     vi.clearAllMocks();
+    mockAgent.state.tools = [];
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
       capturedSubscriber = cb;
       return mockUnsubscribe;
@@ -105,6 +109,7 @@ describe("createWorkerAgent – depth limit", () => {
   beforeEach(() => {
     capturedSubscriber = null;
     vi.clearAllMocks();
+    mockAgent.state.tools = [];
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
       capturedSubscriber = cb;
       return mockUnsubscribe;
@@ -144,6 +149,7 @@ describe("createWorkerAgent – AGENT_TYPE_PRESETS (spawn label propagation)", (
   beforeEach(async () => {
     capturedSubscriber = null;
     vi.clearAllMocks();
+    mockAgent.state.tools = [];
     const { Agent } = await import("@mariozechner/pi-agent-core");
     vi.mocked(Agent).mockImplementation(function (this: unknown) {
       return mockAgent;
@@ -248,6 +254,7 @@ describe("createWorkerAgent – onProgress", () => {
   beforeEach(() => {
     capturedSubscriber = null;
     vi.clearAllMocks();
+    mockAgent.state.tools = [];
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
       capturedSubscriber = cb;
       return mockUnsubscribe;
@@ -304,6 +311,7 @@ describe("makeEvaluatorFn", () => {
   beforeEach(async () => {
     capturedSubscriber = null;
     vi.clearAllMocks();
+    mockAgent.state.tools = [];
     // Restore Agent mock to return shared mockAgent
     const { Agent } = await import("@mariozechner/pi-agent-core");
     vi.mocked(Agent).mockImplementation(function (this: unknown) {
@@ -364,5 +372,21 @@ describe("makeEvaluatorFn", () => {
     expect(result.pass).toBe(false);
     expect(result.criteria[0].name).toBe("parse-error");
     expect(result.criteria[0].rationale).toContain("return valid JSON");
+  });
+
+  it("returns parse-error verdict when evaluator output has valid JSON but wrong schema", async () => {
+    mockAgent.prompt.mockImplementation(async () => {
+      await capturedSubscriber?.({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: '{ "foo": "bar" }' },
+      });
+      await capturedSubscriber?.({ type: "agent_end" });
+    });
+
+    const fn = makeEvaluatorFn({ ...BASE_CONFIG });
+    const result = await fn("/some/path/output.md", ["completeness"]);
+    expect(result.pass).toBe(false);
+    expect(result.criteria[0].name).toBe("parse-error");
+    expect(result.criteria[0].rationale).toContain("schema");
   });
 });

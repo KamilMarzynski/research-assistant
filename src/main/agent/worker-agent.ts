@@ -1,4 +1,5 @@
 import { Agent } from "@mariozechner/pi-agent-core";
+import { z } from "zod";
 import { loadSkillsByContent } from "./context";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
@@ -57,6 +58,17 @@ export interface EvaluatorBaseConfig {
   provider: ModelProvider;
   webAccessEnabled?: boolean;
 }
+
+const EvaluationCriterionSchema = z.object({
+  name: z.string(),
+  pass: z.boolean(),
+  rationale: z.string(),
+});
+
+const EvaluationVerdictSchema = z.object({
+  pass: z.boolean(),
+  criteria: z.array(EvaluationCriterionSchema),
+});
 
 /**
  * Extract a JSON object from text using balanced-brace matching.
@@ -118,7 +130,20 @@ export function makeEvaluatorFn(
         ],
       };
     }
-    return parsed as EvaluationVerdict;
+    const result = EvaluationVerdictSchema.safeParse(parsed);
+    if (!result.success) {
+      return {
+        pass: false,
+        criteria: [
+          {
+            name: "parse-error",
+            pass: false,
+            rationale: `evaluator returned invalid JSON schema: ${result.error.message}`,
+          },
+        ],
+      };
+    }
+    return result.data as EvaluationVerdict;
   };
 }
 
@@ -198,7 +223,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       webAccessEnabled,
     };
 
-    spawnAgentFn = async (
+    const spawnAgentImpl = async (
       type: AgentType,
       query: string,
       outputPath: string,
@@ -211,6 +236,8 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       return { outputPath, summary };
     };
 
+    spawnAgentFn = spawnAgentImpl;
+
     spawnAgentsParallelFn = async (
       agents: Array<{ type: AgentType; query: string; outputPath: string }>,
     ): Promise<SpawnResult[]> => {
@@ -219,8 +246,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
         agents.map(({ type, query, outputPath }) => {
           typeCounters[type] = (typeCounters[type] ?? 0) + 1;
           const label = `[${type}-${typeCounters[type]}]`;
-          // biome-ignore lint/style/noNonNullAssertion: spawnAgentFn defined in this branch
-          return spawnAgentFn!(type, query, outputPath, label);
+          return spawnAgentImpl(type, query, outputPath, label);
         }),
       );
     };
@@ -229,15 +255,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
   const skillContent = await loadSkillsByContent(skills, folderPath ?? undefined);
   const systemPrompt = [systemPromptAddition, skillContent].filter(Boolean).join("\n\n");
 
-  const agent = new Agent({
-    initialState: {
-      systemPrompt,
-      model: createModel({ provider, langfuseEnabled: false }),
-    },
-    getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),
-  });
-
-  agent.state.tools = createAgentTools({
+  const tools = createAgentTools({
     projectId,
     projectName,
     folderPath,
@@ -264,6 +282,15 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     spawnAgentsParallelFn,
   });
 
+  const agent = new Agent({
+    initialState: {
+      systemPrompt,
+      model: createModel({ provider, langfuseEnabled: false }),
+      tools,
+    },
+    getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),
+  });
+
   const run = (input: string): Promise<string> =>
     new Promise<string>((resolve, reject) => {
       let output = "";
@@ -283,7 +310,10 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
           resolve(output);
         }
       });
-      agent.prompt(input).catch(reject);
+      agent.prompt(input).catch((err) => {
+        unsubscribe();
+        reject(err);
+      });
     });
 
   return { agent, run };
