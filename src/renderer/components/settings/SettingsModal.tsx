@@ -87,7 +87,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         },
       });
       setLangfuseEnabled(settings.langfuseEnabled ?? false);
-      setWebAccessEnabled(true);
+      setWebAccessEnabled(settings.webAccessEnabled ?? true);
     });
   }, [open]);
 

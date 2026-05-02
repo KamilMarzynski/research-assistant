@@ -32,6 +32,7 @@ export const SaveSettingsSchema = z
     defaultCloudProvider: z.string().optional(),
     providerCredentials: z.unknown().optional(),
     langfuseEnabled: z.boolean().optional(),
+    webAccessEnabled: z.boolean().optional(),
   })
   .passthrough();
 

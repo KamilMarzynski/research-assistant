@@ -13,6 +13,7 @@ export interface SettingsResponse {
     ollama: { host: string; defaultModel: string };
   };
   langfuseEnabled: boolean;
+  webAccessEnabled: boolean;
 }
 
 /** Response from CHECK_OLLAMA */

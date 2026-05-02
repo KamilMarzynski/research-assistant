@@ -25,6 +25,7 @@ export function registerSettingsHandlers(
       defaultCloudProvider: settings.defaultCloudProvider,
       providerCredentials: settings.providerCredentials,
       langfuseEnabled: settings.langfuseEnabled,
+      webAccessEnabled: settings.webAccessEnabled,
     };
   });
 
