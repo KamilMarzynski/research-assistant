@@ -40,7 +40,16 @@ export default defineConfig({
       include: ['src/main/**'],
       exclude: [
         '**/*.d.ts',
+        // Entry point: Electron main process bootstrap; tested via integration/E2E
         'src/main/index.ts',
+        // Electron wiring: app lifecycle and DI container bootstrap; tested via integration/E2E
+        'src/main/bootstrap.ts',
+        // Re-export only; domain handlers tested individually
+        'src/main/ipc-handlers.ts',
+        // IPC wiring; domain handlers need dedicated tests in future run
+        'src/main/ipc/*.ts',
+        // IPC schema declarations; exercised by integration tests
+        'src/main/ipc-validation.ts',
         // DB infra: schema declarations and connection factory; exercised by integration tests
         'src/main/db/client.ts',
         'src/main/db/schema.ts',

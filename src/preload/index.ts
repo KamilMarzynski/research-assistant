@@ -11,7 +11,7 @@ function assertAllowed(channel: string): asserts channel is IpcChannel {
 }
 
 // Parallel listener registry used by _simulateEvent in tests.
-// Populated only when PLAYWRIGHT_TEST=1.
+// Populated only when NODE_ENV === "test".
 const _testListeners = new Map<string, Array<(data: unknown) => void>>();
 
 const isTestMode = process.env.NODE_ENV === "test";
