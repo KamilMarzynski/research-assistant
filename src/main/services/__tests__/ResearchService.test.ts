@@ -1,6 +1,13 @@
 import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("electron", () => ({
+  safeStorage: {
+    encryptString: vi.fn().mockReturnValue(Buffer.from("encrypted")),
+    decryptString: vi.fn().mockReturnValue("decrypted"),
+  },
+}));
+
 let capturedSubscriber: ((event: unknown) => void) | null = null;
 
 const mockAgent = {

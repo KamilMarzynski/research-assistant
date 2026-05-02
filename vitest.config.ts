@@ -41,9 +41,6 @@ export default defineConfig({
       exclude: [
         '**/*.d.ts',
         'src/main/index.ts',
-        // Electron-wiring: require app/ipcMain at runtime, tested E2E in later runs
-        'src/main/bootstrap.ts',
-        'src/main/ipc-handlers.ts',
         // DB infra: schema declarations and connection factory; exercised by integration tests
         'src/main/db/client.ts',
         'src/main/db/schema.ts',

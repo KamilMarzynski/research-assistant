@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
@@ -133,14 +134,16 @@ export class ResearchService {
       workspacePath: string,
     ) => Omit<WorkerAgentConfig, "provider" | "onProgress">,
   ): Promise<{ taskId: string }> {
-    const taskId = crypto.randomUUID();
+    const taskId = randomUUID();
     const settings = await this.settingsService.getSettings();
 
     const homePath = this.homeService.getHomePath();
     const workspacePath = join(homePath, "workspace", config.projectId, taskId);
 
     // Fire cleanup in background — don't block research start
-    void this.cleanupOldWorkspaces();
+    this.cleanupOldWorkspaces().catch((err) => {
+      console.error("[ResearchService] background workspace cleanup failed:", err);
+    });
 
     await mkdir(workspacePath, { recursive: true });
 
@@ -232,6 +235,9 @@ export class ResearchService {
     agent.prompt(config.query).catch(async (err) => {
       console.error("[ResearchService] worker error:", err);
       await this.homeService.updateTaskStatus(taskId, "failed", String(err));
+      await rm(workspacePath, { recursive: true, force: true }).catch(() => {
+        // Best-effort cleanup; don't let cleanup failure mask the original error
+      });
       this.eventBus.emit({
         type: "research:failed",
         payload: { taskId, projectId: config.projectId, query: config.query, error: String(err) },

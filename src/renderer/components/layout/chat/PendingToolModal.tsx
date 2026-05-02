@@ -5,6 +5,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  type PaperProps,
   Typography,
 } from "@mui/material";
 import type { PendingTool } from "../../../../shared/ipc-channels";
@@ -29,15 +30,12 @@ export default function PendingToolModal({
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      slotProps={
-        {
-          paper: {
-            sx: glassSx,
-            "data-testid": "pending-tool-modal",
-          },
-          // biome-ignore lint/suspicious/noExplicitAny: MUI v9 slotProps type doesn't include HTML attributes like data-testid
-        } as any
-      }
+      slotProps={{
+        paper: {
+          sx: glassSx,
+          "data-testid": "pending-tool-modal",
+        } as PaperProps,
+      }}
     >
       <DialogTitle>Review proposed tool: {tool.name}</DialogTitle>
       <DialogContent>

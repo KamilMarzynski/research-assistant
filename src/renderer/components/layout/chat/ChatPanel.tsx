@@ -51,7 +51,7 @@ export default function ChatPanel() {
           setMessages((msgs) => [
             ...msgs,
             {
-              id: crypto.randomUUID(),
+              id: window.electronAPI.generateUuid(),
               projectId: activeProjectId ?? "",
               role: "assistant" as const,
               content: prev,

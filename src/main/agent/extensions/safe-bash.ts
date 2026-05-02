@@ -187,9 +187,11 @@ function runSafeBashInternal(opts: SafeBashOptions): Promise<SafeBashResult> {
     proc.stdout.on("data", (chunk: Buffer) => {
       if (Buffer.byteLength(stdout) < MAX_OUTPUT_CHARS) {
         stdout += chunk.toString();
-        if (Buffer.byteLength(stdout) >= MAX_OUTPUT_CHARS) {
+        const byteLen = Buffer.byteLength(stdout);
+        if (byteLen >= MAX_OUTPUT_CHARS) {
           truncated = true;
-          stdout = stdout.slice(0, MAX_OUTPUT_CHARS);
+          const buf = Buffer.from(stdout);
+          stdout = buf.subarray(0, MAX_OUTPUT_CHARS).toString("utf-8");
         }
       }
     });
@@ -197,9 +199,11 @@ function runSafeBashInternal(opts: SafeBashOptions): Promise<SafeBashResult> {
     proc.stderr.on("data", (chunk: Buffer) => {
       if (Buffer.byteLength(stderr) < MAX_OUTPUT_CHARS) {
         stderr += chunk.toString();
-        if (Buffer.byteLength(stderr) >= MAX_OUTPUT_CHARS) {
+        const byteLen = Buffer.byteLength(stderr);
+        if (byteLen >= MAX_OUTPUT_CHARS) {
           truncated = true;
-          stderr = stderr.slice(0, MAX_OUTPUT_CHARS);
+          const buf = Buffer.from(stderr);
+          stderr = buf.subarray(0, MAX_OUTPUT_CHARS).toString("utf-8");
         }
       }
     });
@@ -238,7 +242,9 @@ function runSafeBashInternal(opts: SafeBashOptions): Promise<SafeBashResult> {
         exitCode: code ?? 1,
       });
 
-      appendFile(auditLogPath, `${entry}\n`, "utf-8").catch(console.error);
+      appendFile(auditLogPath, `${entry}\n`, "utf-8").catch((err) => {
+        console.error("[safe-bash] audit log append failed:", err);
+      });
 
       settle({ stdout, stderr, exitCode: code ?? 1, truncated });
     });

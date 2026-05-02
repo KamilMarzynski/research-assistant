@@ -10,7 +10,8 @@ declare global {
       ): Promise<IpcResponseMap[T]>;
       invoke(channel: IpcChannel, data?: unknown): Promise<unknown>;
       on(channel: IpcChannel, callback: (data: unknown) => void): () => void;
-      /** Test-only: fires registered on() listeners for the given channel without going through IPC. Only present when PLAYWRIGHT_TEST=1. */
+      generateUuid(): string;
+      /** Test-only: fires registered on() listeners for the given channel without going through IPC. Only present when NODE_ENV="test". */
       _simulateEvent?: (channel: IpcChannel, payload: unknown) => void;
     };
   }

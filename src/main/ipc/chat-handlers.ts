@@ -99,11 +99,19 @@ export function registerChatHandler(
 
         // Stream timeout: 120s, prevents stuck cursor if agent_end never fires
         const timeout = AbortSignal.timeout(120_000);
+        let onAbort: (() => void) | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => {
-          timeout.addEventListener("abort", () => reject(new Error("stream_timeout")));
+          onAbort = () => reject(new Error("stream_timeout"));
+          timeout.addEventListener("abort", onAbort);
         });
 
-        await Promise.race([session.send(content), timeoutPromise]);
+        try {
+          await Promise.race([session.send(content), timeoutPromise]);
+        } finally {
+          if (onAbort) {
+            timeout.removeEventListener("abort", onAbort);
+          }
+        }
       } catch (err) {
         if (err instanceof Error && err.message === "stream_timeout") {
           if (projectId) {

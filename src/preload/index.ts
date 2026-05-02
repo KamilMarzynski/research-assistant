@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { contextBridge, ipcRenderer } from "electron";
 import { IPC, type IpcChannel } from "../shared/ipc-channels";
 
@@ -13,7 +14,7 @@ function assertAllowed(channel: string): asserts channel is IpcChannel {
 // Populated only when PLAYWRIGHT_TEST=1.
 const _testListeners = new Map<string, Array<(data: unknown) => void>>();
 
-const isTestMode = process.env.PLAYWRIGHT_TEST === "1";
+const isTestMode = process.env.NODE_ENV === "test";
 
 const baseApi = {
   send(channel: IpcChannel, data?: unknown): void {
@@ -47,6 +48,10 @@ const baseApi = {
         }
       }
     };
+  },
+
+  generateUuid(): string {
+    return randomUUID();
   },
 };
 

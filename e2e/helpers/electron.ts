@@ -9,7 +9,7 @@ export interface AppHandle {
 export async function launchApp(): Promise<AppHandle> {
   const app = await electron.launch({
     args: [path.join(process.cwd(), "out/main/index.js")],
-    env: { ...process.env, PLAYWRIGHT_TEST: "1" },
+    env: { ...process.env, NODE_ENV: "test", PLAYWRIGHT_TEST: "1" },
   });
   const page = await app.firstWindow();
   await page.waitForLoadState("domcontentloaded");
