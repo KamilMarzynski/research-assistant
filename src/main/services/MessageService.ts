@@ -11,7 +11,9 @@ export class MessageService {
 
   async addMessage(data: Omit<Message, "id" | "createdAt">): Promise<Message> {
     if (!VALID_ROLES.has(data.role)) {
-      throw new Error(`Invalid message role: "${data.role}". Must be one of: user, assistant, system`);
+      throw new Error(
+        `Invalid message role: "${data.role}". Must be one of: user, assistant, system`,
+      );
     }
     return this.repo.create(data);
   }

@@ -26,12 +26,14 @@ export const RetryResearchSchema = z.object({
   query: z.string(),
 });
 
-export const SaveSettingsSchema = z.object({
-  activeProvider: z.string().optional(),
-  defaultCloudProvider: z.string().optional(),
-  providerCredentials: z.unknown().optional(),
-  langfuseEnabled: z.boolean().optional(),
-}).passthrough();
+export const SaveSettingsSchema = z
+  .object({
+    activeProvider: z.string().optional(),
+    defaultCloudProvider: z.string().optional(),
+    providerCredentials: z.unknown().optional(),
+    langfuseEnabled: z.boolean().optional(),
+  })
+  .passthrough();
 
 export const CheckOllamaSchema = z.string();
 

@@ -12,7 +12,7 @@ import {
 import type { DrizzleDB } from "../db/client";
 import { tasks } from "../db/schema";
 import { DB_TOKEN } from "../di/tokens";
-import { getHomePath, getAgentsPath } from "../paths";
+import { getAgentsPath, getHomePath } from "../paths";
 
 export interface ResearchTask {
   taskId: string;
