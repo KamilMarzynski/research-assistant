@@ -43,6 +43,13 @@ describe("MessageService", () => {
       expect(repo.create).toHaveBeenCalledWith(data);
       expect(result).toEqual(created);
     });
+
+    it("throws for invalid role", async () => {
+      const data = { projectId: "proj-1", role: "invalid" as never, content: "Hi" };
+      await expect(service.addMessage(data)).rejects.toThrow(
+        'Invalid message role: "invalid". Must be one of: user, assistant, system',
+      );
+    });
   });
 
   describe("getHistory", () => {

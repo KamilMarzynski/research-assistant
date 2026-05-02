@@ -248,6 +248,32 @@ describe("createWorkerAgent – AGENT_TYPE_PRESETS (spawn label propagation)", (
     expect(labels).toContain("[researcher-1]");
     expect(labels).toContain("[researcher-2]");
   });
+
+  it("spawnAgentFn works with coder preset", async () => {
+    const { createAgentTools } = await import("./tools");
+    const capturedConfigs: unknown[] = [];
+    vi.mocked(createAgentTools).mockImplementation((opts) => {
+      capturedConfigs.push(opts);
+      return [];
+    });
+
+    await createWorkerAgent({
+      ...BASE_CONFIG,
+      toolNames: ["spawn_agent"] as const,
+      remainingDepth: 1,
+    });
+
+    const parentOpts = capturedConfigs[0] as {
+      spawnAgentFn?: (type: string, query: string, outputPath: string) => Promise<unknown>;
+    };
+    expect(parentOpts.spawnAgentFn).toBeDefined();
+
+    // biome-ignore lint/style/noNonNullAssertion: expect above confirmed defined
+    await parentOpts.spawnAgentFn!("coder", "q1", "/tmp/out.md");
+
+    // createAgentTools called twice: parent + child
+    expect(capturedConfigs).toHaveLength(2);
+  });
 });
 
 describe("createWorkerAgent – onProgress", () => {
@@ -304,6 +330,18 @@ describe("createWorkerAgent – onProgress", () => {
     });
     const { run } = await createWorkerAgent(BASE_CONFIG);
     await expect(run("test")).resolves.toBe("y");
+  });
+
+  it("getApiKey returns ollama for ollama provider", async () => {
+    const { Agent } = await import("@mariozechner/pi-agent-core");
+    await createWorkerAgent({
+      ...BASE_CONFIG,
+      provider: { type: "ollama", host: "http://localhost:11434", model: "llama3" },
+    });
+    const constructorCall = vi.mocked(Agent).mock.calls.at(-1);
+    const options = constructorCall?.[0] as { getApiKey: () => Promise<string> };
+    const key = await options.getApiKey();
+    expect(key).toBe("ollama");
   });
 });
 

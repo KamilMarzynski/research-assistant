@@ -183,14 +183,23 @@ describe("task persistence", () => {
     expect(insertFn).toHaveBeenCalled();
   });
 
-  it("migrateTasksFromJson does nothing when no JSON dir", async () => {
+  it("migrateTasksFromJson does nothing when tasks dir missing", async () => {
     const db = mockDb();
-    const _insertFn = db.insert as ReturnType<typeof vi.fn>;
+    const svc = new HomeService(db);
+    // do NOT call ensureDirectories — tasks dir won't exist
+    await svc.migrateTasksFromJson();
+    expect(true).toBe(true);
+  });
+
+  it("migrateTasksFromJson skips malformed JSON files", async () => {
+    const db = mockDb();
+    const insertFn = db.insert as ReturnType<typeof vi.fn>;
     const svc = new HomeService(db);
     await svc.ensureDirectories();
+    const tasksDir = join(tmpHome, ".research-assistant", "tasks");
+    await writeFile(join(tasksDir, "bad.json"), "not json");
     await svc.migrateTasksFromJson();
-    // insert might be called zero times; just verify no crash
-    expect(true).toBe(true);
+    expect(insertFn).not.toHaveBeenCalled();
   });
 });
 
@@ -252,6 +261,26 @@ describe("pending tools", () => {
     const svc = new HomeService(mockDb());
     await svc.ensureDirectories();
     expect(await svc.getPendingTools()).toEqual([]);
+  });
+
+  it("getPendingTools returns empty array when pending-tools dir does not exist", async () => {
+    const svc = new HomeService(mockDb());
+    await svc.ensureDirectories();
+    const pendingDir = join(tmpHome, ".research-assistant", "pending-tools");
+    await rm(pendingDir, { recursive: true, force: true });
+    expect(await svc.getPendingTools()).toEqual([]);
+  });
+
+  it("getPendingTools skips malformed entries where readFile throws", async () => {
+    const svc = new HomeService(mockDb());
+    await svc.ensureDirectories();
+    await svc.savePendingTool("good-tool", "# good");
+    const pendingDir = join(tmpHome, ".research-assistant", "pending-tools");
+    // Create a directory instead of a file to make readFile throw
+    await mkdir(join(pendingDir, "bad-tool", "SKILL.md"), { recursive: true });
+    const tools = await svc.getPendingTools();
+    expect(tools).toHaveLength(1);
+    expect(tools[0].name).toBe("good-tool");
   });
 
   it("getPendingTools returns saved tools", async () => {
@@ -329,6 +358,25 @@ describe("skill management", () => {
     expect(skills.length).toBeGreaterThanOrEqual(3);
   });
 
+  it("getSkills returns empty array when skills dir does not exist", async () => {
+    const db = mockDb();
+    const svc = new HomeService(db);
+    await svc.ensureDirectories();
+    const skillsDir = join(tmpHome, ".research-assistant", "skills");
+    await rm(skillsDir, { recursive: true, force: true });
+    expect(await svc.getSkills()).toEqual([]);
+  });
+
+  it("getSkills skips malformed entries where readFile throws", async () => {
+    const db = mockDb();
+    const svc = new HomeService(db);
+    await svc.ensureDirectories();
+    const skillsDir = join(svc.getHomePath(), "skills");
+    await mkdir(join(skillsDir, "bad-skill", "SKILL.md"), { recursive: true });
+    const skills = await svc.getSkills();
+    expect(skills.some((s) => s.name === "bad-skill")).toBe(false);
+  });
+
   it("getSkills returns skills with parsed frontmatter", async () => {
     const db = mockDb();
     const svc = new HomeService(db);
@@ -347,6 +395,20 @@ describe("skill management", () => {
     expect(ourSkill?.description).toBe("A test skill.");
     expect(ourSkill?.enabled).toBe(true);
     expect(ourSkill?.content).toContain("Some content.");
+  });
+
+  it("getSkills falls back to entry name and empty description when frontmatter missing", async () => {
+    const db = mockDb();
+    const svc = new HomeService(db);
+    await svc.ensureDirectories();
+    const skillDir = join(svc.getHomePath(), "skills", "no-meta");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(join(skillDir, "SKILL.md"), "# Just markdown\nNo frontmatter.");
+
+    const skills = await svc.getSkills();
+    const skill = skills.find((s) => s.name === "no-meta");
+    expect(skill).toBeDefined();
+    expect(skill?.description).toBe("");
   });
 
   it("getSkills returns enabled=false when .disabled file exists", async () => {

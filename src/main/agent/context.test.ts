@@ -76,6 +76,25 @@ describe("loadSkills", () => {
     const result = await loadSkills(undefined);
     expect(result).not.toContain("disabled-skill");
   });
+
+  it("skips malformed skill entries missing frontmatter", async () => {
+    const skillDir = join(tmpHome, ".research-assistant", "skills", "bad-skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(join(skillDir, "SKILL.md"), "# No frontmatter here");
+
+    const result = await loadSkills(undefined);
+    expect(result).not.toContain("bad-skill");
+  });
+
+  it("skips skill entries where readFile throws", async () => {
+    const skillDir = join(tmpHome, ".research-assistant", "skills", "dir-skill");
+    await mkdir(skillDir, { recursive: true });
+    // Create a directory named SKILL.md to make readFile throw EISDIR
+    await mkdir(join(skillDir, "SKILL.md"), { recursive: true });
+
+    const result = await loadSkills(undefined);
+    expect(result).not.toContain("dir-skill");
+  });
 });
 
 describe("toSlug", () => {
@@ -140,6 +159,25 @@ describe("buildSystemContext", () => {
     expect(result).toContain("TypeScript monorepo.");
   });
 
+  it("skips empty config.md", async () => {
+    const home = join(tmpHome, ".research-assistant");
+    await mkdir(home, { recursive: true });
+    await writeFile(join(home, "config.md"), "   ");
+
+    const result = await buildSystemContext("proj-1", "my project", undefined);
+    expect(result).not.toContain("config.md");
+  });
+
+  it("skips empty AGENTS.md", async () => {
+    const home = join(tmpHome, ".research-assistant");
+    const slug = "my-project";
+    await mkdir(join(home, "projects", slug), { recursive: true });
+    await writeFile(join(home, "projects", slug, "AGENTS.md"), "   ");
+
+    const result = await buildSystemContext("proj-1", "my project", undefined);
+    expect(result).not.toContain("Project context");
+  });
+
   it("generates correct slug from project name", async () => {
     const home = join(tmpHome, ".research-assistant");
     // "My Cool Project!" → "my-cool-project"
@@ -149,6 +187,20 @@ describe("buildSystemContext", () => {
 
     const result = await buildSystemContext("proj-1", "My Cool Project!", undefined);
     expect(result).toContain("Context for cool project.");
+  });
+
+  it("includes skills XML when skills are present", async () => {
+    const home = join(tmpHome, ".research-assistant");
+    const skillDir = join(home, "skills", "my-skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: my-skill\ndescription: Does something.\n---\n# Content",
+    );
+
+    const result = await buildSystemContext("proj-1", "my project", undefined);
+    expect(result).toContain("<available_skills>");
+    expect(result).toContain("<name>my-skill</name>");
   });
 });
 
@@ -191,5 +243,21 @@ describe("loadSkillsByContent", () => {
     const result = await loadSkillsByContent(["skill-a", "skill-b"], undefined);
     expect(result).toContain("# skill-a");
     expect(result).toContain("# skill-b");
+  });
+
+  it("resolves skill from project folder when present", async () => {
+    const globalDir = join(tmpHome, ".research-assistant", "skills", "proj-skill");
+    await mkdir(globalDir, { recursive: true });
+    await writeFile(join(globalDir, "SKILL.md"), "# global");
+
+    const projectDir = "/tmp/proj-skill-test/.agents/skills/proj-skill";
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(join(projectDir, "SKILL.md"), "# project");
+
+    const result = await loadSkillsByContent(["proj-skill"], "/tmp/proj-skill-test");
+    expect(result).toContain("# project");
+    expect(result).not.toContain("# global");
+
+    await rm("/tmp/proj-skill-test", { recursive: true, force: true });
   });
 });

@@ -148,6 +148,68 @@ describe("runSafeBash", () => {
       }),
     ).rejects.toThrow("This command would recursively delete");
   });
+
+  it("truncates stdout when output exceeds MAX_OUTPUT_CHARS", async () => {
+    const result = await runSafeBash({
+      command: `node -e "console.log('x'.repeat(70000))"`,
+      intent: "test truncation",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+    });
+    expect(result.truncated).toBe(true);
+    expect(result.stdout).toContain("[truncated");
+  });
+
+  it("truncates stderr when output exceeds MAX_OUTPUT_CHARS", async () => {
+    const result = await runSafeBash({
+      command: `node -e "console.error('x'.repeat(70000))"`,
+      intent: "test stderr truncation",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+    });
+    expect(result.truncated).toBe(true);
+    expect(result.stderr.length).toBeLessThanOrEqual(65536 + 1); // allow one char rounding
+  });
+
+  it("returns exitCode 124 on timeout", async () => {
+    const result = await runSafeBash({
+      command: "sleep 5",
+      intent: "test timeout",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+      timeoutMs: 100,
+    });
+    expect(result.exitCode).toBe(124);
+    expect(result.stderr).toContain("Timeout");
+  });
+
+  it("handles audit log append failure gracefully", async () => {
+    const { mkdir } = await import("node:fs/promises");
+    const badAuditLogPath = join(workDir, "audit-dir");
+    await mkdir(badAuditLogPath, { recursive: true });
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await runSafeBash({
+      command: "echo hello",
+      intent: "test audit failure",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath: badAuditLogPath,
+    });
+
+    // Allow microtask queue to process the appendFile rejection
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(result.stdout.trim()).toBe("hello");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[safe-bash] audit log append failed:",
+      expect.any(Error),
+    );
+    consoleSpy.mockRestore();
+  });
 });
 
 describe("approval gate", () => {
@@ -299,5 +361,9 @@ describe("approval gate", () => {
     expect(payload2.projectId).toBe("p2");
     resolveBlockedCommand(payload2.commandId, "deny", "p2");
     await expect(promise2).rejects.toThrow("Blocked:");
+  });
+
+  it("resolveBlockedCommand silently returns for unknown commandId", () => {
+    expect(() => resolveBlockedCommand("nonexistent-id", "deny")).not.toThrow();
   });
 });

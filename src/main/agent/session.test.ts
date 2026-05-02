@@ -77,6 +77,7 @@ function makeHomeService() {
 function makeResearchService() {
   return {
     startResearch: vi.fn().mockResolvedValue({ taskId: "task-1" }),
+    startOrchestratedResearch: vi.fn().mockResolvedValue({ taskId: "task-2" }),
   };
 }
 
@@ -224,6 +225,23 @@ describe("AgentSession", () => {
       });
       expect(win.webContents.send).not.toHaveBeenCalled();
     });
+
+    it("logs subscriber error when webContents.send throws", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      (win.webContents.send as ReturnType<typeof vi.fn>).mockImplementation(() => {
+        throw new Error("IPC broken");
+      });
+      await session.send("hello");
+      await triggerEvent({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "x" },
+      });
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[AgentSession] subscriber error:",
+        expect.any(Error),
+      );
+      consoleSpy.mockRestore();
+    });
   });
 
   describe("abort()", () => {
@@ -242,6 +260,32 @@ describe("AgentSession", () => {
       };
       const key = await options.getApiKey();
       expect(key).toBe("sk-or-test");
+    });
+
+    it("works without eventBus (emitBlocked undefined)", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        provider: {
+          type: "openrouter",
+          apiKey: "sk-or-test",
+          model: "anthropic/claude-sonnet-4-6",
+        },
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+      });
+      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const opts = lastCall?.[0] as { initialState: { tools: unknown[] } };
+      expect(opts.initialState.tools).toBeDefined();
     });
 
     it("beforeToolCall blocks unregistered tools", async () => {
@@ -266,6 +310,65 @@ describe("AgentSession", () => {
       };
       const result = await options.beforeToolCall({ toolCall: { name: "read_file" } });
       expect(result).toBeUndefined();
+    });
+
+    it("getApiKey returns ollama for ollama provider", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      const { createAgentTools } = await import("./tools");
+      new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        provider: { type: "ollama", host: "http://localhost:11434", model: "llama3" },
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+      });
+      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const opts = lastCall?.[0] as { getApiKey: () => Promise<string> };
+      const key = await opts.getApiKey();
+      expect(key).toBe("ollama");
+      expect(createAgentTools).toHaveBeenCalledWith(expect.objectContaining({ apiKey: "ollama" }));
+    });
+
+    it("startResearchFn delegates to startOrchestratedResearch when deep is true", async () => {
+      const researchService = makeResearchService();
+      const { createAgentTools } = await import("./tools");
+      new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: researchService as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        provider: {
+          type: "openrouter",
+          apiKey: "sk-or-test",
+          model: "anthropic/claude-sonnet-4-6",
+        },
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+      });
+      const opts = vi.mocked(createAgentTools).mock.calls.at(-1)?.[0] as {
+        startResearchFn?: (query: string, deep?: boolean) => Promise<unknown>;
+      };
+      await opts?.startResearchFn?.("deep query", true);
+      expect(researchService.startOrchestratedResearch).toHaveBeenCalledWith(
+        "p-1",
+        "Test",
+        "deep query",
+        null,
+      );
     });
   });
 
@@ -331,6 +434,11 @@ describe("AgentSession", () => {
       expect(mockAgent.followUp).toHaveBeenCalledWith(
         expect.objectContaining({ role: "user", content: "Research complete: found 5 files." }),
       );
+    });
+
+    it("throws when followUp fails", async () => {
+      mockAgent.followUp.mockRejectedValueOnce(new Error("network error"));
+      await expect(session.queueFollowUp("follow-up")).rejects.toThrow("network error");
     });
 
     it("defers followUp while send() is processing and runs it after send completes", async () => {

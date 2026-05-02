@@ -70,6 +70,30 @@ describe("isPrivateIp", () => {
   it("blocks ::ffff:192.168.1.1 (IPv4-mapped private)", () => {
     expect(isPrivateIp("::ffff:192.168.1.1")).toBe(true);
   });
+
+  it("blocks 0:0:0:0:0:ffff:192.168.1.1 (IPv4-mapped private without ::)", () => {
+    expect(isPrivateIp("0:0:0:0:0:ffff:192.168.1.1")).toBe(true);
+  });
+
+  it("returns false for invalid IPv4", () => {
+    expect(isPrivateIp("999.999.999.999")).toBe(false);
+  });
+
+  it("returns false for invalid IPv6", () => {
+    expect(isPrivateIp("::g::")).toBe(false);
+  });
+
+  it("returns false for non-IP string", () => {
+    expect(isPrivateIp("not-an-ip")).toBe(false);
+  });
+
+  it("returns false for invalid IPv4 embedded in IPv6", () => {
+    expect(isPrivateIp("::ffff:999.999.999.999")).toBe(false);
+  });
+
+  it("returns false for valid public IPv6 without double colon", () => {
+    expect(isPrivateIp("2001:0db8:0000:0000:0000:0000:0000:0001")).toBe(false);
+  });
 });
 
 describe("assertSafeUrl", () => {
@@ -119,6 +143,27 @@ describe("assertSafeUrl", () => {
 
   it("throws for malformed URL", async () => {
     await expect(assertSafeUrl("not-a-url")).rejects.toThrow(/SSRF guard blocked.*invalid URL/);
+  });
+
+  it("throws for non-http protocol", async () => {
+    await expect(assertSafeUrl("ftp://example.com")).rejects.toThrow(
+      /SSRF guard blocked.*only http and https/,
+    );
+  });
+
+  it("allows public IPv4 address", async () => {
+    const result = await assertSafeUrl("http://93.184.216.34");
+    expect(result).toBe("http://93.184.216.34");
+  });
+
+  it("allows public IPv6 address", async () => {
+    mockResolve6.mockResolvedValueOnce(["2001:db8::1"]);
+    const result = await assertSafeUrl("http://[2001:db8::1]");
+    expect(result).toBe("http://[2001:db8::1]");
+  });
+
+  it("returns false for invalid IPv4 embedded in IPv6 without ::", () => {
+    expect(isPrivateIp("0:0:0:0:0:ffff:999.999.999.999")).toBe(false);
   });
 });
 

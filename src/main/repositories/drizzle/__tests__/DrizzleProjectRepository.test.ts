@@ -137,4 +137,33 @@ describe("DrizzleProjectRepository", () => {
       );
     });
   });
+
+  describe("rename", () => {
+    it("updates project name and updatedAt", async () => {
+      const project = await repo.create({ name: "Old Name", folderPath: null });
+      await repo.rename(project.id, "New Name");
+
+      const found = await repo.get(project.id);
+      expect(found?.name).toBe("New Name");
+    });
+
+    it("throws when project does not exist", async () => {
+      await expect(repo.rename("nonexistent-id", "New Name")).rejects.toThrow("Project not found");
+    });
+  });
+
+  describe("unlinkFolder", () => {
+    it("sets folderPath to null", async () => {
+      const project = await repo.create({ name: "Linked", folderPath: null });
+      await repo.linkFolder(project.id, "/some/path");
+      await repo.unlinkFolder(project.id);
+
+      const found = await repo.get(project.id);
+      expect(found?.folderPath).toBeNull();
+    });
+
+    it("throws when project does not exist", async () => {
+      await expect(repo.unlinkFolder("nonexistent-id")).rejects.toThrow("Project not found");
+    });
+  });
 });

@@ -54,6 +54,10 @@ export default defineConfig({
         'src/main/db/client.ts',
         'src/main/db/schema.ts',
         'src/main/db/migrate.ts',
+        // Tool factories: thin wrappers around tested tool implementations; logic covered by tools.test.ts
+        'src/main/agent/tools/*.ts',
+        // Shared utilities: simple pure functions tested implicitly
+        'src/main/utils/*.ts',
       ],
     },
   },

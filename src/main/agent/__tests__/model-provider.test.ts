@@ -36,6 +36,34 @@ describe("isCloudProvider", () => {
   });
 });
 
+describe("getCloudCreds edge cases", () => {
+  it("falls back to default cloud provider when credentials object is malformed", () => {
+    const settings = {
+      ...baseSettings,
+      providerCredentials: {
+        ...baseSettings.providerCredentials,
+        openrouter: "not-an-object" as never,
+      },
+    };
+    const p = resolveProvider({ settings });
+    expect((p as { apiKey?: string }).apiKey).toBe("");
+    expect((p as { model?: string }).model).toBe("");
+  });
+
+  it("falls back when credentials object is null", () => {
+    const settings = {
+      ...baseSettings,
+      providerCredentials: {
+        ...baseSettings.providerCredentials,
+        openrouter: null as never,
+      },
+    };
+    const p = resolveProvider({ settings });
+    expect((p as { apiKey?: string }).apiKey).toBe("");
+    expect((p as { model?: string }).model).toBe("");
+  });
+});
+
 describe("resolveProvider", () => {
   it("resolves openrouter when active", () => {
     const p = resolveProvider({ settings: baseSettings });
@@ -87,6 +115,58 @@ describe("resolveProvider", () => {
       projectModelOverride: "ollama:llama3.2:3b",
     });
     expect(p).toEqual({ type: "ollama", host: "http://localhost:11434", model: "llama3.2:3b" });
+  });
+
+  it("handles openrouter override", () => {
+    const p = resolveProvider({
+      settings: baseSettings,
+      projectModelOverride: "openrouter:anthropic/claude-sonnet-4-6",
+    });
+    expect(p).toEqual({
+      type: "openrouter",
+      apiKey: "sk-test",
+      model: "anthropic/claude-sonnet-4-6",
+    });
+  });
+
+  it("handles openai override", () => {
+    const p = resolveProvider({
+      settings: baseSettings,
+      projectModelOverride: "openai:gpt-4o",
+    });
+    expect(p).toEqual({ type: "openai", apiKey: "sk-openai", model: "gpt-4o" });
+  });
+
+  it("handles anthropic override", () => {
+    const p = resolveProvider({
+      settings: baseSettings,
+      projectModelOverride: "anthropic:claude-3-5-sonnet",
+    });
+    expect(p).toEqual({
+      type: "anthropic",
+      apiKey: "sk-anthropic",
+      model: "claude-3-5-sonnet",
+    });
+  });
+
+  it("falls back to default when override has no model part", () => {
+    const p = resolveProvider({
+      settings: baseSettings,
+      projectModelOverride: "openrouter:",
+    });
+    expect(p.type).toBe("openrouter");
+  });
+
+  it("resolves anthropic active provider to default cloud provider", () => {
+    const settings = { ...baseSettings, activeProvider: "anthropic" as const };
+    const p = resolveProvider({ settings });
+    expect(p.type).toBe("openrouter");
+  });
+
+  it("resolves with invalid active provider to default cloud provider", () => {
+    const settings = { ...baseSettings, activeProvider: "invalid" as never };
+    const p = resolveProvider({ settings });
+    expect(p.type).toBe("openrouter");
   });
 });
 
