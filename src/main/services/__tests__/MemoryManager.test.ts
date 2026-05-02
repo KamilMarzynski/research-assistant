@@ -38,6 +38,11 @@ const mockComplete = vi.fn().mockResolvedValue({
 
 vi.mock("@mariozechner/pi-ai", () => ({
   getModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
+  getModels: vi.fn().mockReturnValue([
+    { provider: "openrouter", id: "test-model" },
+    { provider: "openrouter", id: "anthropic/claude-sonnet-4-6" },
+    { provider: "openrouter", id: "anthropic/claude-haiku-4.5" },
+  ]),
   complete: mockComplete,
 }));
 

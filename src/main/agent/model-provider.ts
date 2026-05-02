@@ -1,3 +1,4 @@
+import { z } from "zod/v4";
 import type { EventBus } from "../event-bus";
 import type { AppSettings } from "../services/SettingsService";
 
@@ -19,16 +20,26 @@ export interface ResolveProviderOpts {
   forceCloud?: boolean;
 }
 
-interface CloudCreds {
-  apiKey: string | null;
-  defaultModel: string;
-}
+const CloudCredsSchema = z
+  .object({
+    apiKey: z.string().nullable().optional(),
+    defaultModel: z.string().optional(),
+  })
+  .nullable()
+  .optional();
 
 function getCloudCreds(creds: unknown): { apiKey: string; defaultModel: string } {
-  const c = creds as CloudCreds | null | undefined;
+  const parsed = CloudCredsSchema.safeParse(creds);
+  if (!parsed.success) {
+    return { apiKey: "", defaultModel: "" };
+  }
+  const data = parsed.data;
+  if (!data) {
+    return { apiKey: "", defaultModel: "" };
+  }
   return {
-    apiKey: c?.apiKey ?? "",
-    defaultModel: c?.defaultModel ?? "",
+    apiKey: data.apiKey ?? "",
+    defaultModel: data.defaultModel ?? "",
   };
 }
 

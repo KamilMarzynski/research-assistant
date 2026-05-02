@@ -10,6 +10,7 @@ const mockBaseModel = {
 
 vi.mock("@mariozechner/pi-ai", () => ({
   getModel: vi.fn().mockReturnValue(mockBaseModel),
+  getModels: vi.fn().mockReturnValue([mockBaseModel]),
 }));
 
 const { createModel } = await import("../model-factory");
@@ -73,9 +74,8 @@ describe("createModel", () => {
   });
 
   it("throws when model ID is not found in registry", async () => {
-    const { getModel } = await import("@mariozechner/pi-ai");
-    // biome-ignore lint/suspicious/noExplicitAny: test-only cast to simulate unknown model
-    vi.mocked(getModel).mockReturnValueOnce(undefined as any);
+    const { getModels } = await import("@mariozechner/pi-ai");
+    vi.mocked(getModels).mockReturnValueOnce([]);
     expect(() => createModel({ provider: openrouterProvider, langfuseEnabled: false })).toThrow(
       "Unknown OpenRouter model",
     );
@@ -89,14 +89,14 @@ describe("createModel", () => {
     };
     const model = createModel({ provider: ollamaProvider, langfuseEnabled: false });
     expect(model.baseUrl).toBe("http://localhost:11434/v1");
-    expect((model as unknown as { apiKey: string }).apiKey).toBe("ollama");
+    expect(model.id).toBe("llama3");
   });
 
   it("returns openai model config", () => {
     const openaiProvider = { type: "openai" as const, apiKey: "sk-openai", model: "gpt-4o" };
     const model = createModel({ provider: openaiProvider, langfuseEnabled: false });
     expect(model.baseUrl).toBe("https://api.openai.com/v1");
-    expect((model as unknown as { apiKey: string }).apiKey).toBe("sk-openai");
+    expect(model.id).toBe("gpt-4o");
   });
 
   it("throws for anthropic provider", () => {

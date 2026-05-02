@@ -22,6 +22,7 @@ vi.mock("@mariozechner/pi-agent-core", () => ({
 
 vi.mock("@mariozechner/pi-ai", () => ({
   getModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
+  getModels: vi.fn().mockReturnValue([{ provider: "openrouter", id: "test-model" }]),
 }));
 
 vi.mock("./model-factory", () => ({
