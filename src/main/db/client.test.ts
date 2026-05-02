@@ -17,7 +17,7 @@ describe("database integrity", () => {
 
     // Verify FK pragma is on
     const pragmaResult = await client.execute("PRAGMA foreign_keys");
-    expect(pragmaResult.rows[0]?.["foreign_keys"] ?? pragmaResult.rows[0]?.[0]).toBe(1);
+    expect(pragmaResult.rows[0]?.foreign_keys ?? pragmaResult.rows[0]?.[0]).toBe(1);
 
     // Insert a project
     await client.execute(
@@ -37,7 +37,7 @@ describe("database integrity", () => {
       .then(() => null)
       .catch((e: Error) => e);
     expect(err).toBeDefined();
-    expect(err!.message).toMatch(/FOREIGN KEY|constraint/i);
+    expect(err?.message).toMatch(/FOREIGN KEY|constraint/i);
 
     // Delete project should cascade
     await client.execute("DELETE FROM projects WHERE id = 'p1'");

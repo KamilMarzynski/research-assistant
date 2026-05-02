@@ -5,7 +5,7 @@ import { inject, injectable } from "tsyringe";
 import { createModel } from "../agent/model-factory";
 import { isCloudProvider, resolveProvider } from "../agent/model-provider";
 import { USER_DATA_PATH_TOKEN } from "../di/tokens";
-import type { SettingsService } from "./SettingsService";
+import { SettingsService } from "./SettingsService";
 
 /** Model used for Observer compression — haiku for cost. Not user-configurable in Run 7. */
 const COMPRESSION_MODEL_ID = "anthropic/claude-haiku-4.5" as const;
@@ -39,7 +39,7 @@ export class MemoryManager implements IMemoryManager {
 
   constructor(
     @inject(USER_DATA_PATH_TOKEN) userDataPath: string,
-    private readonly settingsService: SettingsService,
+    @inject(SettingsService) private readonly settingsService: SettingsService,
   ) {
     this.dbPath = join(userDataPath, "research-assistant.db");
   }

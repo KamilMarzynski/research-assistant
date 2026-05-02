@@ -7,7 +7,6 @@ import {
   AGENT_HOME_PATH_TOKEN,
   ARTIFACT_REPO_TOKEN,
   DB_TOKEN,
-  MEMORY_MANAGER_TOKEN,
   MESSAGE_REPO_TOKEN,
   PROJECT_REPO_TOKEN,
   USER_DATA_PATH_TOKEN,
@@ -48,7 +47,6 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);
   appContainer.registerSingleton(MemoryManager);
-  appContainer.registerInstance(MEMORY_MANAGER_TOKEN, appContainer.resolve(MemoryManager));
   appContainer.registerSingleton(HomeService);
 
   const homeService = appContainer.resolve(HomeService);

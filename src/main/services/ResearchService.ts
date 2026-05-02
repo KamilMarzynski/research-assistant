@@ -1,14 +1,13 @@
 import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { injectable } from "tsyringe";
-import type { ModelProvider } from "../agent/model-provider";
+import { inject, injectable } from "tsyringe";
 import { resolveProvider } from "../agent/model-provider";
 import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
-import type { EventBus } from "../event-bus";
-import type { ArtifactService } from "./ArtifactService";
-import type { HomeService } from "./HomeService";
-import type { SettingsService } from "./SettingsService";
+import { EventBus } from "../event-bus";
+import { ArtifactService } from "./ArtifactService";
+import { HomeService } from "./HomeService";
+import { SettingsService } from "./SettingsService";
 
 interface RunResearchConfig {
   projectId: string;
@@ -23,10 +22,10 @@ export class ResearchService {
   private static readonly WORKSPACE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
   constructor(
-    private readonly eventBus: EventBus,
-    private readonly artifactService: ArtifactService,
-    private readonly settingsService: SettingsService,
-    private readonly homeService: HomeService,
+    @inject(EventBus) private readonly eventBus: EventBus,
+    @inject(ArtifactService) private readonly artifactService: ArtifactService,
+    @inject(SettingsService) private readonly settingsService: SettingsService,
+    @inject(HomeService) private readonly homeService: HomeService,
   ) {}
 
   async startResearch(
