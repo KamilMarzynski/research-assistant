@@ -45,7 +45,8 @@ type AppEvent =
         relativePath: string;
         fileName: string;
       };
-    };
+    }
+  | { type: "skill:changed"; payload: { skillName: string; summary: string } };
 
 @injectable()
 export class EventBus {

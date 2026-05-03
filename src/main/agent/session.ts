@@ -3,8 +3,8 @@ import type { BrowserWindow } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { EventBus } from "../event-bus";
 import type { HomeService } from "../services/HomeService";
-import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MemoryFileService } from "../services/MemoryFileService";
+import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
@@ -53,6 +53,7 @@ export class AgentSession {
   private lastUserContent = "";
   private processing = false;
   private pendingFollowUp: string | null = null;
+  private pendingSkillDeltas: Array<{ skillName: string; summary: string }> = [];
 
   constructor({
     win,
@@ -77,6 +78,12 @@ export class AgentSession {
     this.messageService = messageService;
     this.memoryManager = memoryManager;
     this.projectId = projectId;
+
+    if (eventBus) {
+      eventBus.on("skill:changed", (payload) => {
+        this.pendingSkillDeltas.push(payload);
+      });
+    }
 
     const homePath = homeService.getHomePath();
     const historyBlock = formatConversationHistory(initialMemoryContext.recentMessages);
@@ -115,7 +122,8 @@ export class AgentSession {
         webAccessEnabled,
       }),
       saveMemoryFn: memoryFileService
-        ? (category, title, content, scope) => memoryFileService.saveMemory(category, title, content, scope)
+        ? (category, title, content, scope) =>
+            memoryFileService.saveMemory(category, title, content, scope)
         : undefined,
       readMemoryFn: memoryFileService
         ? (options) => memoryFileService.readMemory(options)
@@ -182,8 +190,16 @@ export class AgentSession {
       throw new Error("Agent is already processing a message. Please wait for the response.");
     }
     this.processing = true;
-    this.lastUserContent = content;
     try {
+      // Inject pending skill deltas as user-visible messages
+      if (this.pendingSkillDeltas.length > 0) {
+        for (const delta of this.pendingSkillDeltas) {
+          await this.agent.prompt(`Skill "${delta.skillName}" was updated. ${delta.summary}`);
+        }
+        this.pendingSkillDeltas = [];
+      }
+
+      this.lastUserContent = content;
       await this.messageService.addMessage({
         projectId: this.projectId,
         role: "user",
