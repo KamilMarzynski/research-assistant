@@ -1,9 +1,14 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import type { PathJail } from "../path-jail";
 import { makeTool } from "./make-tool";
+
+function sha256(content: string): string {
+  return createHash("sha256").update(content, "utf-8").digest("hex");
+}
 
 export function createReadFileTool(jail: PathJail): AgentTool<typeof readFileParameters, null> {
   return makeTool({
