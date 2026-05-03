@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { contextBridge, ipcRenderer } from "electron";
 import { IPC, type IpcChannel } from "../shared/ipc-channels";
 
@@ -51,7 +50,7 @@ const baseApi = {
   },
 
   generateUuid(): string {
-    return randomUUID();
+    return globalThis.crypto.randomUUID();
   },
 };
 
