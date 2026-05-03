@@ -51,6 +51,20 @@ export class DrizzleArtifactRepository implements IArtifactRepository {
     return rows[0] ? this.rowToArtifact(rows[0]) : null;
   }
 
+  async acknowledge(id: string): Promise<void> {
+    await this.db
+      .update(artifacts)
+      .set({ acknowledged: true })
+      .where(eq(artifacts.id, id));
+  }
+
+  async acknowledgeAllByProject(projectId: string): Promise<void> {
+    await this.db
+      .update(artifacts)
+      .set({ acknowledged: true })
+      .where(eq(artifacts.projectId, projectId));
+  }
+
   private rowToArtifact = (row: typeof artifacts.$inferSelect): Artifact => ({
     id: row.id,
     projectId: row.projectId,

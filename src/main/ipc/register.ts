@@ -5,6 +5,7 @@ import { ArtifactService } from "../services/ArtifactService";
 import { HomeService } from "../services/HomeService";
 import { MemoryManager } from "../services/MemoryManager";
 import { MessageService } from "../services/MessageService";
+import { OutputNotificationService } from "../services/OutputNotificationService";
 import { ProjectService } from "../services/ProjectService";
 import { ResearchService } from "../services/ResearchService";
 import { SettingsService } from "../services/SettingsService";
@@ -30,6 +31,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const eventBus = container.resolve(EventBus);
 
   const sessionManager = new SessionManager();
+  const outputNotificationService = container.resolve(OutputNotificationService);
 
   registerProjectHandlers(win, { projectService, sessionManager });
   registerSettingsHandlers(win, { settingsService, sessionManager });
@@ -43,6 +45,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     memoryManager,
     messageService,
     projectService,
+    outputNotificationService,
   });
   registerAdminHandlers(win, { homeService });
   registerResearchHandlers(win, { projectService, researchService });

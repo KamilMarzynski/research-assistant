@@ -38,6 +38,7 @@ export interface AgentSessionOptions {
   systemContext?: string;
   langfuseEnabled: boolean;
   webAccessEnabled?: boolean;
+  onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
 }
 
 export class AgentSession {
@@ -67,6 +68,7 @@ export class AgentSession {
     systemContext = "",
     langfuseEnabled,
     webAccessEnabled,
+    onFileWrite,
   }: AgentSessionOptions) {
     this.win = win;
     this.messageService = messageService;
@@ -93,6 +95,7 @@ export class AgentSession {
       apiKey: provider.type === "ollama" ? "ollama" : provider.apiKey,
       model: provider.model,
       webAccessEnabled,
+      onFileWrite,
       emitBlocked: eventBus
         ? (payload) => eventBus.emit({ type: "bash:blocked", payload })
         : undefined,
