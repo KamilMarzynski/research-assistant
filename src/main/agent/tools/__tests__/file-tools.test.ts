@@ -96,5 +96,33 @@ describe("createWriteFileTool", () => {
 
       expect(onFileWrite).toHaveBeenCalledWith(filePath, "file.txt", "file.txt");
     });
+
+    it("rejects expected_hash for new file", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "new.txt");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "hello",
+        expected_hash: "abc123",
+      });
+
+      expect(result.content[0].text).toContain("Cannot provide expected_hash for new file");
+    });
+
+    it("rejects line ranges for new file", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "new.txt");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "hello",
+        start_line: 1,
+      });
+
+      expect(result.content[0].text).toContain("Line ranges not valid for new files");
+    });
   });
 });
