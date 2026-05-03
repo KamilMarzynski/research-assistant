@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { complete } from "@mariozechner/pi-ai";
 import { LibSQLStore } from "@mastra/libsql";
@@ -225,6 +226,31 @@ export class MemoryManager implements IMemoryManager {
               updatedAt: new Date(),
             },
           });
+        }
+
+        // Also write to filesystem for user visibility
+        try {
+          const { getResearchAssistantHome } = await import("../paths");
+          const { toSlug } = await import("../agent/context");
+          const homePath = getResearchAssistantHome();
+          const slug = toSlug(projectId);
+          const memoryDir = join(homePath, "projects", slug, "memory");
+          await mkdir(memoryDir, { recursive: true });
+          const date = new Date().toISOString().split("T")[0];
+          const filePath = join(memoryDir, `${date}.md`);
+          const frontmatter = [
+            "---",
+            "type: observation",
+            `date: ${new Date().toISOString()}`,
+            `thread_id: ${projectId}`,
+            `project_id: ${projectId}`,
+            "---",
+            "",
+            summaryText,
+          ].join("\n");
+          await writeFile(filePath, frontmatter, "utf-8");
+        } catch (err) {
+          console.error("[MemoryManager] Failed to write observation to filesystem:", err);
         }
       } catch (err) {
         console.error("[MemoryManager] Observer compression failed:", err);

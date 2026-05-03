@@ -11,6 +11,21 @@ vi.mock("electron", () => ({
   app: { getPath: vi.fn().mockReturnValue("/tmp") },
 }));
 
+// Mock node:fs/promises
+const mockMkdir = vi.fn().mockResolvedValue(undefined);
+const mockWriteFile = vi.fn().mockResolvedValue(undefined);
+const mockReadFile = vi.fn().mockResolvedValue("");
+const mockAccess = vi.fn().mockResolvedValue(undefined);
+const mockReaddir = vi.fn().mockResolvedValue([]);
+
+vi.mock("node:fs/promises", () => ({
+  access: mockAccess,
+  mkdir: mockMkdir,
+  readFile: mockReadFile,
+  readdir: mockReaddir,
+  writeFile: mockWriteFile,
+}));
+
 // ---- LibSQLStore mock ----
 const mockMemoryStore = {
   getThreadById: vi.fn().mockResolvedValue(null),
@@ -438,6 +453,48 @@ describe("MemoryManager", () => {
       await new Promise((r) => setTimeout(r, 10));
 
       expect(mockComplete).not.toHaveBeenCalled();
+    });
+
+    it("writes compressed summary to filesystem memory/YYYY-MM-DD.md", async () => {
+      const longText = "x".repeat(120_001);
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [makeMastraMessage("user", longText)],
+      });
+      mockMemoryStore.getThreadById.mockResolvedValue(null);
+
+      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockMkdir).toHaveBeenCalledWith(expect.stringContaining("memory"), {
+        recursive: true,
+      });
+      expect(mockWriteFile).toHaveBeenCalledWith(
+        expect.stringMatching(/memory\/\d{4}-\d{2}-\d{2}\.md$/),
+        expect.stringContaining("type: observation"),
+        "utf-8",
+      );
+      const writtenContent = mockWriteFile.mock.calls[0][1] as string;
+      expect(writtenContent).toContain("thread_id: proj-1");
+      expect(writtenContent).toContain("project_id: proj-1");
+      expect(writtenContent).toContain("Compressed summary.");
+    });
+
+    it("does NOT throw when filesystem write fails", async () => {
+      mockWriteFile.mockRejectedValueOnce(new Error("disk full"));
+
+      const longText = "x".repeat(120_001);
+      mockMemoryStore.listMessages.mockResolvedValue({
+        messages: [makeMastraMessage("user", longText)],
+      });
+      mockMemoryStore.getThreadById.mockResolvedValue(null);
+
+      // Should resolve without throwing even though writeFile rejects
+      await expect(
+        manager.save("proj-1", [{ role: "user", content: "trigger" }]),
+      ).resolves.toBeUndefined();
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockWriteFile).toHaveBeenCalled();
     });
   });
 
