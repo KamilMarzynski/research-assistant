@@ -61,7 +61,7 @@ Use these when the research requires:
 
 export const DISCOVER_PROJECT_SKILL = `---
 name: discover_project
-description: Walk and document a linked project folder. Use automatically when a project has a folderPath but no AGENTS.md exists yet.
+description: Walk and document a linked project folder. Use when a project has a folderPath but no AGENTS.md exists yet, or when the user asks you to analyze their project structure.
 ---
 
 # discover_project
@@ -91,6 +91,9 @@ When a project has a linked folder but \`~/.research-assistant/projects/<slug>/A
 
 ## Conventions
 <naming, code style, any patterns observed>
+
+## Output location
+<where research outputs and artifacts should be saved>
 
 ## Notes
 <anything else the agent should know>

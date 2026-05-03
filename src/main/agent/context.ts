@@ -152,13 +152,32 @@ export async function buildSystemContext(
   if (skillsXml) parts.push(skillsXml);
 
   // 3. AGENTS.md
-  try {
-    const agentsFile = await readFile(join(raHome, "projects", slug, "AGENTS.md"), "utf-8");
-    if (agentsFile.trim()) {
-      parts.push("<!-- Project context (AGENTS.md) -->", agentsFile.trim());
+  let agentsFile: string | undefined;
+  if (folderPath) {
+    try {
+      agentsFile = await readFile(join(folderPath, "AGENTS.md"), "utf-8");
+    } catch {
+      // not in linked folder, try next
     }
-  } catch {
-    // not yet discovered
+  }
+  if (!agentsFile) {
+    try {
+      agentsFile = await readFile(join(raHome, "projects", slug, "AGENTS.md"), "utf-8");
+    } catch {
+      // not yet discovered
+    }
+  }
+  if (agentsFile?.trim()) {
+    parts.push("<!-- Project context (AGENTS.md) -->", agentsFile.trim());
+  } else {
+    parts.push(
+      "This project has no AGENTS.md yet. Ask the user to describe:",
+      "1. What is this project about?",
+      "2. How are files organized?",
+      "3. Where should research outputs go?",
+      "4. Any naming conventions or folder structures?",
+      `After getting answers, write the AGENTS.md file to ~/.research-assistant/projects/${slug}/AGENTS.md using the write_file tool.`,
+    );
   }
 
   return parts.join("\n\n");
