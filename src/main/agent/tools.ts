@@ -8,6 +8,7 @@ import { createListDirTool, createReadFileTool, createWriteFileTool } from "./to
 import { createSpawnAgentsParallelTool, createSpawnAgentTool } from "./tools/orchestrator-tools";
 import { createProposeToolTool } from "./tools/propose-tool";
 import { createStartResearchTool } from "./tools/research-tools";
+import { createReadMemoryTool, createSaveMemoryTool } from "./tools/memory-tools";
 import { createSafeBashTool } from "./tools/safe-bash-tool";
 import { createFetchUrlTool } from "./tools/web/fetch-url";
 import { createWebSearchTool } from "./tools/web/web-search";
@@ -91,6 +92,13 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
     createListDirTool(jail),
     createSafeBashTool(projectId, workspacePath, auditLogPath, opts.emitBlocked),
   ];
+
+  if (opts.saveMemoryFn) {
+    tools.push(createSaveMemoryTool(opts.saveMemoryFn));
+  }
+  if (opts.readMemoryFn) {
+    tools.push(createReadMemoryTool(opts.readMemoryFn));
+  }
 
   if (opts.webAccessEnabled !== false) {
     tools.push(createFetchUrlTool());

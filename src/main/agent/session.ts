@@ -4,6 +4,7 @@ import { IPC } from "../../shared/ipc-channels";
 import type { EventBus } from "../event-bus";
 import type { HomeService } from "../services/HomeService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
+import type { MemoryFileService } from "../services/MemoryFileService";
 import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
@@ -39,6 +40,7 @@ export interface AgentSessionOptions {
   langfuseEnabled: boolean;
   webAccessEnabled?: boolean;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
+  memoryFileService?: MemoryFileService;
 }
 
 export class AgentSession {
@@ -69,6 +71,7 @@ export class AgentSession {
     langfuseEnabled,
     webAccessEnabled,
     onFileWrite,
+    memoryFileService,
   }: AgentSessionOptions) {
     this.win = win;
     this.messageService = messageService;
@@ -111,6 +114,12 @@ export class AgentSession {
         provider,
         webAccessEnabled,
       }),
+      saveMemoryFn: memoryFileService
+        ? (category, title, content, scope) => memoryFileService.saveMemory(category, title, content, scope)
+        : undefined,
+      readMemoryFn: memoryFileService
+        ? (options) => memoryFileService.readMemory(options)
+        : undefined,
     });
 
     this.agent = new Agent({
