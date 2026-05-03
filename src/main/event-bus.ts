@@ -8,7 +8,7 @@ type AppEvent =
       type: "research:complete";
       payload: {
         taskId: string;
-        artifactId: string;
+        artifactId?: string;
         projectId: string;
         query: string;
         filePath: string;

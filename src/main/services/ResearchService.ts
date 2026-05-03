@@ -6,7 +6,6 @@ import { resolveProvider } from "../agent/model-provider";
 import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
-import { ArtifactService } from "./ArtifactService";
 import { HomeService } from "./HomeService";
 import { SettingsService } from "./SettingsService";
 
@@ -24,7 +23,6 @@ export class ResearchService {
 
   constructor(
     @inject(EventBus) private readonly eventBus: EventBus,
-    @inject(ArtifactService) private readonly artifactService: ArtifactService,
     @inject(SettingsService) private readonly settingsService: SettingsService,
     @inject(HomeService) private readonly homeService: HomeService,
   ) {}
@@ -35,23 +33,20 @@ export class ResearchService {
     query: string,
     folderPath: string | null,
   ): Promise<{ taskId: string }> {
-    return this._runResearch(
-      { projectId, projectName, query, folderPath },
-      "output.md",
-      (workspacePath) => ({
-        toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "request_evaluation"],
-        systemPromptAddition: [
-          "You are a background researcher. Investigate the given query thoroughly using the available tools,",
-          `then write a comprehensive Markdown report to: ${join(workspacePath, "output.md")}.`,
-          "Be thorough. When done, respond with a final summary of your findings.",
-        ].join(" "),
-        projectId,
-        projectName,
-        folderPath,
-        homePath: this.homeService.getHomePath(),
-        remainingDepth: 0,
-      }),
-    );
+    return this._runResearch({ projectId, projectName, query, folderPath }, (_workspacePath) => ({
+      toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "request_evaluation"],
+      systemPromptAddition: [
+        "You are a background researcher. Investigate the given query thoroughly using the available tools.",
+        "Create final output files in the project folder using write_file, not in the workspace.",
+        "Name files meaningfully (no task IDs in filenames).",
+        "Be thorough. When done, respond with a final summary of your findings.",
+      ].join(" "),
+      projectId,
+      projectName,
+      folderPath,
+      homePath: this.homeService.getHomePath(),
+      remainingDepth: 0,
+    }));
   }
 
   async startOrchestratedResearch(
@@ -62,41 +57,22 @@ export class ResearchService {
   ): Promise<{ taskId: string }> {
     const homePath = this.homeService.getHomePath();
 
-    const saveArtifactFn = async (path: string, title: string) => {
-      const artifact = await this.artifactService.saveArtifact({
-        projectId,
-        title,
-        filePath: path,
-      });
-      return { artifactId: artifact.id };
-    };
-
-    const proposeToolFn = async (name: string, skillContent: string, script?: string) => {
-      await this.homeService.savePendingTool(name, skillContent, script);
-      this.eventBus.emit({ type: "tool:pending", payload: { name, skillContent } });
-    };
-
-    return this._runResearch(
-      { projectId, projectName, query, folderPath },
-      "synthesis.md",
-      (workspacePath) => ({
-        toolNames: [...ORCHESTRATOR_TOOL_NAMES],
-        systemPromptAddition: [
-          "You are a top-level research orchestrator. Plan and execute a thorough research strategy for the given query.",
-          `Your workspace root: ${workspacePath}`,
-          "Write intermediate results to subdirectories within your workspace root.",
-          "Write your final synthesis to synthesis.md in your workspace root.",
-          "Use save_artifact to persist valuable outputs — both intermediate and final.",
-        ].join("\n"),
-        projectId,
-        projectName,
-        folderPath,
-        homePath,
-        remainingDepth: 3,
-        saveArtifactFn,
-        proposeToolFn,
-      }),
-    );
+    return this._runResearch({ projectId, projectName, query, folderPath }, (workspacePath) => ({
+      toolNames: [...ORCHESTRATOR_TOOL_NAMES],
+      systemPromptAddition: [
+        "You are a top-level research orchestrator. Plan and execute a thorough research strategy for the given query.",
+        `Your workspace root: ${workspacePath}`,
+        "Write intermediate results to subdirectories within your workspace root.",
+        "Create final output files in the project folder using write_file, not in the workspace.",
+        "Name files meaningfully (no task IDs in filenames).",
+        "Use save_artifact to persist valuable outputs — both intermediate and final.",
+      ].join("\n"),
+      projectId,
+      projectName,
+      folderPath,
+      homePath,
+      remainingDepth: 3,
+    }));
   }
 
   /** Remove workspace directories older than WORKSPACE_MAX_AGE_MS. Fire-and-forget. */
@@ -129,7 +105,6 @@ export class ResearchService {
 
   private async _runResearch(
     config: RunResearchConfig,
-    outputFileName: string,
     buildPartialConfig: (
       workspacePath: string,
     ) => Omit<WorkerAgentConfig, "provider" | "onProgress">,
@@ -200,21 +175,14 @@ export class ResearchService {
         }
       } else if (e.type === "agent_end") {
         try {
-          const outputPath = join(workspacePath, outputFileName);
-          const artifact = await this.artifactService.saveArtifact({
-            projectId: config.projectId,
-            title: `Research: ${config.query.slice(0, 60)}`,
-            filePath: outputPath,
-          });
           await this.homeService.updateTaskStatus(taskId, "complete");
           this.eventBus.emit({
             type: "research:complete",
             payload: {
               taskId,
-              artifactId: artifact.id,
               projectId: config.projectId,
               query: config.query,
-              filePath: outputPath,
+              filePath: "",
             },
           });
         } catch (err) {
