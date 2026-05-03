@@ -24,7 +24,7 @@ export function registerProjectHandlers(
 
   ipcMain.handle(IPC.CREATE_PROJECT, async (_event, payload: unknown) => {
     const p = parseOrThrow(CreateProjectSchema, payload, "CREATE_PROJECT");
-    return projectService.createProject(p.name, p.folderPath ?? null);
+    return projectService.createProject(p.name, p.folderPath);
   });
 
   ipcMain.handle(IPC.RENAME_PROJECT, async (_event, payload: unknown) => {
@@ -51,8 +51,8 @@ export function registerProjectHandlers(
 
   ipcMain.handle(IPC.OPEN_FOLDER_DIALOG, async () => {
     const result = await dialog.showOpenDialog(win, {
-      properties: ["openDirectory"],
-      title: "Select project folder",
+      properties: ["openDirectory", "createDirectory"],
+      title: "Select or create project folder",
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     return result.filePaths[0];

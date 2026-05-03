@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 export const CreateProjectSchema = z.object({
   name: z.string(),
-  folderPath: z.string().nullable().optional(),
+  folderPath: z.string(),
 });
 
 export const ProjectIdSchema = z.object({

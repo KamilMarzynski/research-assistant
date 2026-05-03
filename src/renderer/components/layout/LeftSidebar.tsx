@@ -58,6 +58,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) return;
+    if (!newFolderPath) return;
     const project = await window.electronAPI.invoke(IPC.CREATE_PROJECT, {
       name,
       folderPath: newFolderPath,
@@ -241,7 +242,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
                 onClick={handleBrowseFolder}
                 sx={{ justifyContent: "flex-start" }}
               >
-                {newFolderPath ? newFolderPath.split("/").pop() : "Link folder (optional)"}
+                {newFolderPath ? newFolderPath.split("/").pop() : "Select project folder *"}
               </Button>
               {newFolderPath && (
                 <Chip
