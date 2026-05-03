@@ -1,10 +1,54 @@
 import { createHash } from "node:crypto";
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { basename, dirname, extname } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import type { PathJail } from "../path-jail";
 import { makeTool } from "./make-tool";
+
+export type SmartReadResult = {
+  content: string;
+  mimeType: string;
+  truncated: boolean;
+  hint: string | null;
+  totalLines: number;
+  lineCount: number;
+  fileHash: string;
+};
+
+const MAX_BYTES = 500 * 1024;
+
+function getMimeType(ext: string): string {
+  const map: Record<string, string> = {
+    csv: "text/csv",
+    md: "text/markdown",
+    markdown: "text/markdown",
+    ts: "text/typescript",
+    tsx: "text/tsx",
+    js: "text/javascript",
+    jsx: "text/jsx",
+    json: "application/json",
+    html: "text/html",
+    htm: "text/html",
+    css: "text/css",
+    py: "text/x-python",
+    sh: "text/x-sh",
+    yaml: "text/yaml",
+    yml: "text/yaml",
+    sql: "text/x-sql",
+    txt: "text/plain",
+  };
+  return map[ext.toLowerCase()] ?? "application/octet-stream";
+}
+
+function isBinaryMimeType(mime: string): boolean {
+  if (mime === "application/octet-stream") return true;
+  if (mime.includes("image/")) return true;
+  if (mime.includes("video/")) return true;
+  if (mime.includes("audio/")) return true;
+  if (mime.includes("application/pdf")) return true;
+  return false;
+}
 
 function sha256(content: string): string {
   return createHash("sha256").update(content, "utf-8").digest("hex");
@@ -46,23 +90,98 @@ function applyLineEdit(
   return { lines: [...before, ...newLines, ...after] };
 }
 
-export function createReadFileTool(jail: PathJail): AgentTool<typeof readFileParameters, null> {
+export function createReadFileTool(
+  jail: PathJail,
+): AgentTool<typeof readFileParameters, SmartReadResult> {
   return makeTool({
     name: "read_file",
     label: "Read file",
     description:
-      "Read the contents of a file. Path must be within the workspace or linked project folder.",
+      "Read the contents of a file with smart pagination and mime detection. Path must be within the workspace or linked project folder.",
     parameters: readFileParameters,
-    execute: async (_id, { path }): Promise<AgentToolResult<null>> => {
+    execute: async (
+      _id,
+      { path, startLine, maxLines },
+    ): Promise<AgentToolResult<SmartReadResult>> => {
       const resolved = jail.validate(path, "read");
-      const content = await readFile(resolved, "utf-8");
-      return { content: [{ type: "text" as const, text: content }], details: null };
+      const buffer = await readFile(resolved);
+      const fileHash = createHash("sha256").update(buffer).digest("hex");
+
+      const ext = extname(resolved).slice(1);
+      const mimeType = getMimeType(ext);
+
+      if (isBinaryMimeType(mimeType)) {
+        const placeholder = `[Binary file: ${resolved} (${mimeType})]`;
+        return {
+          content: [{ type: "text" as const, text: placeholder }],
+          details: {
+            content: placeholder,
+            mimeType,
+            truncated: false,
+            hint: `Binary file (${mimeType}). Cannot read as text.`,
+            totalLines: 0,
+            lineCount: 0,
+            fileHash,
+          },
+        };
+      }
+
+      const fullText = buffer.toString("utf-8");
+      const allLines =
+        fullText === "" ? [] : fullText.split("\n").map((line) => line.replace(/\r$/, ""));
+      if (allLines.length > 0 && allLines[allLines.length - 1] === "") {
+        allLines.pop();
+      }
+      const totalLines = allLines.length;
+
+      const sLine = Math.max(1, startLine ?? 1);
+      const mLines = Math.max(1, maxLines ?? 500);
+      const selectedLines = allLines.slice(sLine - 1, sLine - 1 + mLines);
+      let content = selectedLines.join("\n");
+      let truncated = false;
+      let hint: string | null = null;
+
+      const contentBuffer = Buffer.from(content, "utf-8");
+      if (contentBuffer.length > MAX_BYTES) {
+        content = contentBuffer.subarray(0, MAX_BYTES).toString("utf-8");
+        truncated = true;
+        const returnedLines = content === "" ? 0 : content.split("\n").length;
+        hint = `Returned lines ${sLine}-${sLine + returnedLines - 1} of ${totalLines} (content truncated to 500KB). Use startLine=${sLine + returnedLines} to read more.`;
+      } else if (totalLines > mLines && selectedLines.length > 0) {
+        truncated = true;
+        hint = `Returned lines ${sLine}-${sLine + selectedLines.length - 1} of ${totalLines}. Use startLine=${sLine + selectedLines.length} to read more.`;
+      } else if (sLine > totalLines) {
+        hint = `File has ${totalLines} lines. startLine exceeds total.`;
+      }
+
+      const lineCount = content === "" ? 0 : content.split("\n").length;
+      const fileName = basename(resolved);
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Read ${lineCount} lines of ${fileName} (${mimeType}). Total: ${totalLines.toLocaleString()} lines.`,
+          },
+        ],
+        details: {
+          content,
+          mimeType,
+          truncated,
+          hint,
+          totalLines,
+          lineCount,
+          fileHash,
+        },
+      };
     },
   });
 }
 
 const readFileParameters = Type.Object({
   path: Type.String({ description: "Absolute path to the file" }),
+  startLine: Type.Optional(Type.Integer({ description: "Starting line (1-based)", default: 1 })),
+  maxLines: Type.Optional(Type.Integer({ description: "Maximum lines to return", default: 500 })),
 });
 
 export function createWriteFileTool(
