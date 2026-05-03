@@ -68,4 +68,17 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
       updated_at INTEGER NOT NULL
     )
   `);
+
+  // Run 15: add artifact notification columns — idempotent
+  try {
+    await db.run(sql`ALTER TABLE artifacts ADD COLUMN relative_path TEXT`);
+  } catch {
+    // column already exists — safe to ignore
+  }
+
+  try {
+    await db.run(sql`ALTER TABLE artifacts ADD COLUMN acknowledged INTEGER NOT NULL DEFAULT 0`);
+  } catch {
+    // column already exists — safe to ignore
+  }
 }

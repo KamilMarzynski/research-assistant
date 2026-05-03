@@ -52,6 +52,7 @@ export interface AgentToolsOptions {
   saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
   webAccessEnabled?: boolean;
+  onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   emitBlocked?: (payload: {
     commandId: string;
     command: string;
@@ -65,7 +66,7 @@ export interface AgentToolsOptions {
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
-  const { projectId, folderPath, homePath, startResearchFn } = opts;
+  const { projectId, folderPath, homePath, startResearchFn, onFileWrite } = opts;
   const jail = new PathJail(projectId, folderPath);
   const workspacePath = join(homePath, "workspace", projectId);
   const auditLogPath = join(homePath, "audit.log");
@@ -73,7 +74,7 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
   // biome-ignore lint/suspicious/noExplicitAny: AgentTool generic is covariant in TDetails but contravariant in TParams; any is the correct erasure for a heterogeneous collection
   const tools: AgentTool<any>[] = [
     createReadFileTool(jail),
-    createWriteFileTool(jail),
+    createWriteFileTool(jail, folderPath, onFileWrite),
     createListDirTool(jail),
     createSafeBashTool(projectId, workspacePath, auditLogPath, opts.emitBlocked),
   ];

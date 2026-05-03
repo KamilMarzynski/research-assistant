@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDatabase } from "../../../../../tests/helpers/db";
 import type { DrizzleDB } from "../../../db/client";
@@ -30,7 +31,25 @@ describe("DrizzleArtifactRepository", () => {
       expect(artifact.projectId).toBe(projectId);
       expect(artifact.title).toBe("Research Report");
       expect(artifact.filePath).toBe("/home/user/docs/report.md");
+      expect(artifact.acknowledged).toBe(false);
       expect(artifact.createdAt).toBeInstanceOf(Date);
+    });
+
+    it("persists relativePath and acknowledged when provided", async () => {
+      const artifact = await repo.create({
+        projectId,
+        title: "Research Report",
+        filePath: "/home/user/docs/report.md",
+        relativePath: "docs/report.md",
+        acknowledged: true,
+      });
+
+      expect(artifact.relativePath).toBe("docs/report.md");
+      expect(artifact.acknowledged).toBe(true);
+
+      const found = await repo.get(artifact.id);
+      expect(found?.relativePath).toBe("docs/report.md");
+      expect(found?.acknowledged).toBe(true);
     });
   });
 

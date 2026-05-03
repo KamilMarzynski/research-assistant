@@ -29,6 +29,8 @@ export const artifacts = sqliteTable("artifacts", {
     .references(() => projects.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   filePath: text("file_path").notNull(),
+  relativePath: text("relative_path"),
+  acknowledged: integer("acknowledged", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 });
 

@@ -13,12 +13,16 @@ export class DrizzleArtifactRepository implements IArtifactRepository {
 
   constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
 
-  async create(data: Omit<Artifact, "id" | "createdAt">): Promise<Artifact> {
+  async create(
+    data: Omit<Artifact, "id" | "createdAt" | "acknowledged"> & { acknowledged?: boolean },
+  ): Promise<Artifact> {
     const artifact: Artifact = {
       id: crypto.randomUUID(),
       projectId: data.projectId,
       title: data.title,
       filePath: data.filePath,
+      relativePath: data.relativePath,
+      acknowledged: data.acknowledged ?? false,
       createdAt: this.clock.now(),
     };
     await this.db.insert(artifacts).values({
@@ -26,6 +30,8 @@ export class DrizzleArtifactRepository implements IArtifactRepository {
       projectId: artifact.projectId,
       title: artifact.title,
       filePath: artifact.filePath,
+      relativePath: artifact.relativePath,
+      acknowledged: artifact.acknowledged,
       createdAt: artifact.createdAt,
     });
     return artifact;
@@ -45,11 +51,24 @@ export class DrizzleArtifactRepository implements IArtifactRepository {
     return rows[0] ? this.rowToArtifact(rows[0]) : null;
   }
 
+  async acknowledge(id: string): Promise<void> {
+    await this.db.update(artifacts).set({ acknowledged: true }).where(eq(artifacts.id, id));
+  }
+
+  async acknowledgeAllByProject(projectId: string): Promise<void> {
+    await this.db
+      .update(artifacts)
+      .set({ acknowledged: true })
+      .where(eq(artifacts.projectId, projectId));
+  }
+
   private rowToArtifact = (row: typeof artifacts.$inferSelect): Artifact => ({
     id: row.id,
     projectId: row.projectId,
     title: row.title,
     filePath: row.filePath,
+    relativePath: row.relativePath ?? undefined,
+    acknowledged: row.acknowledged,
     createdAt: row.createdAt,
   });
 }

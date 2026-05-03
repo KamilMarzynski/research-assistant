@@ -8,6 +8,7 @@ import { ProjectIdSchema, SendMessageSchema } from "../ipc-validation";
 import type { HomeService } from "../services/HomeService";
 import type { MemoryManager } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
+import type { OutputNotificationService } from "../services/OutputNotificationService";
 import type { ProjectService } from "../services/ProjectService";
 import type { ResearchService } from "../services/ResearchService";
 import type { SettingsService } from "../services/SettingsService";
@@ -25,6 +26,7 @@ export function registerChatHandler(
     memoryManager: MemoryManager;
     messageService: MessageService;
     projectService: ProjectService;
+    outputNotificationService: OutputNotificationService;
   },
 ): void {
   const {
@@ -36,6 +38,7 @@ export function registerChatHandler(
     memoryManager,
     messageService,
     projectService,
+    outputNotificationService,
   } = deps;
 
   ipcMain.handle(IPC.GET_MESSAGES, async (_event, payload: unknown) => {
@@ -45,10 +48,11 @@ export function registerChatHandler(
 
   ipcMain.on(IPC.SEND_MESSAGE, (_event, payload: unknown) => {
     void (async () => {
-      let projectId: string | undefined;
+      let rawProjectId: string | undefined;
       try {
         const parsed = parseOrThrow(SendMessageSchema, payload, "SEND_MESSAGE");
-        projectId = parsed.projectId;
+        rawProjectId = parsed.projectId;
+        const projectId = rawProjectId;
         const content = parsed.content;
 
         const settings = await settingsService.getSettings();
@@ -90,6 +94,18 @@ export function registerChatHandler(
               systemContext,
               langfuseEnabled: settings.langfuseEnabled,
               webAccessEnabled: settings.webAccessEnabled,
+              onFileWrite: (absolutePath, relativePath, fileName) => {
+                void outputNotificationService.recordWrite(
+                  projectId,
+                  absolutePath,
+                  relativePath,
+                  fileName,
+                );
+                eventBus.emit({
+                  type: "file:written",
+                  payload: { projectId, absolutePath, relativePath, fileName },
+                });
+              },
             }),
           );
         }
@@ -114,8 +130,8 @@ export function registerChatHandler(
         }
       } catch (err) {
         if (err instanceof Error && err.message === "stream_timeout") {
-          if (projectId) {
-            const session = sessionManager.get(projectId);
+          if (rawProjectId) {
+            const session = sessionManager.get(rawProjectId);
             session?.abort();
           }
           win.webContents.send(IPC.MESSAGE_CHUNK, "⚠️ The response timed out. Please try again.");

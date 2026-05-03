@@ -19,6 +19,7 @@ import { ArtifactService } from "./services/ArtifactService";
 import { HomeService } from "./services/HomeService";
 import { MemoryManager } from "./services/MemoryManager";
 import { MessageService } from "./services/MessageService";
+import { OutputNotificationService } from "./services/OutputNotificationService";
 import { ProjectService } from "./services/ProjectService";
 import { ResearchService } from "./services/ResearchService";
 import { SettingsService } from "./services/SettingsService";
@@ -46,6 +47,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(SettingsService);
   appContainer.registerSingleton(MemoryManager);
   appContainer.registerSingleton(HomeService);
+  appContainer.registerSingleton(OutputNotificationService);
 
   const homeService = appContainer.resolve(HomeService);
   await homeService.ensureDirectories();

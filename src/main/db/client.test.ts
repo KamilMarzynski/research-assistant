@@ -48,3 +48,23 @@ describe("database integrity", () => {
     expect(count).toBe(0);
   });
 });
+
+describe("artifact columns", () => {
+  it("has acknowledged column", async () => {
+    const { db } = await createTestDb();
+    const result = await db
+      .select({ acknowledged: schema.artifacts.acknowledged })
+      .from(schema.artifacts)
+      .limit(1);
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("has relativePath column", async () => {
+    const { db } = await createTestDb();
+    const result = await db
+      .select({ relativePath: schema.artifacts.relativePath })
+      .from(schema.artifacts)
+      .limit(1);
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
