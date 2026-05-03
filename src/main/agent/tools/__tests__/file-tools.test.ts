@@ -1,9 +1,14 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PathJail } from "../../path-jail";
 import { createWriteFileTool } from "../file-tools";
+
+function sha256(content: string): string {
+  return createHash("sha256").update(content, "utf-8").digest("hex");
+}
 
 describe("createWriteFileTool", () => {
   describe("metadata", () => {
@@ -123,6 +128,42 @@ describe("createWriteFileTool", () => {
       });
 
       expect(result.content[0].text).toContain("Line ranges not valid for new files");
+    });
+
+    it("edits existing file when hash matches", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "existing.txt");
+      const originalContent = "line1\nline2\nline3";
+      await writeFile(filePath, originalContent, "utf-8");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "replaced",
+        expected_hash: sha256(originalContent),
+      });
+
+      expect(result.content[0].text).toContain("Written");
+      const final = await readFile(filePath, "utf-8");
+      expect(final).toBe("replaced");
+    });
+
+    it("blocks edit when hash mismatches", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "existing.txt");
+      await writeFile(filePath, "original", "utf-8");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "new",
+        expected_hash: "wronghash",
+      });
+
+      expect(result.content[0].text).toContain("Hash mismatch");
+      expect(result.content[0].text).toContain("Re-read and retry");
+      const final = await readFile(filePath, "utf-8");
+      expect(final).toBe("original");
     });
   });
 });
