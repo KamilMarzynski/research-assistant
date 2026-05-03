@@ -43,7 +43,7 @@ describe("createReadFileTool", () => {
     expect(details.totalLines).toBe(2);
     expect(details.lineCount).toBe(2);
     expect(details.fileHash).toBe(sha256(Buffer.from(content, "utf-8")));
-    expect(details.hint).toBe("");
+    expect(details.hint).toBe(null);
   });
 
   it("strips trailing \\r from lines", async () => {
@@ -101,7 +101,7 @@ describe("createReadFileTool", () => {
     const result = await tool.execute("call-1", { path: filePath });
 
     // biome-ignore lint/style/noNonNullAssertion: execute always returns details
-    expect(result.details!.mimeType).toBe("image/png");
+    expect(result.details!.mimeType).toBe("application/octet-stream");
     // biome-ignore lint/style/noNonNullAssertion: execute always returns details
     expect(result.details!.content).toContain("Binary file");
     // biome-ignore lint/style/noNonNullAssertion: execute always returns details
@@ -111,7 +111,9 @@ describe("createReadFileTool", () => {
     // biome-ignore lint/style/noNonNullAssertion: execute always returns details
     expect(result.details!.truncated).toBe(false);
     // biome-ignore lint/style/noNonNullAssertion: execute always returns details
-    expect(result.details!.hint).toContain("specialized tool");
+    expect(result.details!.hint).toBe(
+      "Binary file (application/octet-stream). Cannot read as text.",
+    );
   });
 
   it("hard-truncates content exceeding 500KB", async () => {
@@ -137,14 +139,21 @@ describe("createReadFileTool", () => {
     const cases = [
       { ext: "test.js", mime: "text/javascript" },
       { ext: "test.ts", mime: "text/typescript" },
+      { ext: "test.tsx", mime: "text/tsx" },
+      { ext: "test.jsx", mime: "text/jsx" },
       { ext: "test.json", mime: "application/json" },
       { ext: "test.md", mime: "text/markdown" },
+      { ext: "test.markdown", mime: "text/markdown" },
       { ext: "test.html", mime: "text/html" },
+      { ext: "test.htm", mime: "text/html" },
       { ext: "test.css", mime: "text/css" },
       { ext: "test.py", mime: "text/x-python" },
-      { ext: "test.jpg", mime: "image/jpeg" },
-      { ext: "test.pdf", mime: "application/pdf" },
-      { ext: "test.zip", mime: "application/zip" },
+      { ext: "test.sh", mime: "text/x-sh" },
+      { ext: "test.yaml", mime: "text/yaml" },
+      { ext: "test.yml", mime: "text/yaml" },
+      { ext: "test.sql", mime: "text/x-sql" },
+      { ext: "test.csv", mime: "text/csv" },
+      { ext: "test.txt", mime: "text/plain" },
       { ext: "test.unknown", mime: "application/octet-stream" },
     ];
 
@@ -199,5 +208,21 @@ describe("createReadFileTool", () => {
     expect(result.details!.lineCount).toBe(0);
     // biome-ignore lint/style/noNonNullAssertion: execute always returns details
     expect(result.details!.totalLines).toBe(2);
+    // biome-ignore lint/style/noNonNullAssertion: execute always returns details
+    expect(result.details!.hint).toBe("File has 2 lines. startLine exceeds total.");
+  });
+
+  it("returns summary in content field and actual content in details.content", async () => {
+    const tool = createReadFileTool(mockJail);
+    const filePath = join(tempDir, "summary.txt");
+    await writeFile(filePath, "Hello\nWorld\n", "utf-8");
+
+    const result = await tool.execute("call-1", { path: filePath });
+
+    expect(result.content[0].type).toBe("text");
+    expect((result.content[0] as { type: "text"; text: string }).text).toBe(
+      "Read 2 lines of summary.txt (text/plain). Total: 2 lines.",
+    );
+    expect(result.details!.content).toBe("Hello\nWorld");
   });
 });
