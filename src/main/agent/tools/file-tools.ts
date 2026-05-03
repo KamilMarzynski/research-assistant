@@ -10,6 +10,48 @@ function sha256(content: string): string {
   return createHash("sha256").update(content, "utf-8").digest("hex");
 }
 
+function applyLineEdit(
+  lines: string[],
+  startLine: number | undefined,
+  endLine: number | undefined,
+  content: string,
+): { lines: string[]; message: string } {
+  const newLines = content.split("\n");
+
+  if (startLine === undefined) {
+    return { lines: newLines, message: "" };
+  }
+
+  if (startLine < 1) {
+    throw new Error("start_line must be >= 1");
+  }
+
+  if (endLine !== undefined && endLine < startLine) {
+    throw new Error("end_line must be >= start_line");
+  }
+
+  const zeroStart = startLine - 1;
+
+  if (endLine === undefined) {
+    // Insert mode: insert content at start_line, shift existing lines down
+    const before = lines.slice(0, zeroStart);
+    const after = lines.slice(zeroStart);
+    return {
+      lines: [...before, ...newLines, ...after],
+      message: `Inserted at line ${startLine}`,
+    };
+  }
+
+  // Replace mode: replace lines [startLine, endLine] inclusive
+  const zeroEnd = endLine - 1;
+  const before = lines.slice(0, zeroStart);
+  const after = lines.slice(zeroEnd + 1);
+  return {
+    lines: [...before, ...newLines, ...after],
+    message: `Replaced lines ${startLine}-${endLine}`,
+  };
+}
+
 export function createReadFileTool(jail: PathJail): AgentTool<typeof readFileParameters, null> {
   return makeTool({
     name: "read_file",
