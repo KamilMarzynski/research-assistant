@@ -201,5 +201,39 @@ describe("createWriteFileTool", () => {
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("a\nX\nY\nd");
     });
+
+    it("inserts at start_line when end_line omitted", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "lines.txt");
+      await writeFile(filePath, "a\nb\nc", "utf-8");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "X\nY",
+        start_line: 2,
+      });
+
+      expect(result.content[0].text).toContain("Inserted: at line 2");
+      const final = await readFile(filePath, "utf-8");
+      expect(final).toBe("a\nX\nY\nb\nc");
+    });
+
+    it("inserts at end when start_line > file length", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "lines.txt");
+      await writeFile(filePath, "a\nb", "utf-8");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "c",
+        start_line: 10,
+      });
+
+      expect(result.content[0].text).toContain("Inserted: at line 10");
+      const final = await readFile(filePath, "utf-8");
+      expect(final).toBe("a\nb\nc");
+    });
   });
 });
