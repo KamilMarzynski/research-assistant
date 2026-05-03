@@ -1,0 +1,62 @@
+import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
+import { Type } from "@sinclair/typebox";
+import { makeTool } from "./make-tool";
+
+export function createSaveMemoryTool(
+  saveMemoryFn: (category: string, title: string, content: string, scope: "app" | "project") => Promise<{ path: string }>,
+): AgentTool<typeof saveMemoryParameters, { path: string }> {
+  return makeTool({
+    name: "save_memory",
+    label: "Save memory",
+    description:
+      "Save a structured memory as a markdown file with YAML frontmatter. Use for important facts, decisions, conventions, or tool usage patterns the agent should remember.",
+    parameters: saveMemoryParameters,
+    execute: async (_id, { category, title, content, scope }): Promise<AgentToolResult<{ path: string }>> => {
+      const result = await saveMemoryFn(category, title, content, scope);
+      return {
+        content: [{ type: "text" as const, text: `Saved memory to: ${result.path}` }],
+        details: result,
+      };
+    },
+  });
+}
+
+const saveMemoryParameters = Type.Object({
+  category: Type.String({
+    description: "Category: philosophy, decision, finding, tool_reference, project_convention",
+  }),
+  title: Type.String({ description: "Short title for the memory" }),
+  content: Type.String({ description: "Markdown content of the memory" }),
+  scope: Type.String({ description: "app (universal) or project (project-specific)" }),
+});
+
+export function createReadMemoryTool(
+  readMemoryFn: (options: {
+    category?: string;
+    query?: string;
+    scope: "app" | "project" | "both";
+  }) => Promise<string>,
+): AgentTool<typeof readMemoryParameters, string> {
+  return makeTool({
+    name: "read_memory",
+    label: "Read memory",
+    description:
+      "Read saved memories by category or text search. Returns matching memories with title, category, and excerpt.",
+    parameters: readMemoryParameters,
+    execute: async (_id, { category, query, scope }): Promise<AgentToolResult<string>> => {
+      const text = await readMemoryFn({ category, query, scope });
+      return {
+        content: [{ type: "text" as const, text }],
+        details: text,
+      };
+    },
+  });
+}
+
+const readMemoryParameters = Type.Object({
+  category: Type.Optional(Type.String({
+    description: "Filter by category: philosophy, decision, finding, tool_reference, project_convention",
+  })),
+  query: Type.Optional(Type.String({ description: "Text search across titles and content" })),
+  scope: Type.String({ description: "app, project, or both" }),
+});
