@@ -235,5 +235,52 @@ describe("createWriteFileTool", () => {
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("a\nb\nc");
     });
+
+    it("errors when start_line < 1", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "lines.txt");
+      await writeFile(filePath, "a\nb", "utf-8");
+
+      await expect(
+        tool.execute("test-id", {
+          path: filePath,
+          content: "x",
+          start_line: 0,
+        }),
+      ).rejects.toThrow("start_line must be >= 1");
+    });
+
+    it("errors when end_line < start_line", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "lines.txt");
+      await writeFile(filePath, "a\nb", "utf-8");
+
+      await expect(
+        tool.execute("test-id", {
+          path: filePath,
+          content: "x",
+          start_line: 2,
+          end_line: 1,
+        }),
+      ).rejects.toThrow("end_line must be >= start_line");
+    });
+
+    it("overwrites entire file when no line params provided (backward compat)", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "lines.txt");
+      await writeFile(filePath, "old", "utf-8");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "new",
+      });
+
+      expect(result.content[0].text).toContain("Written");
+      const final = await readFile(filePath, "utf-8");
+      expect(final).toBe("new");
+    });
   });
 });
