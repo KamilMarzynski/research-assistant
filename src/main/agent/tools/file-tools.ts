@@ -66,6 +66,24 @@ export function createWriteFileTool(
 const writeFileParameters = Type.Object({
   path: Type.String({ description: "Absolute path to the file" }),
   content: Type.String({ description: "Content to write" }),
+  start_line: Type.Optional(
+    Type.Number({
+      description:
+        "1-based line number to insert at or start replacement. Existing line at this position shifts down if end_line is omitted.",
+    }),
+  ),
+  end_line: Type.Optional(
+    Type.Number({
+      description:
+        "1-based inclusive line number to end replacement. If omitted with start_line, inserts at start_line without replacing any lines.",
+    }),
+  ),
+  expected_hash: Type.Optional(
+    Type.String({
+      description:
+        "SHA-256 hash of current file contents (as agent last saw it). Required when editing existing files to prevent overwriting concurrent changes.",
+    }),
+  ),
 });
 
 export function createListDirTool(jail: PathJail): AgentTool<typeof listDirParameters, string[]> {
