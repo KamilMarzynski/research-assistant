@@ -90,6 +90,10 @@ export interface IpcResponseMap {
   UNLINK_FOLDER: undefined;
   RETRY_RESEARCH: { taskId: string };
   READ_ARTIFACT_FILE: string;
+  GET_RECENT_OUTPUTS: Artifact[];
+  ACKNOWLEDGE_OUTPUT: undefined;
+  ACKNOWLEDGE_ALL_OUTPUTS: undefined;
+  REVEAL_IN_FOLDER: undefined;
   GET_PENDING_TOOLS: PendingTool[];
   APPROVE_TOOL: undefined;
   REJECT_TOOL: undefined;
