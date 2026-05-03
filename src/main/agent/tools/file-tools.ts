@@ -38,7 +38,7 @@ function applyLineEdit(
     const after = lines.slice(zeroStart);
     return {
       lines: [...before, ...newLines, ...after],
-      message: `Inserted at line ${startLine}`,
+      message: `Inserted: at line ${startLine}`,
     };
   }
 
@@ -48,7 +48,7 @@ function applyLineEdit(
   const after = lines.slice(zeroEnd + 1);
   return {
     lines: [...before, ...newLines, ...after],
-    message: `Replaced lines ${startLine}-${endLine}`,
+    message: `Edited: (lines ${startLine}-${endLine})`,
   };
 }
 
@@ -92,20 +92,23 @@ export function createWriteFileTool(
         () => false,
       );
 
+      if (end_line !== undefined && start_line === undefined) {
+        return {
+          content: [{ type: "text" as const, text: `end_line requires start_line` }],
+          details: null,
+        };
+      }
+
       if (!fileExists) {
         if (expected_hash !== undefined) {
           return {
-            content: [
-              { type: "text" as const, text: `Error: Cannot provide expected_hash for new file` },
-            ],
+            content: [{ type: "text" as const, text: `Cannot provide expected_hash for new file` }],
             details: null,
           };
         }
         if (start_line !== undefined || end_line !== undefined) {
           return {
-            content: [
-              { type: "text" as const, text: `Error: Line ranges not valid for new files` },
-            ],
+            content: [{ type: "text" as const, text: `Line ranges not valid for new files` }],
             details: null,
           };
         }
@@ -138,7 +141,7 @@ export function createWriteFileTool(
           content: [
             {
               type: "text" as const,
-              text: `Hash mismatch: file changed. Current: ${currentHash}. Re-read file and retry.`,
+              text: `Hash mismatch: file changed. Current: ${currentHash}. Re-read and retry.`,
             },
           ],
           details: null,
@@ -165,7 +168,7 @@ export function createWriteFileTool(
         }
       }
 
-      const actionText = start_line !== undefined ? editMessage : "Overwritten";
+      const actionText = start_line !== undefined ? editMessage : "Written";
 
       return {
         content: [{ type: "text" as const, text: `${actionText}: ${resolved}` }],
@@ -179,13 +182,13 @@ const writeFileParameters = Type.Object({
   path: Type.String({ description: "Absolute path to the file" }),
   content: Type.String({ description: "Content to write" }),
   start_line: Type.Optional(
-    Type.Number({
+    Type.Integer({
       description:
         "1-based line number to insert at or start replacement. Existing line at this position shifts down if end_line is omitted.",
     }),
   ),
   end_line: Type.Optional(
-    Type.Number({
+    Type.Integer({
       description:
         "1-based inclusive line number to end replacement. If omitted with start_line, inserts at start_line without replacing any lines.",
     }),
