@@ -165,5 +165,41 @@ describe("createWriteFileTool", () => {
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("original");
     });
+
+    it("replaces single line with start_line and end_line", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "lines.txt");
+      await writeFile(filePath, "a\nb\nc", "utf-8");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "X",
+        start_line: 2,
+        end_line: 2,
+      });
+
+      expect(result.content[0].text).toContain("Edited: (lines 2-2)");
+      const final = await readFile(filePath, "utf-8");
+      expect(final).toBe("a\nX\nc");
+    });
+
+    it("replaces line range", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "lines.txt");
+      await writeFile(filePath, "a\nb\nc\nd", "utf-8");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "X\nY",
+        start_line: 2,
+        end_line: 3,
+      });
+
+      expect(result.content[0].text).toContain("Edited: (lines 2-3)");
+      const final = await readFile(filePath, "utf-8");
+      expect(final).toBe("a\nX\nY\nd");
+    });
   });
 });
