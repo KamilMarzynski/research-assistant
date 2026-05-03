@@ -6,6 +6,7 @@ import { AgentSession } from "../agent/session";
 import type { EventBus } from "../event-bus";
 import { ProjectIdSchema, SendMessageSchema } from "../ipc-validation";
 import type { HomeService } from "../services/HomeService";
+import type { MemoryFileService } from "../services/MemoryFileService";
 import type { MemoryManager } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { OutputNotificationService } from "../services/OutputNotificationService";
@@ -27,6 +28,7 @@ export function registerChatHandler(
     messageService: MessageService;
     projectService: ProjectService;
     outputNotificationService: OutputNotificationService;
+    memoryFileService: MemoryFileService;
   },
 ): void {
   const {
@@ -39,6 +41,7 @@ export function registerChatHandler(
     messageService,
     projectService,
     outputNotificationService,
+    memoryFileService,
   } = deps;
 
   ipcMain.handle(IPC.GET_MESSAGES, async (_event, payload: unknown) => {
@@ -94,6 +97,7 @@ export function registerChatHandler(
               systemContext,
               langfuseEnabled: settings.langfuseEnabled,
               webAccessEnabled: settings.webAccessEnabled,
+              memoryFileService,
               onFileWrite: (absolutePath, relativePath, fileName) => {
                 void outputNotificationService.recordWrite(
                   projectId,

@@ -20,6 +20,7 @@ export interface ReadMemoryOptions {
   category?: string;
   query?: string;
   scope: "app" | "project" | "both";
+  projectFolderPath?: string;
 }
 
 export class MemoryFileService {
@@ -33,6 +34,7 @@ export class MemoryFileService {
     title: string,
     content: string,
     scope: "app" | "project",
+    projectFolderPath?: string,
   ): Promise<SaveMemoryResult> {
     const safeCategory = VALID_CATEGORIES.includes(category as MemoryCategory)
       ? category
@@ -47,7 +49,9 @@ export class MemoryFileService {
     const targetDir =
       scope === "app"
         ? join(this.appMemoryPath, safeCategory)
-        : join(this.projectMemoryPath, ".agents", "memory", safeCategory);
+        : projectFolderPath
+          ? join(projectFolderPath, ".agents", "memory", safeCategory)
+          : join(this.projectMemoryPath, ".agents", "memory", safeCategory);
 
     // Attempt to write; fall back to app dir on failure
     let actualDir = targetDir;
@@ -83,6 +87,9 @@ export class MemoryFileService {
     }
     if (options.scope === "project" || options.scope === "both") {
       dirs.push(join(this.projectMemoryPath, ".agents", "memory"));
+      if (options.projectFolderPath) {
+        dirs.push(join(options.projectFolderPath, ".agents", "memory"));
+      }
     }
 
     const matches: Array<{

@@ -1,6 +1,6 @@
-import { watch } from "chokidar";
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
+import { watch } from "chokidar";
 import { parseFrontmatter } from "../utils/frontmatter";
 
 interface SkillManifest {
@@ -25,7 +25,7 @@ export class SkillWatcherService {
     if (this.opts.skillDirs.length === 0) return;
 
     this.watcher = watch(this.opts.skillDirs, {
-      ignored: /(^|[\/\\])\../,
+      ignored: /(^|[/\\])\../,
       persistent: true,
       depth: 2,
     });

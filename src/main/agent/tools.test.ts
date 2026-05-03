@@ -167,16 +167,16 @@ describe("createAgentTools – spawn + orchestrator tools", () => {
   });
 });
 
-  it("includes save_memory and read_memory when functions are provided", () => {
-    const tools = createAgentTools({
-      ...BASE,
-      saveMemoryFn: vi.fn().mockResolvedValue({ path: "/tmp/test.md" }),
-      readMemoryFn: vi.fn().mockResolvedValue("test"),
-    });
-    const names = tools.map((t) => t.name);
-    expect(names).toContain("save_memory");
-    expect(names).toContain("read_memory");
+it("includes save_memory and read_memory when functions are provided", () => {
+  const tools = createAgentTools({
+    ...BASE,
+    saveMemoryFn: vi.fn().mockResolvedValue({ path: "/tmp/test.md" }),
+    readMemoryFn: vi.fn().mockResolvedValue("test"),
   });
+  const names = tools.map((t) => t.name);
+  expect(names).toContain("save_memory");
+  expect(names).toContain("read_memory");
+});
 
 describe("createAgentTools – start_research deep flag", () => {
   it("passes deep=true to startResearchFn when tool called with deep: true", async () => {
