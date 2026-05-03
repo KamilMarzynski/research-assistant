@@ -1,5 +1,5 @@
-import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
@@ -82,11 +82,79 @@ export function createWriteFileTool(
     description:
       "Write content to a file, creating parent directories as needed. Path must be within the workspace or linked project folder.",
     parameters: writeFileParameters,
-    execute: async (_id, { path, content }): Promise<AgentToolResult<null>> => {
+    execute: async (
+      _id,
+      { path, content, start_line, end_line, expected_hash },
+    ): Promise<AgentToolResult<null>> => {
       const resolved = jail.validate(path, "write");
-      const dir = dirname(resolved);
-      await mkdir(dir, { recursive: true });
-      await writeFile(resolved, content, "utf-8");
+      const fileExists = await access(resolved).then(
+        () => true,
+        () => false,
+      );
+
+      if (!fileExists) {
+        if (expected_hash !== undefined) {
+          return {
+            content: [
+              { type: "text" as const, text: `Error: Cannot provide expected_hash for new file` },
+            ],
+            details: null,
+          };
+        }
+        if (start_line !== undefined || end_line !== undefined) {
+          return {
+            content: [
+              { type: "text" as const, text: `Error: Line ranges not valid for new files` },
+            ],
+            details: null,
+          };
+        }
+
+        const dir = dirname(resolved);
+        await mkdir(dir, { recursive: true });
+        await writeFile(resolved, content, "utf-8");
+
+        if (folderPath && onFileWrite) {
+          const normalizedFolder = folderPath.replace(/\/$/, "");
+          if (resolved.startsWith(`${normalizedFolder}/`)) {
+            const relativePath = resolved.slice(normalizedFolder.length + 1);
+            const fileName = resolved.split("/").pop() || relativePath;
+            onFileWrite(resolved, relativePath, fileName);
+          }
+        }
+
+        return {
+          content: [{ type: "text" as const, text: `Written: ${resolved}` }],
+          details: null,
+        };
+      }
+
+      // File exists
+      const existingContent = await readFile(resolved, "utf-8");
+      const currentHash = sha256(existingContent);
+
+      if (expected_hash !== undefined && expected_hash !== currentHash) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Hash mismatch: file changed. Current: ${currentHash}. Re-read file and retry.`,
+            },
+          ],
+          details: null,
+        };
+      }
+
+      const lines = existingContent.split("\n");
+      const { lines: editedLines, message: editMessage } = applyLineEdit(
+        lines,
+        start_line,
+        end_line,
+        content,
+      );
+      const newContent = editedLines.join("\n");
+
+      await writeFile(resolved, newContent, "utf-8");
 
       if (folderPath && onFileWrite) {
         const normalizedFolder = folderPath.replace(/\/$/, "");
@@ -97,8 +165,10 @@ export function createWriteFileTool(
         }
       }
 
+      const actionText = start_line !== undefined ? editMessage : "Overwritten";
+
       return {
-        content: [{ type: "text" as const, text: `Written: ${resolved}` }],
+        content: [{ type: "text" as const, text: `${actionText}: ${resolved}` }],
         details: null,
       };
     },
