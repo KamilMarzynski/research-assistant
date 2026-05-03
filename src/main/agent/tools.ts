@@ -25,7 +25,9 @@ export type AgentToolName =
   | "spawn_agent"
   | "spawn_agents_parallel"
   | "save_artifact"
-  | "propose_tool";
+  | "propose_tool"
+  | "save_memory"
+  | "read_memory";
 
 export type SpawnResult = { outputPath: string; summary: string };
 export type AgentType = "researcher" | "coder" | "orchestrator";
@@ -51,6 +53,12 @@ export interface AgentToolsOptions {
   ) => Promise<SpawnResult[]>;
   saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  saveMemoryFn?: (category: string, title: string, content: string, scope: "app" | "project") => Promise<{ path: string }>;
+  readMemoryFn?: (options: {
+    category?: string;
+    query?: string;
+    scope: "app" | "project" | "both";
+  }) => Promise<string>;
   webAccessEnabled?: boolean;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   emitBlocked?: (payload: {
