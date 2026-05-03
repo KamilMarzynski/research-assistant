@@ -83,7 +83,7 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
     tools.push(createWebSearchTool());
   }
 
-  tools.push(createDockerTool());
+  tools.push(createDockerTool(jail));
 
   if (startResearchFn) {
     tools.push(createStartResearchTool(startResearchFn));

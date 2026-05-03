@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Docker from "dockerode";
@@ -7,6 +7,7 @@ export interface DockerSandboxInput {
   code: string;
   language: "python" | "bash" | "typescript";
   files?: Array<{ name: string; content: string }>;
+  workspaceFiles?: Array<{ name: string; sourcePath: string }>;
   networkEnabled?: boolean;
 }
 
@@ -50,6 +51,9 @@ export async function runInDocker(input: DockerSandboxInput): Promise<DockerSand
 
     for (const f of input.files ?? []) {
       await writeFile(join(tmpDir, f.name), f.content, "utf-8");
+    }
+    for (const wf of input.workspaceFiles ?? []) {
+      await copyFile(wf.sourcePath, join(tmpDir, wf.name));
     }
     await writeFile(join(tmpDir, ENTRY_FILES[input.language]), input.code, "utf-8");
 

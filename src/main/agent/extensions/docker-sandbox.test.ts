@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -115,5 +115,16 @@ describe("runInDocker", () => {
     const result = await runInDocker({ code: 'print("hi")', language: "python" });
     expect(result.stdout).toBe("");
     expect(result.error).toBeUndefined();
+  });
+
+  it("copies workspaceFiles into temp dir before running", async () => {
+    const sourceFile = join(workDir, "data.csv");
+    await writeFile(sourceFile, "a,b\n1,2", "utf-8");
+    await runInDocker({
+      code: 'print("hi")',
+      language: "python",
+      workspaceFiles: [{ name: "data.csv", sourcePath: sourceFile }],
+    });
+    expect(mockCreateContainer).toHaveBeenCalled();
   });
 });
