@@ -3,7 +3,12 @@ import { Type } from "@sinclair/typebox";
 import { makeTool } from "./make-tool";
 
 export function createSaveMemoryTool(
-  saveMemoryFn: (category: string, title: string, content: string, scope: "app" | "project") => Promise<{ path: string }>,
+  saveMemoryFn: (
+    category: string,
+    title: string,
+    content: string,
+    scope: "app" | "project",
+  ) => Promise<{ path: string }>,
 ): AgentTool<typeof saveMemoryParameters, { path: string }> {
   return makeTool({
     name: "save_memory",
@@ -11,7 +16,10 @@ export function createSaveMemoryTool(
     description:
       "Save a structured memory as a markdown file with YAML frontmatter. Use for important facts, decisions, conventions, or tool usage patterns the agent should remember.",
     parameters: saveMemoryParameters,
-    execute: async (_id, { category, title, content, scope }): Promise<AgentToolResult<{ path: string }>> => {
+    execute: async (
+      _id,
+      { category, title, content, scope },
+    ): Promise<AgentToolResult<{ path: string }>> => {
       const result = await saveMemoryFn(category, title, content, scope);
       return {
         content: [{ type: "text" as const, text: `Saved memory to: ${result.path}` }],
@@ -27,7 +35,9 @@ const saveMemoryParameters = Type.Object({
   }),
   title: Type.String({ description: "Short title for the memory" }),
   content: Type.String({ description: "Markdown content of the memory" }),
-  scope: Type.String({ description: "app (universal) or project (project-specific)" }),
+  scope: Type.Union([Type.Literal("app"), Type.Literal("project")], {
+    description: "app (universal) or project (project-specific)",
+  }),
 });
 
 export function createReadMemoryTool(
@@ -54,9 +64,14 @@ export function createReadMemoryTool(
 }
 
 const readMemoryParameters = Type.Object({
-  category: Type.Optional(Type.String({
-    description: "Filter by category: philosophy, decision, finding, tool_reference, project_convention",
-  })),
+  category: Type.Optional(
+    Type.String({
+      description:
+        "Filter by category: philosophy, decision, finding, tool_reference, project_convention",
+    }),
+  ),
   query: Type.Optional(Type.String({ description: "Text search across titles and content" })),
-  scope: Type.String({ description: "app, project, or both" }),
+  scope: Type.Union([Type.Literal("app"), Type.Literal("project"), Type.Literal("both")], {
+    description: "app, project, or both",
+  }),
 });

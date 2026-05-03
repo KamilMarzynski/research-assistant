@@ -53,7 +53,12 @@ export interface AgentToolsOptions {
   ) => Promise<SpawnResult[]>;
   saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
-  saveMemoryFn?: (category: string, title: string, content: string, scope: "app" | "project") => Promise<{ path: string }>;
+  saveMemoryFn?: (
+    category: string,
+    title: string,
+    content: string,
+    scope: "app" | "project",
+  ) => Promise<{ path: string }>;
   readMemoryFn?: (options: {
     category?: string;
     query?: string;

@@ -14,7 +14,9 @@ describe("createSaveMemoryTool", () => {
     });
 
     expect(saveMemoryFn).toHaveBeenCalledWith("philosophy", "Test", "# Hello", "app");
-    expect((result.content[0] as { text: string }).text).toContain("Saved memory to: /tmp/philosophy/test.md");
+    expect((result.content[0] as { text: string }).text).toContain(
+      "Saved memory to: /tmp/philosophy/test.md",
+    );
   });
 });
 
@@ -29,7 +31,11 @@ describe("createReadMemoryTool", () => {
       scope: "app",
     });
 
-    expect(readMemoryFn).toHaveBeenCalledWith({ category: "philosophy", query: "test", scope: "app" });
+    expect(readMemoryFn).toHaveBeenCalledWith({
+      category: "philosophy",
+      query: "test",
+      scope: "app",
+    });
     expect((result.content[0] as { text: string }).text).toBe("# Results\nFound 2 memories.");
   });
 });

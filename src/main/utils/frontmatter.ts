@@ -3,6 +3,7 @@ import { parse } from "yaml";
 export interface FrontmatterMeta {
   name?: string;
   description?: string;
+  [key: string]: unknown;
 }
 
 /**
