@@ -43,7 +43,7 @@ export function createWriteFileTool(
 
       if (folderPath && onFileWrite) {
         const normalizedFolder = folderPath.replace(/\/$/, "");
-        if (resolved.startsWith(normalizedFolder + "/")) {
+        if (resolved.startsWith(`${normalizedFolder}/`)) {
           const relativePath = resolved.slice(normalizedFolder.length + 1);
           const fileName = resolved.split("/").pop() || relativePath;
           onFileWrite(resolved, relativePath, fileName);

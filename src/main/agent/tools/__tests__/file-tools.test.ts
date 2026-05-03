@@ -89,7 +89,7 @@ describe("createWriteFileTool", () => {
       const onFileWrite = vi.fn();
       const projectDir = join(tempDir, "project");
       const jail = makeJail();
-      const tool = createWriteFileTool(jail, projectDir + "/", onFileWrite);
+      const tool = createWriteFileTool(jail, `${projectDir}/`, onFileWrite);
 
       const filePath = join(projectDir, "file.txt");
       await tool.execute("test-id", { path: filePath, content: "hello" });
