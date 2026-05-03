@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let tmpHome: string;
 
-vi.mock("node:os", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:os")>();
-  return { ...actual, homedir: () => tmpHome };
-});
+vi.mock("node:os", () => ({
+  tmpdir: () => "/tmp",
+  homedir: () => tmpHome,
+}));
 
 const { loadSkills, buildSystemContext, toSlug, loadSkillsByContent } = await import("./context");
 
@@ -132,9 +132,10 @@ describe("buildSystemContext", () => {
     await rm(tmpHome, { recursive: true, force: true });
   });
 
-  it("returns empty string when no context files exist", async () => {
+  it("returns onboarding prompt when no context files exist", async () => {
     const result = await buildSystemContext("proj-1", "my project", undefined);
-    expect(result).toBe("");
+    expect(result).toContain("no AGENTS.md yet");
+    expect(result).toContain("Ask the user to describe");
   });
 
   it("includes config.md content when present", async () => {
@@ -201,6 +202,46 @@ describe("buildSystemContext", () => {
     const result = await buildSystemContext("proj-1", "my project", undefined);
     expect(result).toContain("<available_skills>");
     expect(result).toContain("<name>my-skill</name>");
+  });
+
+  it("injects onboarding prompt when AGENTS.md is missing", async () => {
+    const result = await buildSystemContext("proj-1", "Test Project", undefined);
+    expect(result).toContain("no AGENTS.md yet");
+    expect(result).toContain("Ask the user to describe");
+  });
+
+  it("loads existing AGENTS.md when present", async () => {
+    const home = join(tmpHome, ".research-assistant");
+    const slug = "test-project";
+    await mkdir(join(home, "projects", slug), { recursive: true });
+    await writeFile(
+      join(home, "projects", slug, "AGENTS.md"),
+      "# Test Project\nThis is the project context.",
+    );
+
+    const result = await buildSystemContext("proj-1", "Test Project", undefined);
+    expect(result).toContain("This is the project context.");
+    expect(result).not.toContain("no AGENTS.md yet");
+  });
+
+  it("includes app-level MEMORY.md when present", async () => {
+    const home = join(tmpHome, ".research-assistant");
+    await mkdir(join(home, "app-memory"), { recursive: true });
+    await writeFile(join(home, "app-memory", "MEMORY.md"), "# App Memory\nI remember things.");
+
+    const result = await buildSystemContext("proj-1", "my project", undefined);
+    expect(result).toContain("App Memory");
+    expect(result).toContain("I remember things.");
+  });
+
+  it("includes project-level MEMORY.md when present", async () => {
+    const projectDir = join(tmpHome, "my-project-folder");
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(join(projectDir, "MEMORY.md"), "# Project Memory\nThis project uses Bun.");
+
+    const result = await buildSystemContext("proj-1", "my project", projectDir);
+    expect(result).toContain("Project Memory");
+    expect(result).toContain("This project uses Bun.");
   });
 });
 

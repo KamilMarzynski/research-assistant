@@ -5,6 +5,7 @@ import { createSaveArtifactTool } from "./tools/artifact-tools";
 import { createDockerTool } from "./tools/docker-tool";
 import { createRequestEvaluationTool } from "./tools/eval-tools";
 import { createListDirTool, createReadFileTool, createWriteFileTool } from "./tools/file-tools";
+import { createReadMemoryTool, createSaveMemoryTool } from "./tools/memory-tools";
 import { createSpawnAgentsParallelTool, createSpawnAgentTool } from "./tools/orchestrator-tools";
 import { createProposeToolTool } from "./tools/propose-tool";
 import { createStartResearchTool } from "./tools/research-tools";
@@ -25,7 +26,9 @@ export type AgentToolName =
   | "spawn_agent"
   | "spawn_agents_parallel"
   | "save_artifact"
-  | "propose_tool";
+  | "propose_tool"
+  | "save_memory"
+  | "read_memory";
 
 export type SpawnResult = { outputPath: string; summary: string };
 export type AgentType = "researcher" | "coder" | "orchestrator";
@@ -51,7 +54,19 @@ export interface AgentToolsOptions {
   ) => Promise<SpawnResult[]>;
   saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  saveMemoryFn?: (
+    category: string,
+    title: string,
+    content: string,
+    scope: "app" | "project",
+  ) => Promise<{ path: string }>;
+  readMemoryFn?: (options: {
+    category?: string;
+    query?: string;
+    scope: "app" | "project" | "both";
+  }) => Promise<string>;
   webAccessEnabled?: boolean;
+  onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   emitBlocked?: (payload: {
     commandId: string;
     command: string;
@@ -65,7 +80,7 @@ export interface AgentToolsOptions {
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
-  const { projectId, folderPath, homePath, startResearchFn } = opts;
+  const { projectId, folderPath, homePath, startResearchFn, onFileWrite } = opts;
   const jail = new PathJail(projectId, folderPath);
   const workspacePath = join(homePath, "workspace", projectId);
   const auditLogPath = join(homePath, "audit.log");
@@ -73,10 +88,17 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
   // biome-ignore lint/suspicious/noExplicitAny: AgentTool generic is covariant in TDetails but contravariant in TParams; any is the correct erasure for a heterogeneous collection
   const tools: AgentTool<any>[] = [
     createReadFileTool(jail),
-    createWriteFileTool(jail),
+    createWriteFileTool(jail, folderPath, onFileWrite),
     createListDirTool(jail),
     createSafeBashTool(projectId, workspacePath, auditLogPath, opts.emitBlocked),
   ];
+
+  if (opts.saveMemoryFn) {
+    tools.push(createSaveMemoryTool(opts.saveMemoryFn));
+  }
+  if (opts.readMemoryFn) {
+    tools.push(createReadMemoryTool(opts.readMemoryFn));
+  }
 
   if (opts.webAccessEnabled !== false) {
     tools.push(createFetchUrlTool());

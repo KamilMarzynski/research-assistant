@@ -1,11 +1,9 @@
-import { Box, Divider } from "@mui/material";
-import { useState } from "react";
-import type { Artifact } from "../../../shared/types";
-import ArtifactSection from "./ArtifactSection";
-import ArtifactViewer from "./ArtifactViewer";
+import { Box } from "@mui/material";
+import { useProject } from "../../contexts/ProjectContext";
+import RecentOutputsPanel from "./RecentOutputsPanel";
 
 export default function DetailsPanel() {
-  const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
+  const { activeProjectId } = useProject();
 
   return (
     <Box
@@ -17,16 +15,7 @@ export default function DetailsPanel() {
         overflow: "auto",
       }}
     >
-      <ArtifactSection onSelectArtifact={setSelectedArtifact} />
-
-      {selectedArtifact && (
-        <>
-          <Divider />
-          <ArtifactViewer artifact={selectedArtifact} onBack={() => setSelectedArtifact(null)} />
-        </>
-      )}
-
-      {/* Future sections: Skills, Project Info, etc. */}
+      <RecentOutputsPanel projectId={activeProjectId ?? ""} />
     </Box>
   );
 }

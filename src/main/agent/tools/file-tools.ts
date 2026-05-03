@@ -144,7 +144,11 @@ const readFileParameters = Type.Object({
   maxLines: Type.Optional(Type.Integer({ description: "Maximum lines to return", default: 500 })),
 });
 
-export function createWriteFileTool(jail: PathJail): AgentTool<typeof writeFileParameters, null> {
+export function createWriteFileTool(
+  jail: PathJail,
+  folderPath: string | null,
+  onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void,
+): AgentTool<typeof writeFileParameters, null> {
   return makeTool({
     name: "write_file",
     label: "Write file",
@@ -156,6 +160,16 @@ export function createWriteFileTool(jail: PathJail): AgentTool<typeof writeFileP
       const dir = dirname(resolved);
       await mkdir(dir, { recursive: true });
       await writeFile(resolved, content, "utf-8");
+
+      if (folderPath && onFileWrite) {
+        const normalizedFolder = folderPath.replace(/\/$/, "");
+        if (resolved.startsWith(`${normalizedFolder}/`)) {
+          const relativePath = resolved.slice(normalizedFolder.length + 1);
+          const fileName = resolved.split("/").pop() || relativePath;
+          onFileWrite(resolved, relativePath, fileName);
+        }
+      }
+
       return {
         content: [{ type: "text" as const, text: `Written: ${resolved}` }],
         details: null,

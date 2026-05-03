@@ -27,10 +27,10 @@ test("preload bridge exposes electronAPI and core methods", async () => {
   });
 
   expect(api).not.toBeNull();
-  expect(api!.hasSend).toBe(true);
-  expect(api!.hasInvoke).toBe(true);
-  expect(api!.hasOn).toBe(true);
-  expect(api!.hasGenerateUuid).toBe(true);
+  expect(api?.hasSend).toBe(true);
+  expect(api?.hasInvoke).toBe(true);
+  expect(api?.hasOn).toBe(true);
+  expect(api?.hasGenerateUuid).toBe(true);
 });
 
 test("app renders initial UI instead of white screen", async () => {

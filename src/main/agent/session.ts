@@ -3,6 +3,7 @@ import type { BrowserWindow } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { EventBus } from "../event-bus";
 import type { HomeService } from "../services/HomeService";
+import type { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
@@ -38,6 +39,8 @@ export interface AgentSessionOptions {
   systemContext?: string;
   langfuseEnabled: boolean;
   webAccessEnabled?: boolean;
+  onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
+  memoryFileService?: MemoryFileService;
 }
 
 export class AgentSession {
@@ -50,6 +53,7 @@ export class AgentSession {
   private lastUserContent = "";
   private processing = false;
   private pendingFollowUp: string | null = null;
+  private pendingSkillDeltas: Array<{ skillName: string; summary: string }> = [];
 
   constructor({
     win,
@@ -67,11 +71,19 @@ export class AgentSession {
     systemContext = "",
     langfuseEnabled,
     webAccessEnabled,
+    onFileWrite,
+    memoryFileService,
   }: AgentSessionOptions) {
     this.win = win;
     this.messageService = messageService;
     this.memoryManager = memoryManager;
     this.projectId = projectId;
+
+    if (eventBus) {
+      eventBus.on("skill:changed", (payload) => {
+        this.pendingSkillDeltas.push(payload);
+      });
+    }
 
     const homePath = homeService.getHomePath();
     const historyBlock = formatConversationHistory(initialMemoryContext.recentMessages);
@@ -93,6 +105,7 @@ export class AgentSession {
       apiKey: provider.type === "ollama" ? "ollama" : provider.apiKey,
       model: provider.model,
       webAccessEnabled,
+      onFileWrite,
       emitBlocked: eventBus
         ? (payload) => eventBus.emit({ type: "bash:blocked", payload })
         : undefined,
@@ -108,6 +121,14 @@ export class AgentSession {
         provider,
         webAccessEnabled,
       }),
+      saveMemoryFn: memoryFileService
+        ? (category, title, content, scope) =>
+            memoryFileService.saveMemory(category, title, content, scope, folderPath ?? undefined)
+        : undefined,
+      readMemoryFn: memoryFileService
+        ? (options) =>
+            memoryFileService.readMemory({ ...options, projectFolderPath: folderPath ?? undefined })
+        : undefined,
     });
 
     this.agent = new Agent({
@@ -170,8 +191,16 @@ export class AgentSession {
       throw new Error("Agent is already processing a message. Please wait for the response.");
     }
     this.processing = true;
-    this.lastUserContent = content;
     try {
+      // Inject pending skill deltas as user-visible messages
+      if (this.pendingSkillDeltas.length > 0) {
+        for (const delta of this.pendingSkillDeltas) {
+          await this.agent.prompt(`Skill "${delta.skillName}" was updated. ${delta.summary}`);
+        }
+        this.pendingSkillDeltas = [];
+      }
+
+      this.lastUserContent = content;
       await this.messageService.addMessage({
         projectId: this.projectId,
         role: "user",

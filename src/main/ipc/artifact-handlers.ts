@@ -1,4 +1,5 @@
-import { ipcMain } from "electron";
+import { ipcMain, shell } from "electron";
+import { z } from "zod/v4";
 import { IPC } from "../../shared/ipc-channels";
 import { ProjectIdSchema, ReadArtifactFileSchema } from "../ipc-validation";
 import type { ArtifactService } from "../services/ArtifactService";
@@ -61,5 +62,45 @@ export function registerArtifactHandlers(
       return `${content.slice(0, 512_000)}\n\n<!-- Content truncated at 500KB -->`;
     }
     return content;
+  });
+
+  ipcMain.handle(IPC.GET_RECENT_OUTPUTS, async (_event, payload: unknown) => {
+    const p = parseOrThrow(ProjectIdSchema, payload, "GET_RECENT_OUTPUTS");
+    return artifactService.listUnacknowledged(p.projectId);
+  });
+
+  ipcMain.handle(IPC.ACKNOWLEDGE_OUTPUT, async (_event, payload: unknown) => {
+    const { projectId, artifactId } = parseOrThrow(
+      z.object({ projectId: z.string(), artifactId: z.string() }),
+      payload,
+      "ACKNOWLEDGE_OUTPUT",
+    );
+    await artifactService.acknowledge(projectId, artifactId);
+  });
+
+  ipcMain.handle(IPC.ACKNOWLEDGE_ALL_OUTPUTS, async (_event, payload: unknown) => {
+    const p = parseOrThrow(ProjectIdSchema, payload, "ACKNOWLEDGE_ALL_OUTPUTS");
+    await artifactService.acknowledgeAll(p.projectId);
+  });
+
+  ipcMain.handle(IPC.REVEAL_IN_FOLDER, async (_event, payload: unknown) => {
+    const { filePath, projectId } = parseOrThrow(
+      z.object({ filePath: z.string(), projectId: z.string() }),
+      payload,
+      "REVEAL_IN_FOLDER",
+    );
+
+    let project: Awaited<ReturnType<typeof projectService.getProject>>;
+    try {
+      project = await projectService.getProject(projectId);
+    } catch {
+      throw new Error("Project not found");
+    }
+
+    const { PathJail } = await import("../agent/path-jail");
+    const jail = new PathJail(projectId, project.folderPath);
+    const resolvedPath = jail.validate(filePath, "read");
+
+    shell.showItemInFolder(resolvedPath);
   });
 }
