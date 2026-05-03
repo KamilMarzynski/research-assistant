@@ -223,6 +223,7 @@ describe("createReadFileTool", () => {
     expect((result.content[0] as { type: "text"; text: string }).text).toBe(
       "Read 2 lines of summary.txt (text/plain). Total: 2 lines.",
     );
+    // biome-ignore lint/style/noNonNullAssertion: execute always returns details
     expect(result.details!.content).toBe("Hello\nWorld");
   });
 });
