@@ -39,7 +39,7 @@ describe("createWriteFileTool", () => {
       const filePath = join(projectDir, "src", "main.ts");
       const result = await tool.execute("test-id", { path: filePath, content: "hello" });
 
-      expect(result.content[0].text).toBe(`Written: ${filePath}`);
+      expect((result.content[0] as { text: string }).text).toBe(`Written: ${filePath}`);
       expect(onFileWrite).toHaveBeenCalledTimes(1);
       expect(onFileWrite).toHaveBeenCalledWith(filePath, "src/main.ts", "main.ts");
     });
@@ -55,7 +55,7 @@ describe("createWriteFileTool", () => {
         content: "hello",
       });
 
-      expect(result.content[0].text).toBe(`Written: ${filePath}`);
+      expect((result.content[0] as { text: string }).text).toBe(`Written: ${filePath}`);
       expect(onFileWrite).not.toHaveBeenCalled();
     });
 
@@ -69,7 +69,7 @@ describe("createWriteFileTool", () => {
       const filePath = join(otherDir, "test.txt");
       const result = await tool.execute("test-id", { path: filePath, content: "hello" });
 
-      expect(result.content[0].text).toBe(`Written: ${filePath}`);
+      expect((result.content[0] as { text: string }).text).toBe(`Written: ${filePath}`);
       expect(onFileWrite).not.toHaveBeenCalled();
     });
 
@@ -82,11 +82,7 @@ describe("createWriteFileTool", () => {
       const filePath = join(projectDir, "deeply", "nested", "file.txt");
       await tool.execute("test-id", { path: filePath, content: "nested content" });
 
-      expect(onFileWrite).toHaveBeenCalledWith(
-        filePath,
-        "deeply/nested/file.txt",
-        "file.txt",
-      );
+      expect(onFileWrite).toHaveBeenCalledWith(filePath, "deeply/nested/file.txt", "file.txt");
     });
 
     it("handles folderPath with trailing slash", async () => {

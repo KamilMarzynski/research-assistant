@@ -52,10 +52,7 @@ export class DrizzleArtifactRepository implements IArtifactRepository {
   }
 
   async acknowledge(id: string): Promise<void> {
-    await this.db
-      .update(artifacts)
-      .set({ acknowledged: true })
-      .where(eq(artifacts.id, id));
+    await this.db.update(artifacts).set({ acknowledged: true }).where(eq(artifacts.id, id));
   }
 
   async acknowledgeAllByProject(projectId: string): Promise<void> {

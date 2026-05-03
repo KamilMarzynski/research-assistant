@@ -21,6 +21,8 @@ function makeMockRepo(overrides: Partial<IArtifactRepository> = {}): IArtifactRe
     create: vi.fn().mockResolvedValue(makeArtifact()),
     listByProject: vi.fn().mockResolvedValue([]),
     get: vi.fn().mockResolvedValue(null),
+    acknowledge: vi.fn().mockResolvedValue(undefined),
+    acknowledgeAllByProject: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -38,7 +40,7 @@ describe("ArtifactService", () => {
     it("delegates to repo.create and returns the artifact", async () => {
       const data = { projectId: "proj-1", title: "My Report", filePath: "/x.md" };
       const created = makeArtifact(data);
-      vi.mocked(repo.create).mockResolvedValue(created);
+      (repo.create as ReturnType<typeof vi.fn>).mockResolvedValue(created);
 
       const result = await service.saveArtifact(data);
 
@@ -50,7 +52,7 @@ describe("ArtifactService", () => {
   describe("listArtifacts", () => {
     it("returns artifacts from repo.listByProject", async () => {
       const list = [makeArtifact({ id: "a" }), makeArtifact({ id: "b" })];
-      vi.mocked(repo.listByProject).mockResolvedValue(list);
+      (repo.listByProject as ReturnType<typeof vi.fn>).mockResolvedValue(list);
 
       const result = await service.listArtifacts("proj-1");
 

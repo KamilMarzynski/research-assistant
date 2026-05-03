@@ -1,12 +1,10 @@
 import { inject, injectable } from "tsyringe";
-import type { IArtifactRepository } from "../repositories/IArtifactRepository";
 import { ARTIFACT_REPO_TOKEN } from "../di/tokens";
+import type { IArtifactRepository } from "../repositories/IArtifactRepository";
 
 @injectable()
 export class OutputNotificationService {
-  constructor(
-    @inject(ARTIFACT_REPO_TOKEN) private readonly repo: IArtifactRepository,
-  ) {}
+  constructor(@inject(ARTIFACT_REPO_TOKEN) private readonly repo: IArtifactRepository) {}
 
   async recordWrite(
     projectId: string,
