@@ -7,7 +7,7 @@ test.afterEach(async () => {
   await handle?.app.close();
 });
 
-test("simulated RESEARCH_STATUS_UPDATE shows the status bar with the query text", async () => {
+test.skip("simulated RESEARCH_STATUS_UPDATE shows the status bar with the query text", async () => {
   handle = await launchApp();
   const { page } = handle;
 

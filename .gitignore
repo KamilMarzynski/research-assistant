@@ -10,3 +10,4 @@ coverage/
 .agents/
 .claude/skills/
 skills-lock.json
+test-results/

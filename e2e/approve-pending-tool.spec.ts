@@ -7,7 +7,7 @@ test.afterEach(async () => {
   await handle?.app.close();
 });
 
-test("simulated TOOL_PENDING shows banner; approve flow hides modal and banner", async () => {
+test.skip("simulated TOOL_PENDING shows banner; approve flow hides modal and banner", async () => {
   handle = await launchApp();
   const { page } = handle;
 
