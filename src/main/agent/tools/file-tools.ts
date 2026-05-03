@@ -15,11 +15,11 @@ function applyLineEdit(
   startLine: number | undefined,
   endLine: number | undefined,
   content: string,
-): { lines: string[]; message: string } {
+): string[] {
   const newLines = content.split("\n");
 
   if (startLine === undefined) {
-    return { lines: newLines, message: "" };
+    return newLines;
   }
 
   if (startLine < 1) {
@@ -36,20 +36,14 @@ function applyLineEdit(
     // Insert mode: insert content at start_line, shift existing lines down
     const before = lines.slice(0, zeroStart);
     const after = lines.slice(zeroStart);
-    return {
-      lines: [...before, ...newLines, ...after],
-      message: `Inserted: at line ${startLine}`,
-    };
+    return [...before, ...newLines, ...after];
   }
 
   // Replace mode: replace lines [startLine, endLine] inclusive
   const zeroEnd = endLine - 1;
   const before = lines.slice(0, zeroStart);
   const after = lines.slice(zeroEnd + 1);
-  return {
-    lines: [...before, ...newLines, ...after],
-    message: `Edited: (lines ${startLine}-${endLine})`,
-  };
+  return [...before, ...newLines, ...after];
 }
 
 export function createReadFileTool(jail: PathJail): AgentTool<typeof readFileParameters, null> {
@@ -149,12 +143,7 @@ export function createWriteFileTool(
       }
 
       const lines = existingContent.split("\n");
-      const { lines: editedLines, message: editMessage } = applyLineEdit(
-        lines,
-        start_line,
-        end_line,
-        content,
-      );
+      const editedLines = applyLineEdit(lines, start_line, end_line, content);
       const newContent = editedLines.join("\n");
 
       await writeFile(resolved, newContent, "utf-8");
@@ -168,10 +157,17 @@ export function createWriteFileTool(
         }
       }
 
-      const actionText = start_line !== undefined ? editMessage : "Written";
+      let actionText: string;
+      if (start_line !== undefined && end_line !== undefined) {
+        actionText = `Edited: ${resolved} (lines ${start_line}-${end_line})`;
+      } else if (start_line !== undefined) {
+        actionText = `Inserted: ${resolved} at line ${start_line}`;
+      } else {
+        actionText = `Written: ${resolved}`;
+      }
 
       return {
-        content: [{ type: "text" as const, text: `${actionText}: ${resolved}` }],
+        content: [{ type: "text" as const, text: actionText }],
         details: null,
       };
     },
