@@ -180,8 +180,8 @@ describe("createWriteFileTool", () => {
         expected_hash: "wronghash",
       });
 
-      expect(getText(result)).toContain("Hash mismatch");
-      expect(getText(result)).toContain("Re-read and retry");
+      expect(getText(result)).toContain("File changed since last read");
+      expect(getText(result)).toContain("Re-read file and retry");
       expect(getText(result)).toContain(sha256("original"));
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("original");
@@ -263,13 +263,13 @@ describe("createWriteFileTool", () => {
       const filePath = join(tempDir, "lines.txt");
       await writeFile(filePath, "a\nb", "utf-8");
 
-      await expect(
-        tool.execute("test-id", {
-          path: filePath,
-          content: "x",
-          start_line: 0,
-        }),
-      ).rejects.toThrow("start_line must be >= 1");
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "x",
+        start_line: 0,
+      });
+
+      expect(getText(result)).toBe("start_line must be >= 1");
     });
 
     it("errors when end_line < start_line", async () => {
@@ -278,14 +278,14 @@ describe("createWriteFileTool", () => {
       const filePath = join(tempDir, "lines.txt");
       await writeFile(filePath, "a\nb", "utf-8");
 
-      await expect(
-        tool.execute("test-id", {
-          path: filePath,
-          content: "x",
-          start_line: 2,
-          end_line: 1,
-        }),
-      ).rejects.toThrow("end_line must be >= start_line");
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        content: "x",
+        start_line: 2,
+        end_line: 1,
+      });
+
+      expect(getText(result)).toBe("end_line must be >= start_line");
     });
 
     it("overwrites entire file when no line params provided (backward compat)", async () => {

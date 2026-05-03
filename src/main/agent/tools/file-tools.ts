@@ -15,19 +15,19 @@ function applyLineEdit(
   startLine: number | undefined,
   endLine: number | undefined,
   content: string,
-): string[] {
+): { lines: string[] } | { error: string } {
   const newLines = content.split("\n");
 
   if (startLine === undefined) {
-    return newLines;
+    return { lines: newLines };
   }
 
   if (startLine < 1) {
-    throw new Error("start_line must be >= 1");
+    return { error: "start_line must be >= 1" };
   }
 
   if (endLine !== undefined && endLine < startLine) {
-    throw new Error("end_line must be >= start_line");
+    return { error: "end_line must be >= start_line" };
   }
 
   const zeroStart = startLine - 1;
@@ -36,14 +36,14 @@ function applyLineEdit(
     // Insert mode: insert content at start_line, shift existing lines down
     const before = lines.slice(0, zeroStart);
     const after = lines.slice(zeroStart);
-    return [...before, ...newLines, ...after];
+    return { lines: [...before, ...newLines, ...after] };
   }
 
   // Replace mode: replace lines [startLine, endLine] inclusive
   const zeroEnd = endLine - 1;
   const before = lines.slice(0, zeroStart);
   const after = lines.slice(zeroEnd + 1);
-  return [...before, ...newLines, ...after];
+  return { lines: [...before, ...newLines, ...after] };
 }
 
 export function createReadFileTool(jail: PathJail): AgentTool<typeof readFileParameters, null> {
@@ -135,7 +135,7 @@ export function createWriteFileTool(
           content: [
             {
               type: "text" as const,
-              text: `Hash mismatch: file changed. Current: ${currentHash}. Re-read and retry.`,
+              text: `File changed since last read. Current hash: ${currentHash}. Re-read file and retry.`,
             },
           ],
           details: null,
@@ -143,8 +143,14 @@ export function createWriteFileTool(
       }
 
       const lines = existingContent.split("\n");
-      const editedLines = applyLineEdit(lines, start_line, end_line, content);
-      const newContent = editedLines.join("\n");
+      const editResult = applyLineEdit(lines, start_line, end_line, content);
+      if ("error" in editResult) {
+        return {
+          content: [{ type: "text" as const, text: editResult.error }],
+          details: null,
+        };
+      }
+      const newContent = editResult.lines.join("\n");
 
       await writeFile(resolved, newContent, "utf-8");
 
