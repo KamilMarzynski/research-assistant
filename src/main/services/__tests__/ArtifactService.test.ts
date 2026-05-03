@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Artifact } from "../../../shared/types";
 import type { IArtifactRepository } from "../../repositories/IArtifactRepository";
@@ -9,6 +10,7 @@ function makeArtifact(overrides: Partial<Artifact> = {}): Artifact {
     projectId: "proj-1",
     title: "Report",
     filePath: "/docs/report.md",
+    acknowledged: false,
     createdAt: new Date("2026-01-01"),
     ...overrides,
   };

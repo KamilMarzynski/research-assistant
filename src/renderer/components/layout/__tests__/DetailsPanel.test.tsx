@@ -45,9 +45,17 @@ describe("ArtifactSection", () => {
         projectId: "p1",
         title: "Research Report",
         filePath: "/x.md",
+        acknowledged: false,
         createdAt: "2026-01-01",
       },
-      { id: "2", projectId: "p1", title: "Findings", filePath: "/y.md", createdAt: "2026-01-02" },
+      {
+        id: "2",
+        projectId: "p1",
+        title: "Findings",
+        filePath: "/y.md",
+        acknowledged: false,
+        createdAt: "2026-01-02",
+      },
     ]);
 
     renderWithProvider(<DetailsPanel />);
@@ -65,7 +73,14 @@ describe("ArtifactViewer", () => {
     invoke.mockImplementation((channel: string, _payload: unknown) => {
       if (channel === "GET_ARTIFACTS")
         return Promise.resolve([
-          { id: "1", projectId: "p1", title: "Report", filePath: "/r.md", createdAt: "2026-01-01" },
+          {
+            id: "1",
+            projectId: "p1",
+            title: "Report",
+            filePath: "/r.md",
+            acknowledged: false,
+            createdAt: "2026-01-01",
+          },
         ]);
       if (channel === "READ_ARTIFACT_FILE") return Promise.resolve("# Report\n\nContent here.");
       return Promise.resolve(null);
@@ -95,6 +110,7 @@ describe("ArtifactViewer", () => {
             projectId: "p1",
             title: "Report",
             filePath: "/missing.md",
+            acknowledged: false,
             createdAt: "2026-01-01",
           },
         ]);

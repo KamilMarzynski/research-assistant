@@ -1,0 +1,2 @@
+ALTER TABLE artifacts ADD COLUMN relative_path TEXT;
+ALTER TABLE artifacts ADD COLUMN acknowledged INTEGER NOT NULL DEFAULT 0;

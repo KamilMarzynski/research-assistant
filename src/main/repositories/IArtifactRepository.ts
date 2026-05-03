@@ -1,7 +1,11 @@
 import type { Artifact } from "@shared/types";
 
+type CreateArtifactData = Omit<Artifact, "id" | "createdAt" | "acknowledged"> & {
+  acknowledged?: boolean;
+};
+
 export interface IArtifactRepository {
-  create(data: Omit<Artifact, "id" | "createdAt">): Promise<Artifact>;
+  create(data: CreateArtifactData): Promise<Artifact>;
   listByProject(projectId: string): Promise<Artifact[]>;
   get(id: string): Promise<Artifact | null>;
 }

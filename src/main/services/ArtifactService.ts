@@ -7,7 +7,9 @@ import type { IArtifactRepository } from "../repositories/IArtifactRepository";
 export class ArtifactService {
   constructor(@inject(ARTIFACT_REPO_TOKEN) private readonly repo: IArtifactRepository) {}
 
-  async saveArtifact(data: Omit<Artifact, "id" | "createdAt">): Promise<Artifact> {
+  async saveArtifact(
+    data: Omit<Artifact, "id" | "createdAt" | "acknowledged"> & { acknowledged?: boolean },
+  ): Promise<Artifact> {
     return this.repo.create(data);
   }
 
