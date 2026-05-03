@@ -180,5 +180,35 @@ export async function buildSystemContext(
     );
   }
 
+  // 4. App-level MEMORY.md
+  try {
+    const appMemory = await readFile(join(raHome, "app-memory", "MEMORY.md"), "utf-8");
+    if (appMemory.trim()) {
+      parts.push("<!-- App-level memory (MEMORY.md) -->", appMemory.trim());
+    }
+  } catch {
+    // not present yet
+  }
+
+  // 5. Project-level MEMORY.md
+  let projectMemory: string | undefined;
+  if (folderPath) {
+    try {
+      projectMemory = await readFile(join(folderPath, "MEMORY.md"), "utf-8");
+    } catch {
+      // not in linked folder, try fallback
+    }
+  }
+  if (!projectMemory) {
+    try {
+      projectMemory = await readFile(join(raHome, "projects", slug, "MEMORY.md"), "utf-8");
+    } catch {
+      // not yet discovered
+    }
+  }
+  if (projectMemory?.trim()) {
+    parts.push("<!-- Project memory (MEMORY.md) -->", projectMemory.trim());
+  }
+
   return parts.join("\n\n");
 }

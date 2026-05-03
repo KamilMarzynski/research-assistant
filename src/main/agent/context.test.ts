@@ -223,6 +223,26 @@ describe("buildSystemContext", () => {
     expect(result).toContain("This is the project context.");
     expect(result).not.toContain("no AGENTS.md yet");
   });
+
+  it("includes app-level MEMORY.md when present", async () => {
+    const home = join(tmpHome, ".research-assistant");
+    await mkdir(join(home, "app-memory"), { recursive: true });
+    await writeFile(join(home, "app-memory", "MEMORY.md"), "# App Memory\nI remember things.");
+
+    const result = await buildSystemContext("proj-1", "my project", undefined);
+    expect(result).toContain("App Memory");
+    expect(result).toContain("I remember things.");
+  });
+
+  it("includes project-level MEMORY.md when present", async () => {
+    const projectDir = join(tmpHome, "my-project-folder");
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(join(projectDir, "MEMORY.md"), "# Project Memory\nThis project uses Bun.");
+
+    const result = await buildSystemContext("proj-1", "my project", projectDir);
+    expect(result).toContain("Project Memory");
+    expect(result).toContain("This project uses Bun.");
+  });
 });
 
 describe("loadSkillsByContent", () => {
