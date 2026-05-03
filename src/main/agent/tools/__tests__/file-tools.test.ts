@@ -113,7 +113,9 @@ describe("createWriteFileTool", () => {
         expected_hash: "abc123",
       });
 
-      expect(result.content[0].text).toContain("Cannot provide expected_hash for new file");
+      expect((result.content[0] as { text: string }).text).toContain(
+        "Cannot provide expected_hash for new file",
+      );
     });
 
     it("rejects line ranges for new file", async () => {
@@ -127,7 +129,9 @@ describe("createWriteFileTool", () => {
         start_line: 1,
       });
 
-      expect(result.content[0].text).toContain("Line ranges not valid for new files");
+      expect((result.content[0] as { text: string }).text).toContain(
+        "Line ranges not valid for new files",
+      );
     });
 
     it("edits existing file when hash matches", async () => {
@@ -143,7 +147,7 @@ describe("createWriteFileTool", () => {
         expected_hash: sha256(originalContent),
       });
 
-      expect(result.content[0].text).toContain("Written");
+      expect((result.content[0] as { text: string }).text).toContain("Written");
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("replaced");
     });
@@ -160,8 +164,8 @@ describe("createWriteFileTool", () => {
         expected_hash: "wronghash",
       });
 
-      expect(result.content[0].text).toContain("Hash mismatch");
-      expect(result.content[0].text).toContain("Re-read and retry");
+      expect((result.content[0] as { text: string }).text).toContain("Hash mismatch");
+      expect((result.content[0] as { text: string }).text).toContain("Re-read and retry");
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("original");
     });
@@ -179,7 +183,7 @@ describe("createWriteFileTool", () => {
         end_line: 2,
       });
 
-      expect(result.content[0].text).toContain("Edited: (lines 2-2)");
+      expect((result.content[0] as { text: string }).text).toContain("Edited: (lines 2-2)");
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("a\nX\nc");
     });
@@ -197,7 +201,7 @@ describe("createWriteFileTool", () => {
         end_line: 3,
       });
 
-      expect(result.content[0].text).toContain("Edited: (lines 2-3)");
+      expect((result.content[0] as { text: string }).text).toContain("Edited: (lines 2-3)");
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("a\nX\nY\nd");
     });
@@ -214,7 +218,7 @@ describe("createWriteFileTool", () => {
         start_line: 2,
       });
 
-      expect(result.content[0].text).toContain("Inserted: at line 2");
+      expect((result.content[0] as { text: string }).text).toContain("Inserted: at line 2");
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("a\nX\nY\nb\nc");
     });
@@ -231,7 +235,7 @@ describe("createWriteFileTool", () => {
         start_line: 10,
       });
 
-      expect(result.content[0].text).toContain("Inserted: at line 10");
+      expect((result.content[0] as { text: string }).text).toContain("Inserted: at line 10");
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("a\nb\nc");
     });
@@ -278,7 +282,7 @@ describe("createWriteFileTool", () => {
         content: "new",
       });
 
-      expect(result.content[0].text).toContain("Written");
+      expect((result.content[0] as { text: string }).text).toContain("Written");
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("new");
     });
