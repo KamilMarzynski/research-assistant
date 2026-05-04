@@ -42,6 +42,7 @@ export async function buildSystemContext(
   _projectId: string,
   projectName: string,
   folderPath: string | undefined,
+  skillIndexXml?: string,
 ): Promise<string> {
   const raHome = getResearchAssistantHome();
   const slug = toSlug(projectName);
@@ -58,7 +59,7 @@ export async function buildSystemContext(
   }
 
   // 2. skills
-  const skillIndex = await loadSkillIndexXml(folderPath);
+  const skillIndex = skillIndexXml ?? (await loadSkillIndexXml(folderPath));
   if (skillIndex) parts.push(skillIndex);
 
   // 3. AGENTS.md

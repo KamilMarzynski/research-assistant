@@ -9,6 +9,7 @@ import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { buildSystemContext } from "./context";
+import { createDefaultSkillRouter } from "./SkillRouter";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
 import { createAgentTools } from "./tools";
@@ -59,6 +60,8 @@ export class AgentSession {
   private processing = false;
   private pendingFollowUp: string | null = null;
   private pendingSkillDeltas: Array<{ skillName: string; summary: string }> = [];
+  private readonly skillRouter: ReturnType<typeof createDefaultSkillRouter>;
+  private skillRouterReady = false;
 
   constructor({
     win,
@@ -85,6 +88,10 @@ export class AgentSession {
     this.projectId = projectId;
     this.projectName = projectName;
     this.folderPath = folderPath;
+
+    this.skillRouter = createDefaultSkillRouter(folderPath ?? undefined, (skillName, summary) => {
+      this.pendingSkillDeltas.push({ skillName, summary });
+    });
 
     if (eventBus) {
       eventBus.on("skill:changed", (payload) => {
@@ -207,12 +214,19 @@ export class AgentSession {
     try {
       // Refresh system context before each prompt so AGENTS.md updates are picked up
       try {
+        if (!this.skillRouterReady) {
+          await this.skillRouter.buildIndex();
+          this.skillRouter.startWatching();
+          this.skillRouterReady = true;
+        }
+
         const memoryContext = await this.memoryManager.buildContext(this.projectId, 20);
         const historyBlock = formatConversationHistory(memoryContext.recentMessages);
         const systemContext = await buildSystemContext(
           this.projectId,
           this.projectName,
           this.folderPath ?? undefined,
+          this.skillRouter.toXml(),
         );
         const systemPrompt = [
           BASE_SYSTEM_PROMPT,
