@@ -10,9 +10,11 @@ vi.mock("node:os", () => ({
   homedir: () => tmpHome,
 }));
 
-const { loadSkills, buildSystemContext, toSlug, loadSkillsByContent } = await import("./context");
+const { loadSkillIndexXml, buildSystemContext, toSlug, loadSkillsByContent } = await import(
+  "./context"
+);
 
-describe("loadSkills", () => {
+describe("loadSkillIndexXml", () => {
   beforeEach(async () => {
     tmpHome = await mkdtemp(join(tmpdir(), "ctx-test-"));
   });
@@ -22,7 +24,7 @@ describe("loadSkills", () => {
   });
 
   it("returns empty string when no skill dirs exist", async () => {
-    const result = await loadSkills(undefined);
+    const result = await loadSkillIndexXml(undefined);
     expect(result).toBe("");
   });
 
@@ -34,11 +36,10 @@ describe("loadSkills", () => {
       `---\nname: my-skill\ndescription: Does something useful.\n---\n# Content`,
     );
 
-    const result = await loadSkills(undefined);
+    const result = await loadSkillIndexXml(undefined);
     expect(result).toContain("<available_skills>");
-    expect(result).toContain("<name>my-skill</name>");
-    expect(result).toContain("<description>Does something useful.</description>");
-    expect(result).toContain("SKILL.md</location>");
+    expect(result).toContain('name="my-skill"');
+    expect(result).toContain('description="Does something useful."');
   });
 
   it("project-level skill overrides global when same name", async () => {
@@ -57,7 +58,7 @@ describe("loadSkills", () => {
       `---\nname: shared-skill\ndescription: Project version.\n---`,
     );
 
-    const result = await loadSkills("/tmp/myproject-ctx-test");
+    const result = await loadSkillIndexXml("/tmp/myproject-ctx-test");
     expect(result).toContain("Project version.");
     expect(result).not.toContain("Global version.");
 
@@ -73,7 +74,7 @@ describe("loadSkills", () => {
     );
     await writeFile(join(skillDir, ".disabled"), "");
 
-    const result = await loadSkills(undefined);
+    const result = await loadSkillIndexXml(undefined);
     expect(result).not.toContain("disabled-skill");
   });
 
@@ -82,7 +83,7 @@ describe("loadSkills", () => {
     await mkdir(skillDir, { recursive: true });
     await writeFile(join(skillDir, "SKILL.md"), "# No frontmatter here");
 
-    const result = await loadSkills(undefined);
+    const result = await loadSkillIndexXml(undefined);
     expect(result).not.toContain("bad-skill");
   });
 
@@ -92,7 +93,7 @@ describe("loadSkills", () => {
     // Create a directory named SKILL.md to make readFile throw EISDIR
     await mkdir(join(skillDir, "SKILL.md"), { recursive: true });
 
-    const result = await loadSkills(undefined);
+    const result = await loadSkillIndexXml(undefined);
     expect(result).not.toContain("dir-skill");
   });
 });
@@ -201,7 +202,7 @@ describe("buildSystemContext", () => {
 
     const result = await buildSystemContext("proj-1", "my project", undefined);
     expect(result).toContain("<available_skills>");
-    expect(result).toContain("<name>my-skill</name>");
+    expect(result).toContain('name="my-skill"');
   });
 
   it("injects onboarding prompt when AGENTS.md is missing", async () => {
@@ -279,7 +280,10 @@ describe("loadSkillsByContent", () => {
     for (const name of ["skill-a", "skill-b"]) {
       const dir = join(tmpHome, ".research-assistant", "skills", name);
       await mkdir(dir, { recursive: true });
-      await writeFile(join(dir, "SKILL.md"), `# ${name}`);
+      await writeFile(
+        join(dir, "SKILL.md"),
+        `---\nname: ${name}\ndescription: does ${name}\n---\n# ${name}`,
+      );
     }
     const result = await loadSkillsByContent(["skill-a", "skill-b"], undefined);
     expect(result).toContain("# skill-a");
@@ -289,11 +293,17 @@ describe("loadSkillsByContent", () => {
   it("resolves skill from project folder when present", async () => {
     const globalDir = join(tmpHome, ".research-assistant", "skills", "proj-skill");
     await mkdir(globalDir, { recursive: true });
-    await writeFile(join(globalDir, "SKILL.md"), "# global");
+    await writeFile(
+      join(globalDir, "SKILL.md"),
+      "---\nname: proj-skill\ndescription: global version\n---\n# global",
+    );
 
     const projectDir = "/tmp/proj-skill-test/.agents/skills/proj-skill";
     await mkdir(projectDir, { recursive: true });
-    await writeFile(join(projectDir, "SKILL.md"), "# project");
+    await writeFile(
+      join(projectDir, "SKILL.md"),
+      "---\nname: proj-skill\ndescription: project version\n---\n# project",
+    );
 
     const result = await loadSkillsByContent(["proj-skill"], "/tmp/proj-skill-test");
     expect(result).toContain("# project");

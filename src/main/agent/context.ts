@@ -1,88 +1,12 @@
-import { access, readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { getAgentsHome, getResearchAssistantHome } from "../paths";
-import { parseFrontmatter } from "../utils/frontmatter";
+import { getResearchAssistantHome } from "../paths";
+import { createDefaultSkillRouter } from "./SkillRouter";
 
-interface SkillMeta {
-  name: string;
-  description: string;
-  location: string;
-}
-
-async function readSkillsFromDir(dir: string): Promise<SkillMeta[]> {
-  let entries: string[] = [];
-  try {
-    entries = await readdir(dir);
-  } catch {
-    return [];
-  }
-
-  const skills: SkillMeta[] = [];
-  for (const entry of entries) {
-    const skillDirPath = join(dir, entry);
-    const skillMdPath = join(skillDirPath, "SKILL.md");
-    try {
-      // Skip disabled skills
-      try {
-        await access(join(skillDirPath, ".disabled"));
-        continue;
-      } catch {
-        // not disabled, proceed
-      }
-      const content = await readFile(skillMdPath, "utf-8");
-      const meta = parseFrontmatter(content);
-      if (meta.name && meta.description) {
-        skills.push({ name: meta.name, description: meta.description, location: skillMdPath });
-      }
-    } catch (err) {
-      console.error(`[context] readSkillsFromDir: skipping malformed entry ${entry}:`, err);
-    }
-  }
-  return skills;
-}
-
-function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-export async function loadSkills(projectFolderPath: string | undefined): Promise<string> {
-  // Load in priority order — later entries win on name collision
-  const agentsHome = getAgentsHome();
-  const raHome = getResearchAssistantHome();
-  const dirs = [
-    join(agentsHome, "skills"),
-    join(raHome, "skills"),
-    ...(projectFolderPath ? [join(projectFolderPath, ".agents", "skills")] : []),
-    ...(projectFolderPath ? [join(projectFolderPath, ".research-assistant", "skills")] : []),
-  ];
-
-  const byName = new Map<string, SkillMeta>();
-  for (const dir of dirs) {
-    const skills = await readSkillsFromDir(dir);
-    for (const skill of skills) {
-      byName.set(skill.name, skill);
-    }
-  }
-
-  if (byName.size === 0) return "";
-
-  const lines = ["<available_skills>"];
-  for (const skill of byName.values()) {
-    lines.push(
-      `  <skill>`,
-      `    <name>${escapeXml(skill.name)}</name>`,
-      `    <description>${escapeXml(skill.description)}</description>`,
-      `    <location>${escapeXml(skill.location)}</location>`,
-      `  </skill>`,
-    );
-  }
-  lines.push("</available_skills>");
-  return lines.join("\n");
+export async function loadSkillIndexXml(projectFolderPath: string | undefined): Promise<string> {
+  const router = createDefaultSkillRouter(projectFolderPath);
+  await router.buildIndex();
+  return router.toXml();
 }
 
 export function toSlug(name: string): string {
@@ -100,31 +24,17 @@ export async function loadSkillsByContent(
 ): Promise<string> {
   if (skillNames.length === 0) return "";
 
-  // Same priority order as loadSkills — later dirs have higher priority
-  const agentsHome = getAgentsHome();
-  const raHome = getResearchAssistantHome();
-  const dirs = [
-    join(agentsHome, "skills"),
-    join(raHome, "skills"),
-    ...(projectFolderPath ? [join(projectFolderPath, ".agents", "skills")] : []),
-    ...(projectFolderPath ? [join(projectFolderPath, ".research-assistant", "skills")] : []),
-  ];
-
+  const router = createDefaultSkillRouter(projectFolderPath);
+  await router.buildIndex();
   const parts: string[] = [];
   for (const name of skillNames) {
-    // Search highest-priority dirs first
-    for (const dir of [...dirs].reverse()) {
-      const skillPath = join(dir, name, "SKILL.md");
-      try {
-        const content = await readFile(skillPath, "utf-8");
-        parts.push(content.trim());
-        break;
-      } catch {
-        // not in this dir, try next
-      }
+    try {
+      const content = await router.loadSkillWithExtras(name);
+      parts.push(content);
+    } catch (err) {
+      console.error(`[context] failed to load skill "${name}":`, err);
     }
   }
-
   return parts.join("\n\n---\n\n");
 }
 
@@ -148,8 +58,8 @@ export async function buildSystemContext(
   }
 
   // 2. skills
-  const skillsXml = await loadSkills(folderPath);
-  if (skillsXml) parts.push(skillsXml);
+  const skillIndex = await loadSkillIndexXml(folderPath);
+  if (skillIndex) parts.push(skillIndex);
 
   // 3. AGENTS.md
   let agentsFile: string | undefined;
