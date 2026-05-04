@@ -62,10 +62,19 @@ export function registerChatHandler(
         const provider = await resolveProviderWithFallback({ settings }, eventBus);
 
         if (provider.type !== "ollama" && !provider.apiKey) {
-          win.webContents.send(
-            IPC.MESSAGE_CHUNK,
-            "⚠️ No API key configured. Open Settings to add your API key.",
-          );
+          if (settings.activeProvider === "ollama") {
+            win.webContents.send(
+              IPC.MESSAGE_CHUNK,
+              `⚠️ Ollama is not reachable at ${settings.providerCredentials.ollama.host}. ` +
+                `Fell back to ${settings.defaultCloudProvider}, which requires an API key. ` +
+                "Please start Ollama or add an API key in Settings.",
+            );
+          } else {
+            win.webContents.send(
+              IPC.MESSAGE_CHUNK,
+              "⚠️ No API key configured. Open Settings to add your API key.",
+            );
+          }
           win.webContents.send(IPC.MESSAGE_DONE);
           return;
         }
