@@ -80,8 +80,8 @@ export interface AgentToolsOptions {
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
-  const { projectId, folderPath, homePath, startResearchFn, onFileWrite } = opts;
-  const jail = new PathJail(projectId, folderPath);
+  const { projectId, projectName, folderPath, homePath, startResearchFn, onFileWrite } = opts;
+  const jail = new PathJail(projectId, folderPath, projectName);
   const workspacePath = join(homePath, "workspace", projectId);
   const auditLogPath = join(homePath, "audit.log");
 

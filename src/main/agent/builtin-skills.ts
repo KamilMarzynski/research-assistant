@@ -72,7 +72,10 @@ When a project has a linked folder but \`~/.research-assistant/projects/<slug>/A
 
 1. Call \`list_dir({ path: "<folderPath>" })\` to see top-level structure
 2. For each interesting item (README, package.json, CLAUDE.md, AGENTS.md, src/, docs/), call \`read_file\` to understand the project
-3. Write \`~/.research-assistant/projects/<slug>/AGENTS.md\` using \`write_file\` with the template below
+3. Write the AGENTS.md file using \`write_file\`:
+   - If the project has a linked folder, write to \`<folderPath>/AGENTS.md\` (preferred location)
+   - Otherwise, write to \`~/.research-assistant/projects/<slug>/AGENTS.md\`
+   Use the template below.
 4. Tell the user: "I've read your project structure and written a context file. Ready to help."
 
 ## AGENTS.md template

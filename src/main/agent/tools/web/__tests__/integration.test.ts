@@ -19,6 +19,7 @@ vi.mock("../../../model-factory", () => ({
 
 vi.mock("../../../context", () => ({
   loadSkillsByContent: vi.fn().mockResolvedValue(""),
+  toSlug: vi.fn().mockReturnValue("test-project"),
 }));
 
 describe("tool registration", () => {

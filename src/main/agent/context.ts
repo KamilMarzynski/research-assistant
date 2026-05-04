@@ -170,13 +170,17 @@ export async function buildSystemContext(
   if (agentsFile?.trim()) {
     parts.push("<!-- Project context (AGENTS.md) -->", agentsFile.trim());
   } else {
+    const agentsPath = folderPath
+      ? `${folderPath}/AGENTS.md`
+      : `~/.research-assistant/projects/${slug}/AGENTS.md`;
     parts.push(
-      "This project has no AGENTS.md yet. Ask the user to describe:",
+      "This project has no AGENTS.md yet. If the user already described their project in their first message, use the `write_file` tool to create the AGENTS.md file directly.",
+      "If they have not yet described it, ask them one question at a time:",
       "1. What is this project about?",
       "2. How are files organized?",
       "3. Where should research outputs go?",
       "4. Any naming conventions or folder structures?",
-      `After getting answers, write the AGENTS.md file to ~/.research-assistant/projects/${slug}/AGENTS.md using the write_file tool.`,
+      `After gathering answers, write the AGENTS.md file to ${agentsPath} using the write_file tool.`,
     );
   }
 

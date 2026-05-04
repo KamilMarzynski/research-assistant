@@ -1,4 +1,4 @@
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, CircularProgress, Paper, Typography } from "@mui/material";
 import { useEffect, useRef } from "react";
 import type { Message } from "../../../../shared/types";
 import MarkdownRenderer from "../../shared/MarkdownRenderer";
@@ -6,9 +6,10 @@ import MarkdownRenderer from "../../shared/MarkdownRenderer";
 interface MessageListProps {
   messages: Message[];
   streamingContent: string | null;
+  processing?: boolean;
 }
 
-export default function MessageList({ messages, streamingContent }: MessageListProps) {
+export default function MessageList({ messages, streamingContent, processing }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when messages or streaming content changes to auto-scroll
@@ -78,6 +79,63 @@ export default function MessageList({ messages, streamingContent }: MessageListP
                   "@keyframes blink": { "50%": { opacity: 0 } },
                 }}
               />
+            </Box>
+          </Paper>
+        </Box>
+      )}
+
+      {processing && !streamingContent && (
+        <Box sx={{ alignSelf: "flex-start", maxWidth: "75%" }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1.5,
+              bgcolor: "action.selected",
+              borderRadius: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <CircularProgress size={16} />
+            <Typography variant="body2" color="text.secondary">
+              Agent is thinking…
+            </Typography>
+          </Paper>
+        </Box>
+      )}
+
+      {messages.length === 0 && !streamingContent && !processing && (
+        <Box sx={{ alignSelf: "flex-start", maxWidth: "85%" }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1.5,
+              bgcolor: "background.default",
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 2,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Welcome to your new project.
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Tell me about your project so I can help you best. Useful details:
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2, color: "text.secondary" }}>
+              <Typography component="li" variant="body2">
+                What is this project about?
+              </Typography>
+              <Typography component="li" variant="body2">
+                How are files organized?
+              </Typography>
+              <Typography component="li" variant="body2">
+                Where should research outputs go?
+              </Typography>
+              <Typography component="li" variant="body2">
+                Any naming conventions or tech stack?
+              </Typography>
             </Box>
           </Paper>
         </Box>

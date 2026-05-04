@@ -14,6 +14,7 @@ export default function ChatPanel() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   // Check API key once on mount
   useEffect(() => {
@@ -42,25 +43,22 @@ export default function ChatPanel() {
     });
 
     const unsubDone = window.electronAPI.on(IPC.MESSAGE_DONE, () => {
+      setProcessing(false);
       setStreamingContent((prev) => {
         if (prev !== null) {
           // Check for API key error message — refresh hasApiKey state
           if (prev.startsWith("⚠️")) {
             setHasApiKey(false);
           }
-          setMessages((msgs) => [
-            ...msgs,
-            {
-              id: window.electronAPI.generateUuid(),
-              projectId: activeProjectId ?? "",
-              role: "assistant" as const,
-              content: prev,
-              createdAt: new Date(),
-            },
-          ]);
         }
         return null;
       });
+      // Reload messages from DB to get canonical state (prevents duplicates)
+      if (activeProjectId) {
+        window.electronAPI
+          .invoke(IPC.GET_MESSAGES, { projectId: activeProjectId })
+          .then((msgs) => setMessages(msgs));
+      }
     });
 
     return () => {
@@ -70,7 +68,8 @@ export default function ChatPanel() {
   }, [activeProjectId]);
 
   const handleSend = (content: string) => {
-    if (!activeProjectId) return;
+    if (!activeProjectId || processing) return;
+    setProcessing(true);
     setMessages((prev) => [
       ...prev,
       {
@@ -104,7 +103,11 @@ export default function ChatPanel() {
       <ResearchStatusBar />
       <PendingCommandBanner />
       <PendingToolBanner />
-      <MessageList messages={messages} streamingContent={streamingContent} />
+      <MessageList
+        messages={messages}
+        streamingContent={streamingContent}
+        processing={processing}
+      />
       {hasApiKey === false ? (
         <Box sx={{ p: 2, textAlign: "center", bgcolor: "background.paper" }}>
           <Typography variant="body2" color="text.secondary">
@@ -112,7 +115,7 @@ export default function ChatPanel() {
           </Typography>
         </Box>
       ) : (
-        <MessageInput onSend={handleSend} disabled={streamingContent !== null} />
+        <MessageInput onSend={handleSend} disabled={processing || streamingContent !== null} />
       )}
     </Box>
   );

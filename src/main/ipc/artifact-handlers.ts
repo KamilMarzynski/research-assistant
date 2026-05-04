@@ -38,7 +38,7 @@ export function registerArtifactHandlers(
     }
 
     const { PathJail } = await import("../agent/path-jail");
-    const jail = new PathJail(projectId, project.folderPath);
+    const jail = new PathJail(projectId, project.folderPath, project.name);
 
     // PathJail validates the path is within allowed zones
     const resolvedPath = jail.validate(filePath, "read");
@@ -98,7 +98,7 @@ export function registerArtifactHandlers(
     }
 
     const { PathJail } = await import("../agent/path-jail");
-    const jail = new PathJail(projectId, project.folderPath);
+    const jail = new PathJail(projectId, project.folderPath, project.name);
     const resolvedPath = jail.validate(filePath, "read");
 
     shell.showItemInFolder(resolvedPath);

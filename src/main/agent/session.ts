@@ -8,6 +8,7 @@ import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
+import { buildSystemContext } from "./context";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
 import { createAgentTools } from "./tools";
@@ -49,7 +50,11 @@ export class AgentSession {
   private readonly messageService: MessageService;
   private readonly memoryManager: IMemoryManager;
   private readonly projectId: string;
+  private readonly projectName: string;
+  private readonly folderPath: string | null;
   private assistantContent = "";
+  private currentTurnId = 0;
+  private savedForTurn = 0;
   private lastUserContent = "";
   private processing = false;
   private pendingFollowUp: string | null = null;
@@ -78,6 +83,8 @@ export class AgentSession {
     this.messageService = messageService;
     this.memoryManager = memoryManager;
     this.projectId = projectId;
+    this.projectName = projectName;
+    this.folderPath = folderPath;
 
     if (eventBus) {
       eventBus.on("skill:changed", (payload) => {
@@ -162,23 +169,27 @@ export class AgentSession {
             this.win.webContents.send(IPC.MESSAGE_CHUNK, ae.delta);
           }
         } else if (e.type === "agent_end") {
-          try {
-            if (this.assistantContent && this.lastUserContent) {
+          const content = this.assistantContent;
+          const userContent = this.lastUserContent;
+          this.assistantContent = "";
+          this.lastUserContent = "";
+          if (content && userContent && this.savedForTurn !== this.currentTurnId) {
+            this.savedForTurn = this.currentTurnId;
+            try {
               await this.messageService.addMessage({
                 projectId: this.projectId,
                 role: "assistant",
-                content: this.assistantContent,
+                content,
               });
               await this.memoryManager.save(this.projectId, [
-                { role: "user", content: this.lastUserContent },
-                { role: "assistant", content: this.assistantContent },
+                { role: "user", content: userContent },
+                { role: "assistant", content },
               ]);
+            } catch (err) {
+              console.error("[AgentSession] save failed:", err);
             }
-          } finally {
-            this.assistantContent = "";
-            this.lastUserContent = "";
-            this.win.webContents.send(IPC.MESSAGE_DONE);
           }
+          this.win.webContents.send(IPC.MESSAGE_DONE);
         }
       } catch (err) {
         console.error("[AgentSession] subscriber error:", err);
@@ -191,7 +202,31 @@ export class AgentSession {
       throw new Error("Agent is already processing a message. Please wait for the response.");
     }
     this.processing = true;
+    this.currentTurnId++;
+    this.savedForTurn = 0;
     try {
+      // Refresh system context before each prompt so AGENTS.md updates are picked up
+      try {
+        const memoryContext = await this.memoryManager.buildContext(this.projectId, 20);
+        const historyBlock = formatConversationHistory(memoryContext.recentMessages);
+        const systemContext = await buildSystemContext(
+          this.projectId,
+          this.projectName,
+          this.folderPath ?? undefined,
+        );
+        const systemPrompt = [
+          BASE_SYSTEM_PROMPT,
+          memoryContext.summary,
+          historyBlock,
+          systemContext,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+        this.agent.state.systemPrompt = systemPrompt;
+      } catch (err) {
+        console.error("[AgentSession] Failed to refresh system context:", err);
+      }
+
       // Inject pending skill deltas as user-visible messages
       if (this.pendingSkillDeltas.length > 0) {
         for (const delta of this.pendingSkillDeltas) {

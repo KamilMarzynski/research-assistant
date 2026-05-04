@@ -135,7 +135,7 @@ describe("buildSystemContext", () => {
   it("returns onboarding prompt when no context files exist", async () => {
     const result = await buildSystemContext("proj-1", "my project", undefined);
     expect(result).toContain("no AGENTS.md yet");
-    expect(result).toContain("Ask the user to describe");
+    expect(result).toContain("If the user already described");
   });
 
   it("includes config.md content when present", async () => {
@@ -207,7 +207,7 @@ describe("buildSystemContext", () => {
   it("injects onboarding prompt when AGENTS.md is missing", async () => {
     const result = await buildSystemContext("proj-1", "Test Project", undefined);
     expect(result).toContain("no AGENTS.md yet");
-    expect(result).toContain("Ask the user to describe");
+    expect(result).toContain("If they have not yet described it");
   });
 
   it("loads existing AGENTS.md when present", async () => {

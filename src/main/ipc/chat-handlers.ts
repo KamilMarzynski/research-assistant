@@ -88,46 +88,44 @@ export function registerChatHandler(
             project.folderPath ?? undefined,
           );
           const initialMemoryContext = await memoryManager.buildContext(projectId, 20);
-          sessionManager.set(
+          const session = new AgentSession({
+            win,
+            messageService,
+            eventBus,
+            homeService,
+            researchService,
+            memoryManager,
+            initialMemoryContext,
             projectId,
-            new AgentSession({
-              win,
-              messageService,
-              eventBus,
-              homeService,
-              researchService,
-              memoryManager,
-              initialMemoryContext,
-              projectId,
-              projectName: project.name,
-              folderPath: project.folderPath,
-              provider,
-              isFirstRun,
-              systemContext,
-              langfuseEnabled: settings.langfuseEnabled,
-              webAccessEnabled: settings.webAccessEnabled,
-              memoryFileService,
-              onFileWrite: (absolutePath, relativePath, fileName) => {
-                void outputNotificationService.recordWrite(
-                  projectId,
-                  absolutePath,
-                  relativePath,
-                  fileName,
-                );
-                eventBus.emit({
-                  type: "file:written",
-                  payload: { projectId, absolutePath, relativePath, fileName },
-                });
-              },
-            }),
-          );
+            projectName: project.name,
+            folderPath: project.folderPath,
+            provider,
+            isFirstRun,
+            systemContext,
+            langfuseEnabled: settings.langfuseEnabled,
+            webAccessEnabled: settings.webAccessEnabled,
+            memoryFileService,
+            onFileWrite: (absolutePath, relativePath, fileName) => {
+              void outputNotificationService.recordWrite(
+                projectId,
+                absolutePath,
+                relativePath,
+                fileName,
+              );
+              eventBus.emit({
+                type: "file:written",
+                payload: { projectId, absolutePath, relativePath, fileName },
+              });
+            },
+          });
+          sessionManager.set(projectId, session);
         }
 
         const session = sessionManager.get(projectId);
         if (!session) return;
 
-        // Stream timeout: 120s, prevents stuck cursor if agent_end never fires
-        const timeout = AbortSignal.timeout(120_000);
+        // Stream timeout: 300s, prevents stuck cursor if agent_end never fires
+        const timeout = AbortSignal.timeout(300_000);
         let onAbort: (() => void) | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => {
           onAbort = () => reject(new Error("stream_timeout"));

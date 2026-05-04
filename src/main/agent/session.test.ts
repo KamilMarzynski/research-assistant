@@ -12,7 +12,7 @@ const mockAgent = {
   prompt: vi.fn().mockResolvedValue(undefined),
   abort: vi.fn(),
   followUp: vi.fn(),
-  state: { tools: [] },
+  state: { tools: [], systemPrompt: "" },
 };
 
 vi.mock("@mariozechner/pi-agent-core", () => ({
@@ -39,6 +39,10 @@ vi.mock("./tools", () => ({
 
 vi.mock("./worker-agent", () => ({
   makeEvaluatorFn: vi.fn().mockReturnValue(vi.fn()),
+}));
+
+vi.mock("./context", () => ({
+  buildSystemContext: vi.fn().mockResolvedValue("mocked system context"),
 }));
 
 const { AgentSession } = await import("./session");
@@ -117,13 +121,12 @@ describe("AgentSession", () => {
 
   describe("send()", () => {
     it("persists user message before calling agent.prompt()", async () => {
-      const sendPromise = session.send("hello");
+      await session.send("hello");
       expect(messageService.addMessage).toHaveBeenCalledWith({
         projectId: "p-1",
         role: "user",
         content: "hello",
       });
-      await sendPromise;
       expect(mockAgent.prompt).toHaveBeenCalledWith("hello");
     });
 
@@ -645,6 +648,87 @@ describe("AgentSession", () => {
       expect(prompt).toContain("Hello from last session");
       expect(prompt).toContain("Hi there from last session");
       expect(prompt).toContain("<conversation_history>");
+    });
+  });
+
+  describe("turn deduplication", () => {
+    it("saves only once when agent_end fires twice", async () => {
+      await session.send("my question");
+      await triggerEvent({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "answer" },
+      });
+      await triggerEvent({ type: "agent_end", messages: [] });
+      await triggerEvent({ type: "agent_end", messages: [] });
+
+      expect(messageService.addMessage).toHaveBeenCalledTimes(2); // 1 user + 1 assistant
+      const assistantCalls = messageService.addMessage.mock.calls.filter(
+        ([arg]) => (arg as { role: string }).role === "assistant",
+      );
+      expect(assistantCalls).toHaveLength(1);
+      expect(assistantCalls[0][0].content).toBe("answer");
+    });
+
+    it("resets dedup guard for the next turn", async () => {
+      await session.send("first");
+      await triggerEvent({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "A" },
+      });
+      await triggerEvent({ type: "agent_end", messages: [] });
+
+      vi.clearAllMocks();
+
+      await session.send("second");
+      await triggerEvent({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "B" },
+      });
+      await triggerEvent({ type: "agent_end", messages: [] });
+
+      const assistantCalls = messageService.addMessage.mock.calls.filter(
+        ([arg]) => (arg as { role: string }).role === "assistant",
+      );
+      expect(assistantCalls).toHaveLength(1);
+      expect(assistantCalls[0][0].content).toBe("B");
+    });
+  });
+
+  describe("system prompt refresh", () => {
+    it("updates agent.state.systemPrompt on send()", async () => {
+      const { buildSystemContext } = await import("./context");
+      (buildSystemContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce("refreshed context");
+
+      const memoryManager = makeMemoryManager();
+      (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        summary: "refreshed summary",
+        recentMessages: [{ role: "user", content: "hi" }],
+      });
+
+      const localSession = new AgentSession({
+        win: makeWin() as never,
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: memoryManager as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        provider: {
+          type: "openrouter",
+          apiKey: "sk-or-test",
+          model: "anthropic/claude-sonnet-4-6",
+        },
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+      });
+
+      await localSession.send("hello");
+      expect(mockAgent.state.systemPrompt).toContain("refreshed context");
+      expect(mockAgent.state.systemPrompt).toContain("refreshed summary");
+      expect(mockAgent.state.systemPrompt).toContain("hi");
     });
   });
 });
