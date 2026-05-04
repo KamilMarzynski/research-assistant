@@ -18,10 +18,11 @@ export function registerSettingsHandlers(
   ipcMain.handle(IPC.GET_SETTINGS, async () => {
     const settings = await settingsService.getSettings();
     const activeCreds = settings.providerCredentials[settings.activeProvider];
+    const isOllama = settings.activeProvider === "ollama";
     const activeApiKey = "apiKey" in activeCreds ? (activeCreds.apiKey ?? null) : null;
 
     return {
-      hasApiKey: activeApiKey !== null && activeApiKey !== "",
+      hasApiKey: isOllama || (activeApiKey !== null && activeApiKey !== ""),
       activeProvider: settings.activeProvider,
       defaultCloudProvider: settings.defaultCloudProvider,
       providerCredentials: settings.providerCredentials,

@@ -3,12 +3,10 @@ import { Box, IconButton, MenuItem, Select, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 
-const MODELS = [
-  { id: "anthropic/claude-sonnet-4-6", label: "Sonnet 4.6" },
-  { id: "anthropic/claude-opus-4-6", label: "Opus 4.6" },
-  { id: "anthropic/claude-haiku-4-5", label: "Haiku 4.5" },
-  { id: "openai/gpt-4o", label: "GPT-4o" },
-];
+interface ModelInfo {
+  id: string;
+  name: string;
+}
 
 interface MessageInputProps {
   onSend: (content: string) => void;
@@ -19,11 +17,36 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
   const [content, setContent] = useState("");
   const [model, setModel] = useState("anthropic/claude-sonnet-4-6");
   const [activeProvider, setActiveProvider] = useState<string>("openrouter");
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
 
   useEffect(() => {
     window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
-      setActiveProvider(settings.activeProvider);
-      setModel(settings.providerCredentials[settings.activeProvider].defaultModel);
+      const provider = settings.activeProvider ?? "openrouter";
+      const currentModel = settings.providerCredentials[provider]?.defaultModel ?? "";
+      setActiveProvider(provider);
+      setModel(currentModel);
+
+      const apiKey =
+        provider === "openai"
+          ? (settings.providerCredentials.openai?.apiKey ?? undefined)
+          : provider === "openrouter"
+            ? (settings.providerCredentials.openrouter?.apiKey ?? undefined)
+            : undefined;
+      const host = provider === "ollama" ? settings.providerCredentials.ollama?.host : undefined;
+
+      setModelsLoading(true);
+      window.electronAPI
+        .invoke(IPC.GET_PROVIDER_MODELS, { provider, apiKey, host })
+        .then((result: { models?: ModelInfo[] }) => {
+          if (result.models && result.models.length > 0) {
+            setAvailableModels(result.models);
+          }
+        })
+        .catch(() => {
+          // Fall back to empty list — Select still shows current model
+        })
+        .finally(() => setModelsLoading(false));
     });
   }, []);
 
@@ -43,6 +66,8 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
     setContent("");
   };
 
+  const modelOptions = availableModels.length > 0 ? availableModels : [{ id: model, name: model }];
+
   return (
     <Box
       sx={{
@@ -56,12 +81,13 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
       <Select
         size="small"
         value={model}
+        disabled={modelsLoading || disabled}
         onChange={(e) => handleModelChange(e.target.value)}
         sx={{ minWidth: 130, flexShrink: 0 }}
       >
-        {MODELS.map((m) => (
+        {modelOptions.map((m) => (
           <MenuItem key={m.id} value={m.id}>
-            {m.label}
+            {m.name}
           </MenuItem>
         ))}
       </Select>

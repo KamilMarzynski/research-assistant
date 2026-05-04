@@ -108,7 +108,7 @@ export default function ChatPanel() {
       {hasApiKey === false ? (
         <Box sx={{ p: 2, textAlign: "center", bgcolor: "background.paper" }}>
           <Typography variant="body2" color="text.secondary">
-            Configure your OpenRouter API key in Settings to start chatting.
+            No API key configured. Open Settings to set up your model provider.
           </Typography>
         </Box>
       ) : (
