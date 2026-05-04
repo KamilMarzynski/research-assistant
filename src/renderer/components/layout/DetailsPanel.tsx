@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import { useProject } from "../../contexts/ProjectContext";
-import RecentOutputsPanel from "./RecentOutputsPanel";
+import ArtifactSection from "./ArtifactSection";
 
 export default function DetailsPanel() {
   const { activeProjectId } = useProject();
@@ -15,7 +15,7 @@ export default function DetailsPanel() {
         overflow: "auto",
       }}
     >
-      <RecentOutputsPanel projectId={activeProjectId ?? ""} />
+      {activeProjectId ? <ArtifactSection projectId={activeProjectId} /> : null}
     </Box>
   );
 }

@@ -39,10 +39,9 @@ describe("EventBus", () => {
       type: "research:complete",
       payload: {
         taskId: "t1",
-        artifactId: "a1",
         projectId: "p1",
         query: "Q",
-        filePath: "/tmp/out.md",
+        filePaths: ["/tmp/out.md"],
       },
     });
 

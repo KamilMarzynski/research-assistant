@@ -66,6 +66,13 @@ export interface BlockedCommandPayload {
   timestamp: string;
 }
 
+/** Payload for PATH_APPROVAL_REQUIRED push event */
+export interface PathApprovalPayload {
+  path: string;
+  mode: "read" | "write";
+  projectId: string;
+}
+
 /** Payload for MODEL_FALLBACK push event */
 export interface ModelFallbackPayload {
   reason: string;
@@ -76,10 +83,10 @@ export interface ModelFallbackPayload {
 /** Payload for RESEARCH_COMPLETE push event */
 export interface ResearchCompletePayload {
   taskId: string;
-  artifactId: string;
+  artifactId?: string;
   projectId: string;
   query: string;
-  filePath: string;
+  filePaths: string[];
 }
 
 /** Payload for RESEARCH_STATUS_UPDATE push event */
@@ -87,6 +94,13 @@ export type ResearchStatusUpdatePayload =
   | { status: "started"; taskId: string; projectId: string; query: string }
   | { status: "progress"; taskId: string; message: string; label?: string }
   | { status: "failed"; taskId: string; projectId: string; query: string; error: string };
+
+export interface FileNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  children?: FileNode[];
+}
 
 /** Typed response map for invoke() channels */
 export interface IpcResponseMap {
@@ -103,6 +117,7 @@ export interface IpcResponseMap {
   UNLINK_FOLDER: undefined;
   RETRY_RESEARCH: { taskId: string };
   READ_ARTIFACT_FILE: string;
+  GET_FILE_TREE: FileNode;
   GET_RECENT_OUTPUTS: Artifact[];
   ACKNOWLEDGE_OUTPUT: undefined;
   ACKNOWLEDGE_ALL_OUTPUTS: undefined;
@@ -116,6 +131,8 @@ export interface IpcResponseMap {
   GET_AUDIT_LOG: AuditLogEntry[];
   CLEAR_AUDIT_LOG: undefined;
   RESOLVE_BLOCKED_COMMAND: undefined;
+  GET_PENDING_PATH_APPROVALS: PathApprovalPayload[];
+  RESOLVE_PATH_APPROVAL: undefined;
   CHECK_OLLAMA: CheckOllamaResponse;
   GET_PROVIDER_MODELS: GetProviderModelsResponse;
 }

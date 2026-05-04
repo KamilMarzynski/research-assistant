@@ -43,9 +43,19 @@ export const IPC = {
   // renderer → main (blocked command resolution)
   RESOLVE_BLOCKED_COMMAND: "RESOLVE_BLOCKED_COMMAND",
 
+  // renderer → main (path approval)
+  GET_PENDING_PATH_APPROVALS: "GET_PENDING_PATH_APPROVALS",
+  RESOLVE_PATH_APPROVAL: "RESOLVE_PATH_APPROVAL",
+
+  // main → renderer (path approval push)
+  PATH_APPROVAL_REQUIRED: "PATH_APPROVAL_REQUIRED",
+
   // Audit log
   GET_AUDIT_LOG: "GET_AUDIT_LOG",
   CLEAR_AUDIT_LOG: "CLEAR_AUDIT_LOG",
+
+  // File tree
+  GET_FILE_TREE: "GET_FILE_TREE",
 
   // Model provider
   CHECK_OLLAMA: "CHECK_OLLAMA",

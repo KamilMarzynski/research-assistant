@@ -1,16 +1,20 @@
+import { join } from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
 import type { BrowserWindow } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { EventBus } from "../event-bus";
+import { addPendingPathApproval } from "../ipc/command-handlers";
 import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
+import { CompressionService } from "./CompressionService";
 import { buildSystemContext } from "./context";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
+import { createDefaultSkillRouter } from "./SkillRouter";
 import { createAgentTools } from "./tools";
 import { makeEvaluatorFn } from "./worker-agent";
 
@@ -59,6 +63,8 @@ export class AgentSession {
   private processing = false;
   private pendingFollowUp: string | null = null;
   private pendingSkillDeltas: Array<{ skillName: string; summary: string }> = [];
+  private readonly skillRouter: ReturnType<typeof createDefaultSkillRouter>;
+  private skillRouterReady = false;
 
   constructor({
     win,
@@ -86,6 +92,10 @@ export class AgentSession {
     this.projectName = projectName;
     this.folderPath = folderPath;
 
+    this.skillRouter = createDefaultSkillRouter(folderPath ?? undefined, (skillName, summary) => {
+      this.pendingSkillDeltas.push({ skillName, summary });
+    });
+
     if (eventBus) {
       eventBus.on("skill:changed", (payload) => {
         this.pendingSkillDeltas.push(payload);
@@ -104,6 +114,10 @@ export class AgentSession {
       .filter(Boolean)
       .join("\n\n");
 
+    const compressionService = new CompressionService(
+      join(homePath, "workspace", projectId, ".compressed"),
+    );
+
     const tools = createAgentTools({
       projectId,
       projectName,
@@ -115,6 +129,12 @@ export class AgentSession {
       onFileWrite,
       emitBlocked: eventBus
         ? (payload) => eventBus.emit({ type: "bash:blocked", payload })
+        : undefined,
+      emitApprovalRequired: eventBus
+        ? (payload) => {
+            addPendingPathApproval(payload);
+            eventBus.emit({ type: "path:approval_required", payload });
+          }
         : undefined,
       startResearchFn: (query, deep) =>
         deep === true
@@ -136,6 +156,7 @@ export class AgentSession {
         ? (options) =>
             memoryFileService.readMemory({ ...options, projectFolderPath: folderPath ?? undefined })
         : undefined,
+      compressionService,
     });
 
     this.agent = new Agent({
@@ -207,12 +228,19 @@ export class AgentSession {
     try {
       // Refresh system context before each prompt so AGENTS.md updates are picked up
       try {
+        if (!this.skillRouterReady) {
+          await this.skillRouter.buildIndex();
+          this.skillRouter.startWatching();
+          this.skillRouterReady = true;
+        }
+
         const memoryContext = await this.memoryManager.buildContext(this.projectId, 20);
         const historyBlock = formatConversationHistory(memoryContext.recentMessages);
         const systemContext = await buildSystemContext(
           this.projectId,
           this.projectName,
           this.folderPath ?? undefined,
+          this.skillRouter.toXml(),
         );
         const systemPrompt = [
           BASE_SYSTEM_PROMPT,
@@ -233,6 +261,18 @@ export class AgentSession {
           await this.agent.prompt(`Skill "${delta.skillName}" was updated. ${delta.summary}`);
         }
         this.pendingSkillDeltas = [];
+      }
+
+      // Manual crystallization trigger detection
+      const lowerContent = content.toLowerCase();
+      if (lowerContent.includes("/crystallize") || lowerContent.includes("always do it this way")) {
+        this.win.webContents.send(
+          IPC.MESSAGE_CHUNK,
+          "Skill crystallization happens automatically after successful research tasks when the approach is novel and reusable. No manual action needed.",
+        );
+        this.win.webContents.send(IPC.MESSAGE_DONE);
+        this.lastUserContent = "";
+        return;
       }
 
       this.lastUserContent = content;

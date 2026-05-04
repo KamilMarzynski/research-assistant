@@ -154,6 +154,26 @@ describe("AgentSession", () => {
       await expect(session.send("second")).rejects.toThrow("already processing");
       await first;
     });
+
+    it("sends info message and skips agent.prompt for /crystallize", async () => {
+      await session.send("/crystallize");
+      expect(mockAgent.prompt).not.toHaveBeenCalled();
+      expect(win.webContents.send).toHaveBeenCalledWith(
+        IPC.MESSAGE_CHUNK,
+        expect.stringContaining("automatic"),
+      );
+      expect(win.webContents.send).toHaveBeenCalledWith(IPC.MESSAGE_DONE);
+    });
+
+    it("sends info message and skips agent.prompt for 'always do it this way'", async () => {
+      await session.send("Please always do it this way");
+      expect(mockAgent.prompt).not.toHaveBeenCalled();
+      expect(win.webContents.send).toHaveBeenCalledWith(
+        IPC.MESSAGE_CHUNK,
+        expect.stringContaining("automatic"),
+      );
+      expect(win.webContents.send).toHaveBeenCalledWith(IPC.MESSAGE_DONE);
+    });
   });
 
   describe("Pi event → IPC mapping", () => {

@@ -1,12 +1,12 @@
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
+import type { CompressionService } from "../../CompressionService";
 import { extractMarkdown } from "./html-extractor";
 import { assertSafeUrl } from "./ssrf-guard";
 
-export function createFetchUrlTool(): AgentTool<
-  typeof fetchUrlParameters,
-  { url: string; title: string }
-> {
+export function createFetchUrlTool(
+  compressionService?: CompressionService,
+): AgentTool<typeof fetchUrlParameters, { url: string; title: string }> {
   return {
     name: "fetch_url",
     label: "Fetch URL",
@@ -44,9 +44,15 @@ export function createFetchUrlTool(): AgentTool<
 
       const html = await response.text();
       const { title, markdown } = extractMarkdown(html, { maxChars });
+      let text = `# ${title}\n\n${markdown}`;
+
+      if (compressionService) {
+        const compressed = await compressionService.compress("fetch_url", text);
+        text = compressed.content;
+      }
 
       return {
-        content: [{ type: "text" as const, text: `# ${title}\n\n${markdown}` }],
+        content: [{ type: "text" as const, text }],
         details: { url: safeUrl, title },
       };
     },

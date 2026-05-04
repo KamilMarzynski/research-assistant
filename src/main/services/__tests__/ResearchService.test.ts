@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { WorkerAgentConfig } from "../../agent/worker-agent";
 
 vi.mock("electron", () => ({
   safeStorage: {
@@ -282,7 +283,7 @@ describe("ResearchService", () => {
     consoleSpy.mockRestore();
   });
 
-  it("emits research:complete with empty filePath on agent_end", async () => {
+  it("emits research:complete with empty filePaths on agent_end", async () => {
     const bus = makeEventBus();
     const svc = new ResearchService(
       bus as never,
@@ -296,9 +297,95 @@ describe("ResearchService", () => {
     expect(bus.emit).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "research:complete",
-        payload: expect.objectContaining({ filePath: "" }),
+        payload: expect.objectContaining({ filePaths: [] }),
       }),
     );
+  });
+
+  it("calls savePendingTool when evaluator approves crystallization", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+    const home = makeHomeService();
+    const evaluatorRun = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        crystallize: true,
+        skillName: "novel-research-pattern",
+        skillDescription: "A reusable research pattern.",
+      }),
+    );
+    createWorkerAgent.mockImplementation(async (config: WorkerAgentConfig) => {
+      if (config.systemPromptAddition?.includes("skill evaluator")) {
+        return { agent: { subscribe: vi.fn(), prompt: vi.fn() }, run: evaluatorRun };
+      }
+      return { agent: mockAgent, run: vi.fn() };
+    });
+
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeSettingsService() as never,
+      home as never,
+    );
+    await svc.startResearch("p1", "My Project", "research X", null);
+    await capturedSubscriber?.({ type: "agent_end" });
+
+    expect(evaluatorRun).toHaveBeenCalled();
+    expect(home.savePendingTool).toHaveBeenCalledWith(
+      "novel-research-pattern",
+      expect.stringContaining("A reusable research pattern."),
+    );
+  });
+
+  it("does not call savePendingTool when evaluator rejects crystallization", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+    const home = makeHomeService();
+    const evaluatorRun = vi
+      .fn()
+      .mockResolvedValue(JSON.stringify({ crystallize: false, reason: "not reusable" }));
+    createWorkerAgent.mockImplementation(async (config: WorkerAgentConfig) => {
+      if (config.systemPromptAddition?.includes("skill evaluator")) {
+        return { agent: { subscribe: vi.fn(), prompt: vi.fn() }, run: evaluatorRun };
+      }
+      return { agent: mockAgent, run: vi.fn() };
+    });
+
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeSettingsService() as never,
+      home as never,
+    );
+    await svc.startResearch("p1", "My Project", "research X", null);
+    await capturedSubscriber?.({ type: "agent_end" });
+
+    expect(evaluatorRun).toHaveBeenCalled();
+    expect(home.savePendingTool).not.toHaveBeenCalled();
+  });
+
+  it("does not call savePendingTool when evaluator returns invalid JSON", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+    const home = makeHomeService();
+    const evaluatorRun = vi.fn().mockResolvedValue("not json");
+    createWorkerAgent.mockImplementation(async (config: WorkerAgentConfig) => {
+      if (config.systemPromptAddition?.includes("skill evaluator")) {
+        return { agent: { subscribe: vi.fn(), prompt: vi.fn() }, run: evaluatorRun };
+      }
+      return { agent: mockAgent, run: vi.fn() };
+    });
+
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeSettingsService() as never,
+      home as never,
+    );
+    await svc.startResearch("p1", "My Project", "research X", null);
+    await capturedSubscriber?.({ type: "agent_end" });
+
+    expect(evaluatorRun).toHaveBeenCalled();
+    expect(home.savePendingTool).not.toHaveBeenCalled();
   });
 });
 

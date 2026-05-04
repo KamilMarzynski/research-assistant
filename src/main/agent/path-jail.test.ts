@@ -1,6 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ApprovalRequiredError } from "../services/AllowlistService";
 import { PathJail } from "./path-jail";
 
 const HOME = join(homedir(), ".research-assistant");
@@ -62,13 +63,13 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("blocks access outside all allowed zones", () => {
-      expect(() => jail.validate("/etc/passwd", "read")).toThrow(/not allowed/);
+    it("blocks access outside all allowed zones with ApprovalRequiredError", () => {
+      expect(() => jail.validate("/etc/passwd", "read")).toThrow(ApprovalRequiredError);
     });
 
-    it("blocks path traversal attempts", () => {
+    it("blocks path traversal attempts with ApprovalRequiredError", () => {
       const p = join(HOME, "workspace", PROJECT_ID, "../../etc/passwd");
-      expect(() => jail.validate(p, "read")).toThrow(/not allowed/);
+      expect(() => jail.validate(p, "read")).toThrow(ApprovalRequiredError);
     });
   });
 
@@ -80,9 +81,9 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("blocks project folder access when no folder linked", () => {
+    it("blocks project folder access when no folder linked with ApprovalRequiredError", () => {
       expect(() => jail.validate("/Users/test/myproject/src/index.ts", "read")).toThrow(
-        /not allowed/,
+        ApprovalRequiredError,
       );
     });
   });

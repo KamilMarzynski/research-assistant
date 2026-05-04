@@ -49,9 +49,10 @@ export function registerEventForwarders(
 
     const session = sessionManager.get(payload.projectId);
     if (session) {
+      const filePathsStr = payload.filePaths.length > 0 ? payload.filePaths.join(", ") : "none";
       session
         .queueFollowUp(
-          `Background research complete (task ${payload.taskId}). Query: "${payload.query}". Artifact saved at ${payload.filePath}. Please briefly summarise the findings for the user.`,
+          `Background research complete (task ${payload.taskId}). Query: "${payload.query}". Artifact saved at ${filePathsStr}. Please briefly summarise the findings for the user.`,
         )
         .catch((err) => {
           console.error("[event-forwarders] queueFollowUp failed:", err);
@@ -76,5 +77,9 @@ export function registerEventForwarders(
 
   eventBus.on("model:fallback", (payload) => {
     win.webContents.send(IPC.MODEL_FALLBACK, payload);
+  });
+
+  eventBus.on("path:approval_required", (payload) => {
+    win.webContents.send(IPC.PATH_APPROVAL_REQUIRED, payload);
   });
 }

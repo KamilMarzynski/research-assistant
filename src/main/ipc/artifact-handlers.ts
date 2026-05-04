@@ -1,10 +1,36 @@
 import { ipcMain, shell } from "electron";
 import { z } from "zod/v4";
 import { IPC } from "../../shared/ipc-channels";
+import type { FileNode } from "../../shared/ipc-types";
 import { ProjectIdSchema, ReadArtifactFileSchema } from "../ipc-validation";
 import type { ArtifactService } from "../services/ArtifactService";
 import type { ProjectService } from "../services/ProjectService";
 import { parseOrThrow } from "./parse-util";
+
+const IGNORED_NAMES = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  ".DS_Store",
+  "coverage",
+  ".next",
+  "build",
+  ".turbo",
+  ".claude",
+  ".vite",
+  "out",
+  "target",
+  "__pycache__",
+  ".pytest_cache",
+  ".mypy_cache",
+  ".egg-info",
+  ".tox",
+  ".venv",
+  "venv",
+]);
+
+const MAX_TREE_ENTRIES = 1000;
+const MAX_TREE_DEPTH = 3;
 
 export function registerArtifactHandlers(
   _win: Electron.BrowserWindow,
@@ -18,6 +44,111 @@ export function registerArtifactHandlers(
   ipcMain.handle(IPC.GET_ARTIFACTS, async (_event, payload: unknown) => {
     const p = parseOrThrow(ProjectIdSchema, payload, "GET_ARTIFACTS");
     return artifactService.listArtifacts(p.projectId);
+  });
+
+  ipcMain.handle(IPC.GET_FILE_TREE, async (_event, payload: unknown) => {
+    const p = parseOrThrow(ProjectIdSchema, payload, "GET_FILE_TREE");
+
+    let project: Awaited<ReturnType<typeof projectService.getProject>>;
+    try {
+      project = await projectService.getProject(p.projectId);
+    } catch {
+      throw new Error("Project not found");
+    }
+
+    const { stat, readdir } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const { getResearchAssistantHome } = await import("../paths");
+    const { PathJail } = await import("../agent/path-jail");
+
+    const jail = new PathJail(project.id, project.folderPath, project.name);
+    let count = 0;
+
+    async function walk(dirPath: string, depth: number): Promise<FileNode[]> {
+      if (depth >= MAX_TREE_DEPTH || count >= MAX_TREE_ENTRIES) return [];
+
+      let entries: import("node:fs").Dirent[];
+      try {
+        entries = await readdir(dirPath, { withFileTypes: true });
+      } catch {
+        return [];
+      }
+
+      const nodes: FileNode[] = [];
+      for (const entry of entries) {
+        if (count >= MAX_TREE_ENTRIES) break;
+        if (IGNORED_NAMES.has(entry.name)) continue;
+        if (
+          entry.name.startsWith(".") &&
+          !entry.name.startsWith(".research-assistant") &&
+          !entry.name.startsWith(".agents")
+        ) {
+          continue;
+        }
+
+        const fullPath = join(dirPath, entry.name);
+        try {
+          jail.validate(fullPath, "read");
+        } catch {
+          continue;
+        }
+
+        count++;
+        const node: FileNode = {
+          name: entry.name,
+          path: fullPath,
+          isDirectory: entry.isDirectory(),
+        };
+
+        if (entry.isDirectory() && depth < MAX_TREE_DEPTH - 1) {
+          node.children = await walk(fullPath, depth + 1);
+        }
+        nodes.push(node);
+      }
+      return nodes;
+    }
+
+    const children: FileNode[] = [];
+
+    if (project.folderPath) {
+      try {
+        const folderPath = jail.validate(project.folderPath, "read");
+        const folderStats = await stat(folderPath);
+        if (folderStats.isDirectory()) {
+          children.push({
+            name: "Project Folder",
+            path: folderPath,
+            isDirectory: true,
+            children: await walk(folderPath, 0),
+          });
+        }
+      } catch {
+        // Folder not accessible
+      }
+    }
+
+    try {
+      const workspacePath = join(getResearchAssistantHome(), "workspace", project.id);
+      const resolvedWorkspace = jail.validate(workspacePath, "read");
+      const workspaceStats = await stat(resolvedWorkspace);
+      if (workspaceStats.isDirectory()) {
+        children.push({
+          name: "Workspace",
+          path: resolvedWorkspace,
+          isDirectory: true,
+          children: await walk(resolvedWorkspace, 0),
+        });
+      }
+    } catch {
+      // Workspace not accessible
+    }
+
+    return {
+      name: project.name,
+      path: project.folderPath || "",
+      isDirectory: true,
+      children,
+    };
   });
 
   ipcMain.handle(IPC.READ_ARTIFACT_FILE, async (_event, payload: unknown) => {

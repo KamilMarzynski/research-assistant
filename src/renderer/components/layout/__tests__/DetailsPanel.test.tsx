@@ -25,43 +25,37 @@ function renderWithProvider(element: React.ReactElement, projectId = "proj-1") {
 }
 
 describe("DetailsPanel", () => {
-  it("shows empty state when no outputs", async () => {
-    const { invoke } = setupElectronAPI();
-    invoke.mockResolvedValue([]);
-
-    renderWithProvider(<DetailsPanel />);
-
-    await vi.waitFor(() => {
-      expect(screen.getByText("No recent outputs")).toBeTruthy();
-    });
+  it("renders nothing when no project is active", () => {
+    setupElectronAPI();
+    const ctx: ProjectContextValue = {
+      activeProjectId: null,
+      setActiveProjectId: vi.fn(),
+    };
+    render(
+      <ProjectContext.Provider value={ctx}>
+        <DetailsPanel />
+      </ProjectContext.Provider>,
+    );
+    expect(screen.queryByText("Project Files")).toBeNull();
   });
 
-  it("displays recent outputs list", async () => {
+  it("renders file explorer for active project", async () => {
     const { invoke } = setupElectronAPI();
-    invoke.mockResolvedValue([
-      {
-        id: "1",
-        projectId: "p1",
-        title: "Research Report",
-        filePath: "docs/research.md",
-        acknowledged: false,
-        createdAt: "2026-01-01",
-      },
-      {
-        id: "2",
-        projectId: "p1",
-        title: "Findings",
-        filePath: "docs/findings.md",
-        acknowledged: false,
-        createdAt: "2026-01-02",
-      },
-    ]);
+    invoke.mockResolvedValue({
+      name: "Test Project",
+      path: "/project",
+      isDirectory: true,
+      children: [{ name: "readme.md", path: "/project/readme.md", isDirectory: false }],
+    });
 
     renderWithProvider(<DetailsPanel />);
 
     await vi.waitFor(() => {
-      expect(screen.getByText("docs/research.md")).toBeTruthy();
-      expect(screen.getByText("docs/findings.md")).toBeTruthy();
+      expect(screen.getByText("Project Files")).toBeTruthy();
     });
+
+    expect(screen.getByText(/Test Project/)).toBeTruthy();
+    expect(screen.getByText(/readme\.md/)).toBeTruthy();
+    expect(invoke).toHaveBeenCalledWith("GET_FILE_TREE", { projectId: "proj-1" });
   });
 });

@@ -1,5 +1,6 @@
 import { join, normalize, resolve } from "node:path";
 import { getAgentsHome, getResearchAssistantHome } from "../paths";
+import { AllowlistService, ApprovalRequiredError } from "../services/AllowlistService";
 import { toSlug } from "./context";
 
 export class PathJail {
@@ -58,6 +59,16 @@ export class PathJail {
         );
       }
       return resolved;
+    }
+
+    const allowlistService = new AllowlistService();
+    const result = allowlistService.isAllowed(this.projectId, resolved, mode, [
+      ...readWriteZones,
+      ...readOnlyZones,
+    ]);
+    if (result.allowed) return resolved;
+    if (result.needsApproval) {
+      throw new ApprovalRequiredError(resolved, mode);
     }
 
     throw new Error(

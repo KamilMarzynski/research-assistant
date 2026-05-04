@@ -3,6 +3,8 @@ import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
+import { ApprovalRequiredError } from "../../services/AllowlistService";
+import type { CompressionService } from "../CompressionService";
 import type { PathJail } from "../path-jail";
 import { makeTool } from "./make-tool";
 
@@ -92,6 +94,12 @@ function applyLineEdit(
 
 export function createReadFileTool(
   jail: PathJail,
+  compressionService?: CompressionService,
+  emitApprovalRequired?: (payload: {
+    path: string;
+    mode: "read" | "write";
+    projectId: string;
+  }) => void,
 ): AgentTool<typeof readFileParameters, SmartReadResult> {
   return makeTool({
     name: "read_file",
@@ -103,7 +111,34 @@ export function createReadFileTool(
       _id,
       { path, startLine, maxLines },
     ): Promise<AgentToolResult<SmartReadResult>> => {
-      const resolved = jail.validate(path, "read");
+      let resolved: string;
+      try {
+        resolved = jail.validate(path, "read");
+      } catch (err) {
+        if (err instanceof ApprovalRequiredError) {
+          if (emitApprovalRequired) {
+            emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
+          }
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Approval required for ${err.mode} on "${err.path}". Waiting for user approval.`,
+              },
+            ],
+            details: {
+              content: "",
+              mimeType: "text/plain",
+              truncated: false,
+              hint: null,
+              totalLines: 0,
+              lineCount: 0,
+              fileHash: "",
+            },
+          };
+        }
+        throw err;
+      }
       const buffer = await readFile(resolved);
       const fileHash = createHash("sha256").update(buffer).digest("hex");
 
@@ -154,6 +189,15 @@ export function createReadFileTool(
         hint = `File has ${totalLines} lines. startLine exceeds total.`;
       }
 
+      if (compressionService) {
+        const compressed = await compressionService.compress("read_file", content);
+        content = compressed.content;
+        if (compressed.wasCompressed) {
+          const note = `Content compressed via ${compressed.strategy}.`;
+          hint = hint ? `${hint} ${note}` : note;
+        }
+      }
+
       const lineCount = content === "" ? 0 : content.split("\n").length;
       const fileName = basename(resolved);
 
@@ -188,6 +232,11 @@ export function createWriteFileTool(
   jail: PathJail,
   folderPath: string | null,
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void,
+  emitApprovalRequired?: (payload: {
+    path: string;
+    mode: "read" | "write";
+    projectId: string;
+  }) => void,
 ): AgentTool<typeof writeFileParameters, null> {
   return makeTool({
     name: "write_file",
@@ -199,7 +248,26 @@ export function createWriteFileTool(
       _id,
       { path, content, start_line, end_line, expected_hash },
     ): Promise<AgentToolResult<null>> => {
-      const resolved = jail.validate(path, "write");
+      let resolved: string;
+      try {
+        resolved = jail.validate(path, "write");
+      } catch (err) {
+        if (err instanceof ApprovalRequiredError) {
+          if (emitApprovalRequired) {
+            emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
+          }
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Approval required for ${err.mode} on "${err.path}". Waiting for user approval.`,
+              },
+            ],
+            details: null,
+          };
+        }
+        throw err;
+      }
       const fileExists = await access(resolved).then(
         () => true,
         () => false,
@@ -322,7 +390,14 @@ const writeFileParameters = Type.Object({
   ),
 });
 
-export function createListDirTool(jail: PathJail): AgentTool<typeof listDirParameters, string[]> {
+export function createListDirTool(
+  jail: PathJail,
+  emitApprovalRequired?: (payload: {
+    path: string;
+    mode: "read" | "write";
+    projectId: string;
+  }) => void,
+): AgentTool<typeof listDirParameters, string[]> {
   return makeTool({
     name: "list_dir",
     label: "List directory",
@@ -330,7 +405,26 @@ export function createListDirTool(jail: PathJail): AgentTool<typeof listDirParam
       "List files and subdirectories in a directory. Path must be within the workspace or linked project folder.",
     parameters: listDirParameters,
     execute: async (_id, { path }): Promise<AgentToolResult<string[]>> => {
-      const resolved = jail.validate(path, "read");
+      let resolved: string;
+      try {
+        resolved = jail.validate(path, "read");
+      } catch (err) {
+        if (err instanceof ApprovalRequiredError) {
+          if (emitApprovalRequired) {
+            emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
+          }
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Approval required for ${err.mode} on "${err.path}". Waiting for user approval.`,
+              },
+            ],
+            details: [],
+          };
+        }
+        throw err;
+      }
       const entries = await readdir(resolved, { withFileTypes: true });
       const lines = entries.map((e) => `${e.isDirectory() ? "d" : "f"} ${e.name}`);
       return {
