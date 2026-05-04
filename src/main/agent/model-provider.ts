@@ -127,7 +127,7 @@ export async function checkOllamaAvailable(host: string): Promise<boolean> {
       return false;
     }
     const res = await fetch(url.toString(), {
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(5000),
     });
     return res.ok;
   } catch {
