@@ -22,6 +22,19 @@ export interface CheckOllamaResponse {
   host: string;
 }
 
+/** Request for GET_PROVIDER_MODELS */
+export interface GetProviderModelsRequest {
+  provider: "ollama" | "openrouter" | "openai";
+  host?: string;
+  apiKey?: string;
+}
+
+/** Response from GET_PROVIDER_MODELS */
+export interface GetProviderModelsResponse {
+  models: Array<{ id: string; name: string }>;
+  error?: string;
+}
+
 /** Entry in the audit log */
 export interface AuditLogEntry {
   ts: string;
@@ -104,4 +117,5 @@ export interface IpcResponseMap {
   CLEAR_AUDIT_LOG: undefined;
   RESOLVE_BLOCKED_COMMAND: undefined;
   CHECK_OLLAMA: CheckOllamaResponse;
+  GET_PROVIDER_MODELS: GetProviderModelsResponse;
 }
