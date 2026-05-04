@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { OutputRouter, OutputConvention } from "./OutputRouter";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { type OutputConvention, OutputRouter } from "./OutputRouter";
 import { PathJail } from "./path-jail";
 
 describe("OutputRouter", () => {

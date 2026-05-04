@@ -4,9 +4,7 @@ import { eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
 import { z } from "zod/v4";
 import type { SkillInfo } from "../../shared/ipc-channels";
-import {
-  EVALUATE_RESEARCH_SKILL,
-} from "../agent/builtin-skills";
+import { EVALUATE_RESEARCH_SKILL } from "../agent/builtin-skills";
 import type { DrizzleDB } from "../db/client";
 import { tasks } from "../db/schema";
 import { DB_TOKEN } from "../di/tokens";

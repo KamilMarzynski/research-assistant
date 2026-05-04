@@ -88,6 +88,13 @@ export type ResearchStatusUpdatePayload =
   | { status: "progress"; taskId: string; message: string; label?: string }
   | { status: "failed"; taskId: string; projectId: string; query: string; error: string };
 
+export interface FileNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  children?: FileNode[];
+}
+
 /** Typed response map for invoke() channels */
 export interface IpcResponseMap {
   GET_PROJECTS: Project[];
@@ -103,6 +110,7 @@ export interface IpcResponseMap {
   UNLINK_FOLDER: undefined;
   RETRY_RESEARCH: { taskId: string };
   READ_ARTIFACT_FILE: string;
+  GET_FILE_TREE: FileNode;
   GET_RECENT_OUTPUTS: Artifact[];
   ACKNOWLEDGE_OUTPUT: undefined;
   ACKNOWLEDGE_ALL_OUTPUTS: undefined;

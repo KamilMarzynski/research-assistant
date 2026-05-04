@@ -1,6 +1,6 @@
 import { mkdir, readdir, rename, stat } from "node:fs/promises";
-import { join, extname } from "node:path";
-import { PathJail } from "./path-jail";
+import { extname, join } from "node:path";
+import type { PathJail } from "./path-jail";
 
 export interface OutputConvention {
   default: string;

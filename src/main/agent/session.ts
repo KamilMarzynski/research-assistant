@@ -9,9 +9,9 @@ import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { buildSystemContext } from "./context";
-import { createDefaultSkillRouter } from "./SkillRouter";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
+import { createDefaultSkillRouter } from "./SkillRouter";
 import { createAgentTools } from "./tools";
 import { makeEvaluatorFn } from "./worker-agent";
 

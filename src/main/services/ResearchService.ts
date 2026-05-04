@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
-import { OutputRouter } from "../agent/OutputRouter";
-import { PathJail } from "../agent/path-jail";
 import { toSlug } from "../agent/context";
 import { resolveProvider } from "../agent/model-provider";
+import { OutputRouter } from "../agent/OutputRouter";
+import { PathJail } from "../agent/path-jail";
 import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
@@ -191,14 +191,21 @@ export class ResearchService {
             if (config.folderPath) {
               try {
                 agentsMdContent = await readFile(join(config.folderPath, "AGENTS.md"), "utf-8");
-              } catch { /* not found */ }
+              } catch {
+                /* not found */
+              }
             }
 
             // Fallback to app home
             if (!agentsMdContent) {
               try {
-                agentsMdContent = await readFile(join(homePath, "projects", slug, "AGENTS.md"), "utf-8");
-              } catch { /* not found */ }
+                agentsMdContent = await readFile(
+                  join(homePath, "projects", slug, "AGENTS.md"),
+                  "utf-8",
+                );
+              } catch {
+                /* not found */
+              }
             }
 
             if (agentsMdContent) {
