@@ -1,7 +1,10 @@
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import type { CompressionService } from "./CompressionService";
 import { PathJail } from "./path-jail";
 import { createSaveArtifactTool } from "./tools/artifact-tools";
+import { createCompressTool } from "./tools/compress-tool";
 import { createDockerTool } from "./tools/docker-tool";
 import { createRequestEvaluationTool } from "./tools/eval-tools";
 import { createListDirTool, createReadFileTool, createWriteFileTool } from "./tools/file-tools";
@@ -28,7 +31,8 @@ export type AgentToolName =
   | "save_artifact"
   | "propose_tool"
   | "save_memory"
-  | "read_memory";
+  | "read_memory"
+  | "compress";
 
 export type SpawnResult = { outputPath: string; summary: string };
 export type AgentType = "researcher" | "coder" | "orchestrator";
@@ -77,6 +81,7 @@ export interface AgentToolsOptions {
     intent: string;
     timestamp: string;
   }) => void;
+  compressionService?: CompressionService;
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
@@ -87,7 +92,7 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
 
   // biome-ignore lint/suspicious/noExplicitAny: AgentTool generic is covariant in TDetails but contravariant in TParams; any is the correct erasure for a heterogeneous collection
   const tools: AgentTool<any>[] = [
-    createReadFileTool(jail),
+    createReadFileTool(jail, opts.compressionService),
     createWriteFileTool(jail, folderPath, onFileWrite),
     createListDirTool(jail),
     createSafeBashTool(projectId, workspacePath, auditLogPath, opts.emitBlocked),
@@ -101,8 +106,22 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
   }
 
   if (opts.webAccessEnabled !== false) {
-    tools.push(createFetchUrlTool());
-    tools.push(createWebSearchTool());
+    tools.push(createFetchUrlTool(opts.compressionService));
+    tools.push(createWebSearchTool(opts.compressionService));
+  }
+
+  const compressionService = opts.compressionService;
+  if (compressionService) {
+    tools.push(
+      createCompressTool(async (path, _maxWords) => {
+        const resolved = jail.validate(path, "read");
+        const content = await readFile(resolved, "utf-8");
+        const result = await compressionService.compress("compress", content, [
+          { tool: "compress", thresholdChars: 0, strategy: "summarize" },
+        ]);
+        return result.content;
+      }),
+    );
   }
 
   tools.push(createDockerTool(jail));

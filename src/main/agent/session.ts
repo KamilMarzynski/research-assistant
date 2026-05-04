@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
 import type { BrowserWindow } from "electron";
 import { IPC } from "../../shared/ipc-channels";
@@ -8,6 +9,7 @@ import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
+import { CompressionService } from "./CompressionService";
 import { buildSystemContext } from "./context";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
@@ -111,6 +113,10 @@ export class AgentSession {
       .filter(Boolean)
       .join("\n\n");
 
+    const compressionService = new CompressionService(
+      join(homePath, "workspace", projectId, ".compressed"),
+    );
+
     const tools = createAgentTools({
       projectId,
       projectName,
@@ -143,6 +149,7 @@ export class AgentSession {
         ? (options) =>
             memoryFileService.readMemory({ ...options, projectFolderPath: folderPath ?? undefined })
         : undefined,
+      compressionService,
     });
 
     this.agent = new Agent({

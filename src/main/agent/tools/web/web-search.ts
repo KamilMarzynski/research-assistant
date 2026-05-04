@@ -1,5 +1,6 @@
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
+import type { CompressionService } from "../../CompressionService";
 
 export interface WebSearchResult {
   title: string;
@@ -93,10 +94,9 @@ function formatResults(results: WebSearchResult[]): string {
 /**
  * Create the web_search AgentTool.
  */
-export function createWebSearchTool(): AgentTool<
-  ReturnType<typeof webSearchParameters>,
-  WebSearchResult[]
-> {
+export function createWebSearchTool(
+  compressionService?: CompressionService,
+): AgentTool<ReturnType<typeof webSearchParameters>, WebSearchResult[]> {
   return {
     name: "web_search",
     label: "Search the web",
@@ -109,7 +109,13 @@ export function createWebSearchTool(): AgentTool<
         ABSOLUTE_MAX_RESULTS,
       );
       const results = await searchDuckDuckGo(query, cappedMax);
-      const text = formatResults(results);
+      let text = formatResults(results);
+
+      if (compressionService) {
+        const compressed = await compressionService.compress("web_search", text);
+        text = compressed.content;
+      }
+
       return {
         content: [{ type: "text" as const, text }],
         details: results,

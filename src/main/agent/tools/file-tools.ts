@@ -3,6 +3,7 @@ import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
+import type { CompressionService } from "../CompressionService";
 import type { PathJail } from "../path-jail";
 import { makeTool } from "./make-tool";
 
@@ -92,6 +93,7 @@ function applyLineEdit(
 
 export function createReadFileTool(
   jail: PathJail,
+  compressionService?: CompressionService,
 ): AgentTool<typeof readFileParameters, SmartReadResult> {
   return makeTool({
     name: "read_file",
@@ -152,6 +154,15 @@ export function createReadFileTool(
         hint = `Returned lines ${sLine}-${sLine + selectedLines.length - 1} of ${totalLines}. Use startLine=${sLine + selectedLines.length} to read more.`;
       } else if (sLine > totalLines) {
         hint = `File has ${totalLines} lines. startLine exceeds total.`;
+      }
+
+      if (compressionService) {
+        const compressed = await compressionService.compress("read_file", content);
+        content = compressed.content;
+        if (compressed.wasCompressed) {
+          const note = `Content compressed via ${compressed.strategy}.`;
+          hint = hint ? `${hint} ${note}` : note;
+        }
       }
 
       const lineCount = content === "" ? 0 : content.split("\n").length;
