@@ -78,4 +78,8 @@ export function registerEventForwarders(
   eventBus.on("model:fallback", (payload) => {
     win.webContents.send(IPC.MODEL_FALLBACK, payload);
   });
+
+  eventBus.on("path:approval_required", (payload) => {
+    win.webContents.send(IPC.PATH_APPROVAL_REQUIRED, payload);
+  });
 }

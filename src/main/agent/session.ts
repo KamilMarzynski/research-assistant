@@ -3,6 +3,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import type { BrowserWindow } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { EventBus } from "../event-bus";
+import { addPendingPathApproval } from "../ipc/command-handlers";
 import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
@@ -128,6 +129,12 @@ export class AgentSession {
       onFileWrite,
       emitBlocked: eventBus
         ? (payload) => eventBus.emit({ type: "bash:blocked", payload })
+        : undefined,
+      emitApprovalRequired: eventBus
+        ? (payload) => {
+            addPendingPathApproval(payload);
+            eventBus.emit({ type: "path:approval_required", payload });
+          }
         : undefined,
       startResearchFn: (query, deep) =>
         deep === true

@@ -6,6 +6,7 @@ import { useProject } from "../../../contexts/ProjectContext";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
 import PendingCommandBanner from "./PendingCommandBanner";
+import PendingPathBanner from "./PendingPathBanner";
 import PendingToolBanner from "./PendingToolBanner";
 import ResearchStatusBar from "./ResearchStatusBar";
 
@@ -102,6 +103,7 @@ export default function ChatPanel() {
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <ResearchStatusBar />
       <PendingCommandBanner />
+      <PendingPathBanner />
       <PendingToolBanner />
       <MessageList
         messages={messages}

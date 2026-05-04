@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { resolve, normalize } from "node:path";
+import { normalize, resolve } from "node:path";
 import { getResearchAssistantHome } from "../paths";
 
 export class ApprovalRequiredError extends Error {
@@ -53,7 +53,7 @@ export class AllowlistService {
   isAllowed(
     projectId: string,
     inputPath: string,
-    mode: "read" | "write",
+    _mode: "read" | "write",
     existingZones: string[],
   ): { allowed: boolean; needsApproval: boolean } {
     const resolved = resolve(normalize(inputPath));

@@ -40,7 +40,11 @@ type AppEvent =
         fileName: string;
       };
     }
-  | { type: "skill:changed"; payload: { skillName: string; summary: string } };
+  | { type: "skill:changed"; payload: { skillName: string; summary: string } }
+  | {
+      type: "path:approval_required";
+      payload: { path: string; mode: "read" | "write"; projectId: string };
+    };
 
 @injectable()
 export class EventBus {

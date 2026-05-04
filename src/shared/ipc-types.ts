@@ -66,6 +66,13 @@ export interface BlockedCommandPayload {
   timestamp: string;
 }
 
+/** Payload for PATH_APPROVAL_REQUIRED push event */
+export interface PathApprovalPayload {
+  path: string;
+  mode: "read" | "write";
+  projectId: string;
+}
+
 /** Payload for MODEL_FALLBACK push event */
 export interface ModelFallbackPayload {
   reason: string;
@@ -124,6 +131,8 @@ export interface IpcResponseMap {
   GET_AUDIT_LOG: AuditLogEntry[];
   CLEAR_AUDIT_LOG: undefined;
   RESOLVE_BLOCKED_COMMAND: undefined;
+  GET_PENDING_PATH_APPROVALS: PathApprovalPayload[];
+  RESOLVE_PATH_APPROVAL: undefined;
   CHECK_OLLAMA: CheckOllamaResponse;
   GET_PROVIDER_MODELS: GetProviderModelsResponse;
 }

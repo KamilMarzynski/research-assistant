@@ -81,6 +81,11 @@ export interface AgentToolsOptions {
     intent: string;
     timestamp: string;
   }) => void;
+  emitApprovalRequired?: (payload: {
+    path: string;
+    mode: "read" | "write";
+    projectId: string;
+  }) => void;
   compressionService?: CompressionService;
 }
 
@@ -92,9 +97,9 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
 
   // biome-ignore lint/suspicious/noExplicitAny: AgentTool generic is covariant in TDetails but contravariant in TParams; any is the correct erasure for a heterogeneous collection
   const tools: AgentTool<any>[] = [
-    createReadFileTool(jail, opts.compressionService),
-    createWriteFileTool(jail, folderPath, onFileWrite),
-    createListDirTool(jail),
+    createReadFileTool(jail, opts.compressionService, opts.emitApprovalRequired),
+    createWriteFileTool(jail, folderPath, onFileWrite, opts.emitApprovalRequired),
+    createListDirTool(jail, opts.emitApprovalRequired),
     createSafeBashTool(projectId, workspacePath, auditLogPath, opts.emitBlocked),
   ];
 
