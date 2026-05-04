@@ -38,6 +38,12 @@ export const SaveSettingsSchema = z
 
 export const CheckOllamaSchema = z.string();
 
+export const GetProviderModelsSchema = z.object({
+  provider: z.enum(["ollama", "openrouter", "openai"]),
+  host: z.string().optional(),
+  apiKey: z.string().optional(),
+});
+
 export const LinkFolderSchema = z.object({
   projectId: z.string(),
   folderPath: z.string(),

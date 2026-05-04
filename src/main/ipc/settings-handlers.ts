@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
-import { CheckOllamaSchema, SaveSettingsSchema } from "../ipc-validation";
+import { getOllamaModels, getOpenAiModels, getOpenRouterModels } from "../agent/model-discovery";
+import { CheckOllamaSchema, GetProviderModelsSchema, SaveSettingsSchema } from "../ipc-validation";
 import type { SettingsService } from "../services/SettingsService";
 import { parseOrThrow } from "./parse-util";
 import type { SessionManager } from "./session-manager";
@@ -44,5 +45,25 @@ export function registerSettingsHandlers(
     const { checkOllamaAvailable } = await import("../agent/model-provider");
     const available = await checkOllamaAvailable(host);
     return { available, host };
+  });
+
+  ipcMain.handle(IPC.GET_PROVIDER_MODELS, async (_event, payload: unknown) => {
+    const p = parseOrThrow(GetProviderModelsSchema, payload, "GET_PROVIDER_MODELS");
+
+    switch (p.provider) {
+      case "ollama": {
+        if (!p.host) return { models: [], error: "Host is required for Ollama" };
+        return getOllamaModels(p.host);
+      }
+      case "openrouter": {
+        return getOpenRouterModels(p.apiKey);
+      }
+      case "openai": {
+        if (!p.apiKey) return { models: [], error: "API key is required for OpenAI" };
+        return getOpenAiModels(p.apiKey);
+      }
+      default:
+        return { models: [], error: "Unknown provider" };
+    }
   });
 }

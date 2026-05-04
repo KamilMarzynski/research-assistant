@@ -33,6 +33,9 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
   });
   const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string }>>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
   const [langfuseEnabled, setLangfuseEnabled] = useState(false);
   const [webAccessEnabled, setWebAccessEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,6 +47,37 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [skillsError, setSkillsError] = useState<string | null>(null);
   const [expandedSkill, setExpandedSkill] = useState<string | null>(null);
   const [confirmDeleteSkill, setConfirmDeleteSkill] = useState<string | null>(null);
+
+  const fetchModels = useCallback(async (provider: string, host?: string, apiKey?: string) => {
+    if (provider !== "ollama" && provider !== "openrouter" && provider !== "openai") {
+      setAvailableModels([]);
+      setModelsError(null);
+      return;
+    }
+    if (provider === "openai" && !apiKey) {
+      setAvailableModels([]);
+      setModelsError(null);
+      return;
+    }
+    setModelsLoading(true);
+    setModelsError(null);
+    try {
+      const result = await window.electronAPI.invoke(IPC.GET_PROVIDER_MODELS, {
+        provider,
+        host,
+        apiKey,
+      });
+      setAvailableModels(result.models);
+      if (result.error) {
+        setModelsError(result.error);
+      }
+    } catch {
+      setModelsError("Failed to fetch models");
+      setAvailableModels([]);
+    } finally {
+      setModelsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -72,8 +106,31 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       });
       setLangfuseEnabled(settings.langfuseEnabled ?? false);
       setWebAccessEnabled(settings.webAccessEnabled ?? true);
+
+      const provider = settings.activeProvider ?? "openrouter";
+      void fetchModels(
+        provider,
+        settings.providerCredentials.ollama.host,
+        provider === "openai"
+          ? (settings.providerCredentials.openai.apiKey ?? undefined)
+          : provider === "openrouter"
+            ? (settings.providerCredentials.openrouter.apiKey ?? undefined)
+            : undefined,
+      );
     });
-  }, [open]);
+  }, [open, fetchModels]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-fetch when provider changes, not on every keystroke in credential fields
+  useEffect(() => {
+    if (!open) return;
+    const apiKey =
+      activeProvider === "openai"
+        ? credentials.openai.apiKey || undefined
+        : activeProvider === "openrouter"
+          ? credentials.openrouter.apiKey || undefined
+          : undefined;
+    void fetchModels(activeProvider, credentials.ollama.host, apiKey);
+  }, [open, activeProvider, fetchModels]);
 
   const loadAuditLog = useCallback(async () => {
     const entries = await window.electronAPI.invoke(IPC.GET_AUDIT_LOG);
@@ -192,6 +249,18 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             onDefaultCloudProviderChange={setDefaultCloudProvider}
             credentials={credentials}
             onCredentialsChange={setCredentials}
+            availableModels={availableModels}
+            modelsLoading={modelsLoading}
+            modelsError={modelsError}
+            onRefreshModels={() => {
+              const apiKey =
+                activeProvider === "openai"
+                  ? credentials.openai.apiKey || undefined
+                  : activeProvider === "openrouter"
+                    ? credentials.openrouter.apiKey || undefined
+                    : undefined;
+              void fetchModels(activeProvider, credentials.ollama.host, apiKey);
+            }}
             ollamaTestStatus={ollamaTestStatus}
             onTestOllama={testOllama}
           />
