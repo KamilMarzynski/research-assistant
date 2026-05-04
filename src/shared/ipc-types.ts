@@ -76,10 +76,10 @@ export interface ModelFallbackPayload {
 /** Payload for RESEARCH_COMPLETE push event */
 export interface ResearchCompletePayload {
   taskId: string;
-  artifactId: string;
+  artifactId?: string;
   projectId: string;
   query: string;
-  filePath: string;
+  filePaths: string[];
 }
 
 /** Payload for RESEARCH_STATUS_UPDATE push event */

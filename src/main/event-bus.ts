@@ -6,13 +6,7 @@ type AppEvent =
   | { type: "research:progress"; payload: { taskId: string; message: string; label?: string } }
   | {
       type: "research:complete";
-      payload: {
-        taskId: string;
-        artifactId?: string;
-        projectId: string;
-        query: string;
-        filePath: string;
-      };
+      payload: { taskId: string; projectId: string; query: string; filePaths: string[] };
     }
   | {
       type: "research:failed";

@@ -282,7 +282,7 @@ describe("ResearchService", () => {
     consoleSpy.mockRestore();
   });
 
-  it("emits research:complete with empty filePath on agent_end", async () => {
+  it("emits research:complete with empty filePaths on agent_end", async () => {
     const bus = makeEventBus();
     const svc = new ResearchService(
       bus as never,
@@ -296,7 +296,7 @@ describe("ResearchService", () => {
     expect(bus.emit).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "research:complete",
-        payload: expect.objectContaining({ filePath: "" }),
+        payload: expect.objectContaining({ filePaths: [] }),
       }),
     );
   });

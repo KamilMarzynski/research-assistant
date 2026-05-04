@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
+import { OutputRouter } from "../agent/OutputRouter";
+import { PathJail } from "../agent/path-jail";
+import { toSlug } from "../agent/context";
 import { resolveProvider } from "../agent/model-provider";
 import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
@@ -176,13 +179,48 @@ export class ResearchService {
       } else if (e.type === "agent_end") {
         try {
           await this.homeService.updateTaskStatus(taskId, "complete");
+
+          // Read AGENTS.md for output conventions
+          let filePaths: string[] = [];
+          try {
+            const homePath = this.homeService.getHomePath();
+            const slug = toSlug(config.projectName);
+            let agentsMdContent = "";
+
+            // Try linked folder first
+            if (config.folderPath) {
+              try {
+                agentsMdContent = await readFile(join(config.folderPath, "AGENTS.md"), "utf-8");
+              } catch { /* not found */ }
+            }
+
+            // Fallback to app home
+            if (!agentsMdContent) {
+              try {
+                agentsMdContent = await readFile(join(homePath, "projects", slug, "AGENTS.md"), "utf-8");
+              } catch { /* not found */ }
+            }
+
+            if (agentsMdContent) {
+              const jail = new PathJail(config.projectId, config.folderPath, config.projectName);
+              const router = new OutputRouter(jail);
+              const conventions = router.parseConventions(agentsMdContent);
+              if (conventions) {
+                const result = await router.moveFinals(workspacePath, conventions);
+                filePaths = result.moved.map((name) => join(conventions.default, name));
+              }
+            }
+          } catch (err) {
+            console.error("[ResearchService] output routing failed:", err);
+          }
+
           this.eventBus.emit({
             type: "research:complete",
             payload: {
               taskId,
               projectId: config.projectId,
               query: config.query,
-              filePath: "",
+              filePaths,
             },
           });
         } catch (err) {

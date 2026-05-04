@@ -49,9 +49,10 @@ export function registerEventForwarders(
 
     const session = sessionManager.get(payload.projectId);
     if (session) {
+      const filePathsStr = payload.filePaths.length > 0 ? payload.filePaths.join(", ") : "none";
       session
         .queueFollowUp(
-          `Background research complete (task ${payload.taskId}). Query: "${payload.query}". Artifact saved at ${payload.filePath}. Please briefly summarise the findings for the user.`,
+          `Background research complete (task ${payload.taskId}). Query: "${payload.query}". Artifact saved at ${filePathsStr}. Please briefly summarise the findings for the user.`,
         )
         .catch((err) => {
           console.error("[event-forwarders] queueFollowUp failed:", err);
