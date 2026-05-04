@@ -263,6 +263,18 @@ export class AgentSession {
         this.pendingSkillDeltas = [];
       }
 
+      // Manual crystallization trigger detection
+      const lowerContent = content.toLowerCase();
+      if (lowerContent.includes("/crystallize") || lowerContent.includes("always do it this way")) {
+        this.win.webContents.send(
+          IPC.MESSAGE_CHUNK,
+          "Skill crystallization happens automatically after successful research tasks when the approach is novel and reusable. No manual action needed.",
+        );
+        this.win.webContents.send(IPC.MESSAGE_DONE);
+        this.lastUserContent = "";
+        return;
+      }
+
       this.lastUserContent = content;
       await this.messageService.addMessage({
         projectId: this.projectId,

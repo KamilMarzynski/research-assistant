@@ -12,6 +12,12 @@ import { EventBus } from "../event-bus";
 import { HomeService } from "./HomeService";
 import { SettingsService } from "./SettingsService";
 
+interface CrystallizationResult {
+  crystallize: boolean;
+  skillName?: string;
+  skillDescription?: string;
+}
+
 interface RunResearchConfig {
   projectId: string;
   projectName: string;
@@ -79,6 +85,52 @@ export class ResearchService {
   }
 
   /** Remove workspace directories older than WORKSPACE_MAX_AGE_MS. Fire-and-forget. */
+  private async evaluateForCrystallization(
+    query: string,
+    projectId: string,
+    projectName: string,
+    folderPath: string | null,
+  ): Promise<CrystallizationResult | null> {
+    const settings = await this.settingsService.getSettings();
+    const provider = resolveProvider({ settings, forceCloud: true });
+
+    const { run } = await createWorkerAgent({
+      toolNames: ["read_file", "safe_bash"],
+      systemPromptAddition:
+        "You are a skill evaluator. Assess whether a completed research task produced a novel, reusable workflow. Respond with JSON only.",
+      skills: ["evaluate-research"],
+      projectId,
+      projectName,
+      folderPath,
+      homePath: this.homeService.getHomePath(),
+      provider,
+      remainingDepth: 0,
+      webAccessEnabled: settings.webAccessEnabled,
+    });
+
+    const prompt = `Research query: "${query}"\n\nWas this approach novel, reusable, and >3 tool calls?\nRespond with JSON: { crystallize: boolean, reason: string, skillName?: string, skillDescription?: string }`;
+
+    const output = await run(prompt);
+    try {
+      const parsed = JSON.parse(output) as {
+        crystallize?: boolean;
+        reason?: string;
+        skillName?: string;
+        skillDescription?: string;
+      };
+      if (parsed.crystallize) {
+        return {
+          crystallize: true,
+          skillName: parsed.skillName,
+          skillDescription: parsed.skillDescription,
+        };
+      }
+    } catch {
+      // JSON parse failed, skip crystallization
+    }
+    return null;
+  }
+
   private async cleanupOldWorkspaces(): Promise<void> {
     try {
       const homePath = this.homeService.getHomePath();
@@ -219,6 +271,35 @@ export class ResearchService {
             }
           } catch (err) {
             console.error("[ResearchService] output routing failed:", err);
+          }
+
+          // Post-research: evaluate for skill crystallization
+          const shouldCrystallize = await this.evaluateForCrystallization(
+            config.query,
+            config.projectId,
+            config.projectName,
+            config.folderPath,
+          );
+          if (
+            shouldCrystallize?.crystallize &&
+            shouldCrystallize.skillName &&
+            shouldCrystallize.skillDescription
+          ) {
+            const skillContent = `---
+name: ${shouldCrystallize.skillName}
+description: >-
+  ${shouldCrystallize.skillDescription}
+---
+
+# ${shouldCrystallize.skillName}
+
+## When to use
+- (auto-generated from research pattern)
+
+## Steps
+1. (steps would be filled by agent)
+`;
+            await this.homeService.savePendingTool(shouldCrystallize.skillName, skillContent);
           }
 
           this.eventBus.emit({
