@@ -31,10 +31,10 @@ interface ModelProviderTabProps {
   onDefaultCloudProviderChange: (provider: string) => void;
   credentials: ProviderCredentials;
   onCredentialsChange: (credentials: ProviderCredentials) => void;
-  availableModels?: ModelOption[];
-  modelsLoading?: boolean;
-  modelsError?: string | null;
-  onRefreshModels?: () => void;
+  availableModels: ModelOption[];
+  modelsLoading: boolean;
+  modelsError: string | null;
+  onRefreshModels: () => void;
   ollamaTestStatus: "idle" | "ok" | "error";
   onTestOllama: () => void;
 }
@@ -46,10 +46,10 @@ export default function ModelProviderTab({
   onDefaultCloudProviderChange,
   credentials,
   onCredentialsChange,
-  availableModels = [],
-  modelsLoading = false,
-  modelsError = null,
-  onRefreshModels = () => {},
+  availableModels,
+  modelsLoading,
+  modelsError,
+  onRefreshModels,
   ollamaTestStatus,
   onTestOllama,
 }: ModelProviderTabProps) {
