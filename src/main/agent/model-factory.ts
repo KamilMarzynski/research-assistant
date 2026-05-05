@@ -27,6 +27,10 @@ export function createModel(opts: ModelFactoryOptions): Model<Api> {
         },
       };
     }
+    console.warn(
+      "[Langfuse] LANGFUSE_PUBLIC_KEY and/or LANGFUSE_SECRET_KEY missing. " +
+        "Tracing disabled despite langfuseEnabled=true.",
+    );
   }
 
   return base;

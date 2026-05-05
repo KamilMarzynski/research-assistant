@@ -43,6 +43,9 @@ describe("createModel", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const model = createModel({ provider: openrouterProvider, langfuseEnabled: true });
     expect(model.baseUrl).toBe("https://openrouter.ai/api/v1");
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[Langfuse] LANGFUSE_PUBLIC_KEY and/or LANGFUSE_SECRET_KEY missing. Tracing disabled despite langfuseEnabled=true.",
+    );
     warnSpy.mockRestore();
   });
 
