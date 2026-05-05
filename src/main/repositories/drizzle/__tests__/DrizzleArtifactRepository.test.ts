@@ -94,4 +94,28 @@ describe("DrizzleArtifactRepository", () => {
       expect(await repo.get("ghost")).toBeNull();
     });
   });
+
+  describe("findUnacknowledged", () => {
+    it("returns only unacknowledged artifacts", async () => {
+      const ack = await repo.create({ projectId, title: "Acked", filePath: "/a.md", acknowledged: true });
+      const unack = await repo.create({ projectId, title: "Unacked", filePath: "/b.md", acknowledged: false });
+
+      const result = await repo.findUnacknowledged(projectId);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(unack.id);
+    });
+
+    it("returns empty when all are acknowledged", async () => {
+      await repo.create({ projectId, title: "Acked", filePath: "/a.md", acknowledged: true });
+      expect(await repo.findUnacknowledged(projectId)).toEqual([]);
+    });
+
+    it("respects limit", async () => {
+      await repo.create({ projectId, title: "A", filePath: "/a.md", acknowledged: false });
+      await repo.create({ projectId, title: "B", filePath: "/b.md", acknowledged: false });
+
+      const result = await repo.findUnacknowledged(projectId, 1);
+      expect(result).toHaveLength(1);
+    });
+  });
 });

@@ -1,5 +1,6 @@
 import { access, mkdir, readdir, readFile } from "node:fs/promises";
 import { join, normalize, resolve } from "node:path";
+import { toSlug } from "../agent/context";
 import { inject, injectable } from "tsyringe";
 import { FALLBACK_MEMORY_PATH_TOKEN, MEMORY_FILE_PATH_TOKEN } from "../di/tokens";
 import { EventBus } from "../event-bus";
@@ -47,11 +48,7 @@ export class MemoryFileService {
     const safeCategory = VALID_CATEGORIES.includes(category as MemoryCategory)
       ? category
       : "finding";
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 60);
+    const slug = toSlug(title).slice(0, 60);
     const fileName = `${slug || "untitled"}.md`;
 
     const targetDir =

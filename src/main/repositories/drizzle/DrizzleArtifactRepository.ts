@@ -69,6 +69,16 @@ export class DrizzleArtifactRepository
       .where(eq(artifacts.projectId, projectId));
   }
 
+  async findUnacknowledged(projectId: string, limit = 50): Promise<Artifact[]> {
+    const rows = await this.db
+      .select()
+      .from(artifacts)
+      .where(eq(artifacts.projectId, projectId))
+      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
+      .limit(limit);
+    return rows.map(this.rowToEntity).filter((a) => !a.acknowledged);
+  }
+
   protected rowToEntity = (row: typeof artifacts.$inferSelect): Artifact => ({
     id: row.id,
     projectId: row.projectId,

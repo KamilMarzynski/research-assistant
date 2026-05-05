@@ -18,11 +18,7 @@ export class ArtifactService {
   }
 
   async listUnacknowledged(projectId: string): Promise<Artifact[]> {
-    const all = await this.repo.listByProject(projectId);
-    return all
-      .filter((a) => !a.acknowledged)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, 50);
+    return this.repo.findUnacknowledged(projectId, 50);
   }
 
   async acknowledge(_projectId: string, artifactId: string): Promise<void> {

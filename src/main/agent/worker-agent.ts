@@ -1,5 +1,5 @@
 import { Agent } from "@mariozechner/pi-agent-core";
-import { z } from "zod";
+import { z } from "zod/v4";
 import type { AllowlistService } from "../services/AllowlistService";
 import { loadSkillsByContent } from "./context";
 import { createModel } from "./model-factory";

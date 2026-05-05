@@ -34,8 +34,8 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   // Run 6: add folder_path — idempotent, ignore "duplicate column name" error
   try {
     await db.run(sql`ALTER TABLE projects ADD COLUMN folder_path TEXT`);
-  } catch {
-    // column already exists — safe to ignore
+  } catch (err) {
+    if (!(err instanceof Error && err.message?.includes("duplicate column name"))) throw err;
   }
 
   // Run 7: add max_recent_messages — idempotent, ignore "duplicate column name" error
@@ -43,15 +43,15 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
     await db.run(
       sql`ALTER TABLE projects ADD COLUMN max_recent_messages INTEGER NOT NULL DEFAULT 20`,
     );
-  } catch {
-    // column already exists — safe to ignore
+  } catch (err) {
+    if (!(err instanceof Error && err.message?.includes("duplicate column name"))) throw err;
   }
 
   // Run 12: add model_override
   try {
     await db.run(sql`ALTER TABLE projects ADD COLUMN model_override TEXT`);
-  } catch {
-    // column already exists — safe to ignore
+  } catch (err) {
+    if (!(err instanceof Error && err.message?.includes("duplicate column name"))) throw err;
   }
 
   // Run 14: tasks table
@@ -72,13 +72,13 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   // Run 15: add artifact notification columns — idempotent
   try {
     await db.run(sql`ALTER TABLE artifacts ADD COLUMN relative_path TEXT`);
-  } catch {
-    // column already exists — safe to ignore
+  } catch (err) {
+    if (!(err instanceof Error && err.message?.includes("duplicate column name"))) throw err;
   }
 
   try {
     await db.run(sql`ALTER TABLE artifacts ADD COLUMN acknowledged INTEGER NOT NULL DEFAULT 0`);
-  } catch {
-    // column already exists — safe to ignore
+  } catch (err) {
+    if (!(err instanceof Error && err.message?.includes("duplicate column name"))) throw err;
   }
 }

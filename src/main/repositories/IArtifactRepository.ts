@@ -10,4 +10,5 @@ export interface IArtifactRepository {
   get(id: string): Promise<Artifact | null>;
   acknowledge(id: string): Promise<void>;
   acknowledgeAllByProject(projectId: string): Promise<void>;
+  findUnacknowledged(projectId: string, limit?: number): Promise<Artifact[]>;
 }

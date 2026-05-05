@@ -23,6 +23,7 @@ function makeMockRepo(overrides: Partial<IArtifactRepository> = {}): IArtifactRe
     get: vi.fn().mockResolvedValue(null),
     acknowledge: vi.fn().mockResolvedValue(undefined),
     acknowledgeAllByProject: vi.fn().mockResolvedValue(undefined),
+    findUnacknowledged: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }

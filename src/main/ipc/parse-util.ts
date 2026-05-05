@@ -1,7 +1,7 @@
+import type { z } from "zod/v4";
+
 export function parseOrThrow<T>(
-  schema: {
-    safeParse: (data: unknown) => { success: false; error: unknown } | { success: true; data: T };
-  },
+  schema: z.ZodType<T>,
   payload: unknown,
   label: string,
 ): T {

@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import { useProject } from "../../contexts/ProjectContext";
-import ArtifactSection from "./ArtifactSection";
+import FileExplorer from "./FileExplorer";
 
 export default function DetailsPanel() {
   const { activeProjectId } = useProject();
@@ -15,7 +15,7 @@ export default function DetailsPanel() {
         overflow: "auto",
       }}
     >
-      {activeProjectId ? <ArtifactSection projectId={activeProjectId} /> : null}
+      {activeProjectId ? <FileExplorer projectId={activeProjectId} /> : null}
     </Box>
   );
 }
