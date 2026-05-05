@@ -2,82 +2,233 @@ import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { appendFile } from "node:fs/promises";
 
-export interface BlocklistEntry {
-  pattern: RegExp;
+export interface BlockedResult {
   key: string;
   reason: string;
-  category: "destructive" | "privilege_escalation" | "exfiltration" | "persistence";
+  category:
+    | "destructive"
+    | "privilege_escalation"
+    | "exfiltration"
+    | "persistence"
+    | "unsafe_operator"
+    | "unknown_binary";
 }
 
-const BLOCKLIST: BlocklistEntry[] = [
-  {
-    pattern: /\brm\s+-rf\b/,
-    key: "recursive_delete",
-    reason: "This command would recursively delete files without recovery.",
-    category: "destructive",
-  },
+const ALLOWED_BINARIES = new Set([
+  "ls",
+  "cat",
+  "grep",
+  "find",
+  "head",
+  "tail",
+  "wc",
+  "sort",
+  "uniq",
+  "mkdir",
+  "touch",
+  "cp",
+  "mv",
+  "ln",
+  "echo",
+  "date",
+  "which",
+  "git",
+  "node",
+  "python3",
+  "python",
+  "bun",
+  "npm",
+  "npx",
+  "sed",
+  "awk",
+  "cut",
+  "tr",
+  "tee",
+  "diff",
+  "xargs",
+  "basename",
+  "dirname",
+  "realpath",
+  "readlink",
+  "file",
+  "stat",
+  "du",
+  "df",
+  "chmod",
+  "chown",
+  "tar",
+  "gzip",
+  "gunzip",
+  "zip",
+  "unzip",
+]);
+
+// Safe shell builtins that are OK to use in bash -c strings
+const ALLOWED_BUILTINS = new Set([
+  "exit",
+  "sleep",
+  "cd",
+  "pwd",
+  "env",
+  "export",
+  "source",
+  "true",
+  "false",
+  "test",
+  "[",
+]);
+
+// Dangerous commands always blocked
+const DANGEROUS_COMMANDS = [
   {
     pattern: /\bsudo\b/,
     key: "sudo",
-    reason: "Privilege escalation commands require user review.",
-    category: "privilege_escalation",
+    reason: "Privilege escalation.",
+    category: "privilege_escalation" as const,
   },
   {
-    pattern: /\bchmod\s+\+x\b/,
-    key: "make_executable",
-    reason: "Making files executable without review is a security risk.",
-    category: "persistence",
+    pattern: /\bsu\b(?=\s)/,
+    key: "su",
+    reason: "Privilege escalation.",
+    category: "privilege_escalation" as const,
   },
   {
     pattern: /\bmkfs\b/,
-    key: "format_filesystem",
-    reason: "Filesystem formatting is destructive and irreversible.",
-    category: "destructive",
+    key: "mkfs",
+    reason: "Filesystem formatting.",
+    category: "destructive" as const,
   },
-  {
-    pattern: /\bdd\b\s+if=/,
-    key: "raw_disk_io",
-    reason: "Raw disk I/O can corrupt data.",
-    category: "destructive",
-  },
+  { pattern: /\bdd\b/, key: "dd", reason: "Raw disk I/O.", category: "destructive" as const },
   {
     pattern: /\bcurl\b/,
     key: "curl",
-    reason: "Network outbound commands are blocked. Use fetch_url tool instead.",
-    category: "exfiltration",
+    reason: "Network outbound. Use fetch_url instead.",
+    category: "exfiltration" as const,
   },
   {
     pattern: /\bwget\b/,
     key: "wget",
-    reason: "Network outbound commands are blocked. Use fetch_url tool instead.",
-    category: "exfiltration",
+    reason: "Network outbound. Use fetch_url instead.",
+    category: "exfiltration" as const,
   },
   {
     pattern: /\beval\b/,
     key: "eval",
-    reason: "Dynamic code execution poses injection risks.",
-    category: "persistence",
-  },
-  {
-    pattern: /`/,
-    key: "backtick_subshell",
-    reason: "Backtick subshells bypass command review.",
-    category: "persistence",
-  },
-  {
-    pattern: /\$\(/,
-    key: "command_substitution",
-    reason: "Command substitution ($(...)) can execute hidden code.",
-    category: "persistence",
+    reason: "Dynamic code execution.",
+    category: "persistence" as const,
   },
 ];
 
-export function checkBlocklist(command: string): BlocklistEntry | null {
-  for (const entry of BLOCKLIST) {
-    if (entry.pattern.test(command)) return entry;
+/**
+ * Strip shell redirects so they don't interfere with binary extraction.
+ * Handles: 2>&1, &>, &>>, >, >>, <, <<<
+ */
+function stripRedirects(command: string): string {
+  // Remove redirect operators and their targets
+  let cleaned = command;
+  // Remove 2>&1 style
+  cleaned = cleaned.replace(/\d*>&\d*/g, "");
+  // Remove &> and &>> with target
+  cleaned = cleaned.replace(/&>>?\s*\S+/g, "");
+  // Remove >>, >, < with target
+  cleaned = cleaned.replace(/(?<!\d)>>?\s*\S+/g, "");
+  cleaned = cleaned.replace(/<<?\s*\S+/g, "");
+  return cleaned.trim();
+}
+
+/**
+ * Check if a command string contains shell operators (;, |, &) in unquoted positions.
+ * We consider text outside of single-quoted regions as unquoted.
+ */
+function hasUnsafeOperators(command: string): boolean {
+  // Remove single-quoted strings (they are safe)
+  const withoutSingleQuotes = command.replace(/'[^']*'/g, "");
+  // Check for dangerous operators in remaining text
+  return /[;|&]/.test(withoutSingleQuotes);
+}
+
+/**
+ * Extract the first binary name from a command string.
+ * Strips leading variable assignments (VAR=val), then takes the first word.
+ * Strips any leading path components (e.g., /usr/bin/ls → ls).
+ */
+function extractBinary(command: string): string | null {
+  const cleaned = stripRedirects(command).trim();
+  if (!cleaned) return null;
+
+  // Remove leading variable assignments (FOO=bar VAR=val)
+  const withoutVars = cleaned.replace(/^\s*\w+=\S+\s+/, "").trim();
+  if (!withoutVars) return null;
+
+  // Take the first word
+  const match = withoutVars.match(/^(\S+)/);
+  if (!match) return null;
+
+  const binary = match[1];
+
+  // Strip path prefix
+  const basename = binary.split("/").pop() ?? binary;
+  return basename;
+}
+
+export function checkCommand(command: string): BlockedResult | null {
+  const trimmed = command.trim();
+  if (!trimmed) return null;
+
+  // Strip redirects so they don't trigger operator detection
+  const withoutRedirects = stripRedirects(trimmed);
+
+  // 1. Check for unsafe shell operators (on redirect-stripped text)
+  if (hasUnsafeOperators(withoutRedirects)) {
+    return {
+      key: "unsafe_operator",
+      reason: "Command contains shell operators (;, |, &) which can chain commands.",
+      category: "unsafe_operator",
+    };
   }
+
+  // 2. Check dangerous commands patterns (on full command text to catch everything)
+  for (const entry of DANGEROUS_COMMANDS) {
+    if (entry.pattern.test(trimmed)) {
+      return {
+        key: entry.key,
+        reason: entry.reason,
+        category: entry.category,
+      };
+    }
+  }
+
+  // 3. Check for $() / backticks (on full command text)
+  if (/\$\(/.test(trimmed)) {
+    return {
+      key: "command_substitution",
+      reason: "Command substitution ($(...)) can execute hidden code.",
+      category: "persistence",
+    };
+  }
+  if (/`/.test(trimmed)) {
+    return {
+      key: "backtick_subshell",
+      reason: "Backtick subshells bypass command review.",
+      category: "persistence",
+    };
+  }
+
+  // 4. Extract binary and check against allowlist (on redirect-stripped text)
+  const binary = extractBinary(trimmed);
+  if (binary && !ALLOWED_BINARIES.has(binary) && !ALLOWED_BUILTINS.has(binary)) {
+    return {
+      key: "unknown_binary",
+      reason: `Binary "${binary}" is not in the allowed list. Only known-safe binaries are permitted.`,
+      category: "unknown_binary",
+    };
+  }
+
   return null;
 }
+
+// Re-export checkCommand as checkBlocklist for backward compatibility in tests
+export { checkCommand as checkBlocklist };
 
 export class BlockedCommandError extends Error {
   readonly commandId?: string;
@@ -107,14 +258,14 @@ export interface BlockedCommandPayload {
 interface BlockedCommandPromise {
   commandId: string;
   options: SafeBashOptions;
-  blocklistEntry: BlocklistEntry;
+  blockedResult: BlockedResult;
   resolve: (result: SafeBashResult) => void;
   reject: (error: Error) => void;
   timer: ReturnType<typeof setTimeout>;
 }
 
 const blockedPromises = new Map<string, BlockedCommandPromise>();
-/** Per-project session allowlist: projectId → set of hashed commands. */
+/** Per-project session allowlist: projectId -> set of hashed commands. */
 const sessionAllowlistByProject = new Map<string, Set<string>>();
 
 function getProjectAllowlist(projectId: string): Set<string> {
@@ -126,7 +277,7 @@ function getProjectAllowlist(projectId: string): Set<string> {
   return list;
 }
 
-/** Clear all allowlists — used in tests. */
+/** Clear all allowlists -- used in tests. */
 export function clearAllowlists(): void {
   sessionAllowlistByProject.clear();
 }
@@ -231,7 +382,7 @@ function runSafeBashInternal(opts: SafeBashOptions): Promise<SafeBashResult> {
     proc.on("close", (code) => {
       clearTimeout(timer);
       if (truncated) {
-        stdout += `\n[truncated — output exceeded ${MAX_OUTPUT_CHARS} chars]`;
+        stdout += `\n[truncated -- output exceeded ${MAX_OUTPUT_CHARS} chars]`;
       }
 
       const entry = JSON.stringify({
@@ -253,21 +404,21 @@ function runSafeBashInternal(opts: SafeBashOptions): Promise<SafeBashResult> {
 
 // --- Approval Gate ---
 
-function enterApprovalGate(opts: SafeBashOptions, entry: BlocklistEntry): Promise<SafeBashResult> {
+function enterApprovalGate(opts: SafeBashOptions, result: BlockedResult): Promise<SafeBashResult> {
   return new Promise<SafeBashResult>((resolve, reject) => {
     const commandId = randomUUID();
 
     const timer = setTimeout(() => {
       blockedPromises.delete(commandId);
       reject(
-        new BlockedCommandError(`Approval timed out. ${entry.reason}`, commandId, entry.category),
+        new BlockedCommandError(`Approval timed out. ${result.reason}`, commandId, result.category),
       );
     }, 300_000);
 
     blockedPromises.set(commandId, {
       commandId,
       options: opts,
-      blocklistEntry: entry,
+      blockedResult: result,
       resolve,
       reject,
       timer,
@@ -277,9 +428,9 @@ function enterApprovalGate(opts: SafeBashOptions, entry: BlocklistEntry): Promis
       opts.emitBlocked({
         commandId,
         command: opts.command,
-        reason: entry.reason,
-        category: entry.category,
-        key: entry.key,
+        reason: result.reason,
+        category: result.category,
+        key: result.key,
         projectId: opts.projectId,
         intent: opts.intent,
         timestamp: new Date().toISOString(),
@@ -302,9 +453,9 @@ export function resolveBlockedCommand(
   if (action === "deny") {
     deferred.reject(
       new BlockedCommandError(
-        `Blocked: ${deferred.blocklistEntry.reason}`,
+        `Blocked: ${deferred.blockedResult.reason}`,
         commandId,
-        deferred.blocklistEntry.category,
+        deferred.blockedResult.category,
       ),
     );
     return;
@@ -321,7 +472,7 @@ export function resolveBlockedCommand(
 // --- Public API ---
 
 export async function runSafeBash(opts: SafeBashOptions): Promise<SafeBashResult> {
-  const entry = checkBlocklist(opts.command);
+  const entry = checkCommand(opts.command);
 
   if (!entry) {
     return runSafeBashInternal(opts);
