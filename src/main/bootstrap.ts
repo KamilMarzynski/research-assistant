@@ -18,7 +18,6 @@ import {
 import { EventBus } from "./event-bus";
 import { getAgentsHome, getHomePath } from "./paths";
 import { DrizzleArtifactRepository } from "./repositories/drizzle/DrizzleArtifactRepository";
-import { MonotonicClock } from "./utils/time";
 import { DrizzleMessageRepository } from "./repositories/drizzle/DrizzleMessageRepository";
 import { DrizzleProjectRepository } from "./repositories/drizzle/DrizzleProjectRepository";
 import { AllowlistService } from "./services/AllowlistService";
@@ -37,6 +36,7 @@ import { SkillManagementService } from "./services/SkillManagementService";
 import { SkillWatcherService } from "./services/SkillWatcherService";
 import { TaskPersistenceService } from "./services/TaskPersistenceService";
 import { ToolApprovalService } from "./services/ToolApprovalService";
+import { MonotonicClock } from "./utils/time";
 
 export async function bootstrap(): Promise<DependencyContainer> {
   const userDataPath = app.getPath("userData");

@@ -81,7 +81,14 @@ describe("MemoryFileService", () => {
   it("uses projectFolderPath when provided for saveMemory", async () => {
     const projectDir = join(tmpdir(), `proj-${Date.now()}`);
     await mkdir(projectDir, { recursive: true });
-    const result = await service.saveMemory("proj-1", "finding", "G", "data", "project", projectDir);
+    const result = await service.saveMemory(
+      "proj-1",
+      "finding",
+      "G",
+      "data",
+      "project",
+      projectDir,
+    );
     expect(result.path.startsWith(join(projectDir, ".agents", "memory"))).toBe(true);
     await rm(projectDir, { recursive: true, force: true });
   });

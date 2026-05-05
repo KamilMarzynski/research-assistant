@@ -4,7 +4,7 @@ import type { Message, MessageRole } from "../../../shared/types";
 import type { DrizzleDB } from "../../db/client";
 import { messages } from "../../db/schema";
 import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
-import { MonotonicClock } from "../../utils/time";
+import type { MonotonicClock } from "../../utils/time";
 import type { IMessageRepository } from "../IMessageRepository";
 import { BaseDrizzleRepository } from "./BaseDrizzleRepository";
 
@@ -13,10 +13,7 @@ export class DrizzleMessageRepository
   extends BaseDrizzleRepository<typeof messages.$inferSelect, typeof messages.$inferInsert, Message>
   implements IMessageRepository
 {
-  constructor(
-    @inject(DB_TOKEN) db: DrizzleDB,
-    @inject(CLOCK_TOKEN) clock: MonotonicClock,
-  ) {
+  constructor(@inject(DB_TOKEN) db: DrizzleDB, @inject(CLOCK_TOKEN) clock: MonotonicClock) {
     super(db, clock);
   }
 

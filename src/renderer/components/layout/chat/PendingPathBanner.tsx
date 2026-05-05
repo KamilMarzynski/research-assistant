@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from "@mui/material";
 import { useState } from "react";
-import { decodePathApprovalPayload } from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
+import { decodePathApprovalPayload } from "../../../../shared/ipc-guards";
 import type { PathApprovalPayload } from "../../../../shared/ipc-types";
 import { usePendingItems } from "../../../hooks/usePendingItems";
 import { glassSx } from "../../../styles/glass";

@@ -66,11 +66,7 @@ const BlockedCommandPayloadSchema = z.object({
   timestamp: z.string(),
 });
 
-function tryDecode<T>(
-  schema: z.ZodType<T>,
-  data: unknown,
-  label: string,
-): T | null {
+function tryDecode<T>(schema: z.ZodType<T>, data: unknown, label: string): T | null {
   const result = schema.safeParse(data);
   if (result.success) return result.data;
   console.warn(`[ipc-guard] Invalid ${label} payload:`, result.error.flatten());

@@ -12,7 +12,9 @@ export interface ProviderSettings {
   modelsError: string | null;
   setActiveProvider: (v: string) => void;
   setDefaultCloudProvider: (v: string) => void;
-  setCredentials: (v: ProviderCredentials | ((prev: ProviderCredentials) => ProviderCredentials)) => void;
+  setCredentials: (
+    v: ProviderCredentials | ((prev: ProviderCredentials) => ProviderCredentials),
+  ) => void;
   fetchModels: (provider: string, host?: string, apiKey?: string) => Promise<void>;
   testOllama: () => Promise<void>;
   loadFromSettings: () => Promise<void>;

@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import { decodePendingTool } from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
+import { decodePendingTool } from "../../../../shared/ipc-guards";
 import type { PendingTool } from "../../../../shared/ipc-types";
 import { usePendingItems } from "../../../hooks/usePendingItems";
 import { glassSx } from "../../../styles/glass";

@@ -10,10 +10,10 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
-import { glassSx } from "../../styles/glass";
 import { useAuditLog } from "../../hooks/useAuditLog";
 import { useProviderSettings } from "../../hooks/useProviderSettings";
 import { useSkillManager } from "../../hooks/useSkillManager";
+import { glassSx } from "../../styles/glass";
 import AuditTab from "./AuditTab";
 import GeneralTab from "./GeneralTab";
 import ModelProviderTab from "./ModelProviderTab";
@@ -133,7 +133,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                   : provider.activeProvider === "openrouter"
                     ? provider.credentials.openrouter.apiKey || undefined
                     : undefined;
-              void provider.fetchModels(provider.activeProvider, provider.credentials.ollama.host, apiKey);
+              void provider.fetchModels(
+                provider.activeProvider,
+                provider.credentials.ollama.host,
+                apiKey,
+              );
             }}
             ollamaTestStatus={provider.ollamaTestStatus}
             onTestOllama={provider.testOllama}
@@ -156,7 +160,9 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             loading={skills.loading}
             error={skills.error}
             expandedSkill={skills.expandedSkill}
-            onToggleExpand={(name) => skills.setExpandedSkill(skills.expandedSkill === name ? null : name)}
+            onToggleExpand={(name) =>
+              skills.setExpandedSkill(skills.expandedSkill === name ? null : name)
+            }
             onToggleSkill={skills.toggle}
             onDeleteRequest={setConfirmDeleteSkill}
             onRetry={skills.load}

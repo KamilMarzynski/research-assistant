@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { inject } from "tsyringe";
-import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
 import type { DrizzleDB } from "../../db/client";
+import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
 import type { MonotonicClock } from "../../utils/time";
 
 export abstract class BaseDrizzleRepository<TSelect, TInsert, TEntity> {

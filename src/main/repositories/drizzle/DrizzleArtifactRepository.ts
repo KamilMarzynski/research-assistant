@@ -4,19 +4,20 @@ import { inject, injectable } from "tsyringe";
 import type { DrizzleDB } from "../../db/client";
 import { artifacts } from "../../db/schema";
 import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
-import { MonotonicClock } from "../../utils/time";
+import type { MonotonicClock } from "../../utils/time";
 import type { IArtifactRepository } from "../IArtifactRepository";
 import { BaseDrizzleRepository } from "./BaseDrizzleRepository";
 
 @injectable()
 export class DrizzleArtifactRepository
-  extends BaseDrizzleRepository<typeof artifacts.$inferSelect, typeof artifacts.$inferInsert, Artifact>
+  extends BaseDrizzleRepository<
+    typeof artifacts.$inferSelect,
+    typeof artifacts.$inferInsert,
+    Artifact
+  >
   implements IArtifactRepository
 {
-  constructor(
-    @inject(DB_TOKEN) db: DrizzleDB,
-    @inject(CLOCK_TOKEN) clock: MonotonicClock,
-  ) {
+  constructor(@inject(DB_TOKEN) db: DrizzleDB, @inject(CLOCK_TOKEN) clock: MonotonicClock) {
     super(db, clock);
   }
 

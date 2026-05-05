@@ -18,8 +18,7 @@ export default function ModelAutocomplete({
   modelsError,
   helperText,
 }: ModelAutocompleteProps) {
-  const selected =
-    options.find((m) => m.id === value) ?? { id: value, name: value };
+  const selected = options.find((m) => m.id === value) ?? { id: value, name: value };
 
   return (
     <Autocomplete
@@ -43,9 +42,7 @@ export default function ModelAutocomplete({
               ...params.slotProps?.input,
               endAdornment: (
                 <>
-                  {modelsLoading ? (
-                    <CircularProgress color="inherit" size={20} />
-                  ) : null}
+                  {modelsLoading ? <CircularProgress color="inherit" size={20} /> : null}
                   {params.slotProps?.input?.endAdornment}
                 </>
               ),

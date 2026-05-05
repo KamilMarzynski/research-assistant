@@ -1,10 +1,10 @@
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { IPC } from "../../../../shared/ipc-channels";
 import {
   decodeResearchCompletePayload,
   decodeResearchStatusUpdatePayload,
 } from "../../../../shared/ipc-guards";
-import { IPC } from "../../../../shared/ipc-channels";
 import { glassSx } from "../../../styles/glass";
 
 interface ResearchState {

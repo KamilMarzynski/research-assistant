@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from "@mui/material";
 import { useState } from "react";
-import { decodeBlockedCommandPayload } from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
+import { decodeBlockedCommandPayload } from "../../../../shared/ipc-guards";
 import type { BlockedCommandPayload } from "../../../../shared/ipc-types";
 import { usePendingItems } from "../../../hooks/usePendingItems";
 import { glassSx } from "../../../styles/glass";

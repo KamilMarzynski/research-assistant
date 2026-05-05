@@ -97,8 +97,18 @@ describe("DrizzleArtifactRepository", () => {
 
   describe("findUnacknowledged", () => {
     it("returns only unacknowledged artifacts", async () => {
-      const ack = await repo.create({ projectId, title: "Acked", filePath: "/a.md", acknowledged: true });
-      const unack = await repo.create({ projectId, title: "Unacked", filePath: "/b.md", acknowledged: false });
+      const ack = await repo.create({
+        projectId,
+        title: "Acked",
+        filePath: "/a.md",
+        acknowledged: true,
+      });
+      const unack = await repo.create({
+        projectId,
+        title: "Unacked",
+        filePath: "/b.md",
+        acknowledged: false,
+      });
 
       const result = await repo.findUnacknowledged(projectId);
       expect(result).toHaveLength(1);

@@ -4,7 +4,7 @@ import { inject, injectable } from "tsyringe";
 import type { DrizzleDB } from "../../db/client";
 import { projects } from "../../db/schema";
 import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
-import { MonotonicClock } from "../../utils/time";
+import type { MonotonicClock } from "../../utils/time";
 import type { CreateProjectData, IProjectRepository } from "../IProjectRepository";
 import { BaseDrizzleRepository } from "./BaseDrizzleRepository";
 
@@ -13,10 +13,7 @@ export class DrizzleProjectRepository
   extends BaseDrizzleRepository<typeof projects.$inferSelect, typeof projects.$inferInsert, Project>
   implements IProjectRepository
 {
-  constructor(
-    @inject(DB_TOKEN) db: DrizzleDB,
-    @inject(CLOCK_TOKEN) clock: MonotonicClock,
-  ) {
+  constructor(@inject(DB_TOKEN) db: DrizzleDB, @inject(CLOCK_TOKEN) clock: MonotonicClock) {
     super(db, clock);
   }
 

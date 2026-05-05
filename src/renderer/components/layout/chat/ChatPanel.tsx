@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import { decodeMessageChunk } from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
+import { decodeMessageChunk } from "../../../../shared/ipc-guards";
 import type { Message } from "../../../../shared/types";
 import { useProject } from "../../../contexts/ProjectContext";
 import MessageInput from "./MessageInput";
