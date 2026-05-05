@@ -44,7 +44,9 @@ type AppEvent =
   | {
       type: "path:approval_required";
       payload: { path: string; mode: "read" | "write"; projectId: string };
-    };
+    }
+  | { type: "agent:chunk"; payload: { projectId: string; delta: string } }
+  | { type: "agent:done"; payload: { projectId: string } };
 
 @injectable()
 export class EventBus {

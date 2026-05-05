@@ -1,7 +1,5 @@
 import { join } from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
-import type { BrowserWindow } from "electron";
-import { IPC } from "../../shared/ipc-channels";
 import type { EventBus } from "../event-bus";
 import { addPendingPathApproval } from "../ipc/command-handlers";
 import type { AllowlistService } from "../services/AllowlistService";
@@ -30,12 +28,11 @@ function formatConversationHistory(
 }
 
 export interface AgentSessionOptions {
-  win: BrowserWindow;
   messageService: MessageService;
   homeService: HomeService;
   researchService: ResearchService;
   memoryManager: IMemoryManager;
-  eventBus?: EventBus;
+  eventBus: EventBus;
   initialMemoryContext: MemoryContext;
   projectId: string;
   projectName: string;
@@ -52,7 +49,7 @@ export interface AgentSessionOptions {
 
 export class AgentSession {
   private readonly agent: Agent;
-  private readonly win: BrowserWindow;
+  private readonly eventBus: EventBus;
   private readonly messageService: MessageService;
   private readonly memoryManager: IMemoryManager;
   private readonly projectId: string;
@@ -69,7 +66,6 @@ export class AgentSession {
   private skillRouterReady = false;
 
   constructor({
-    win,
     messageService,
     homeService,
     researchService,
@@ -88,7 +84,7 @@ export class AgentSession {
     memoryFileService,
     allowlistService,
   }: AgentSessionOptions) {
-    this.win = win;
+    this.eventBus = eventBus;
     this.messageService = messageService;
     this.memoryManager = memoryManager;
     this.projectId = projectId;
@@ -99,11 +95,9 @@ export class AgentSession {
       this.pendingSkillDeltas.push({ skillName, summary });
     });
 
-    if (eventBus) {
-      eventBus.on("skill:changed", (payload) => {
-        this.pendingSkillDeltas.push(payload);
-      });
-    }
+    eventBus.on("skill:changed", (payload) => {
+      this.pendingSkillDeltas.push(payload);
+    });
 
     const homePath = homeService.getHomePath();
     const historyBlock = formatConversationHistory(initialMemoryContext.recentMessages);
@@ -130,15 +124,11 @@ export class AgentSession {
       model: provider.model,
       webAccessEnabled,
       onFileWrite,
-      emitBlocked: eventBus
-        ? (payload) => eventBus.emit({ type: "bash:blocked", payload })
-        : undefined,
-      emitApprovalRequired: eventBus
-        ? (payload) => {
-            addPendingPathApproval(payload);
-            eventBus.emit({ type: "path:approval_required", payload });
-          }
-        : undefined,
+      emitBlocked: (payload) => eventBus.emit({ type: "bash:blocked", payload }),
+      emitApprovalRequired: (payload) => {
+        addPendingPathApproval(payload);
+        eventBus.emit({ type: "path:approval_required", payload });
+      },
       startResearchFn: (query, deep) =>
         deep === true
           ? researchService.startOrchestratedResearch(projectId, projectName, query, folderPath)
@@ -154,7 +144,14 @@ export class AgentSession {
       }),
       saveMemoryFn: memoryFileService
         ? (category, title, content, scope) =>
-            memoryFileService.saveMemory(projectId, category, title, content, scope, folderPath ?? undefined)
+            memoryFileService.saveMemory(
+              projectId,
+              category,
+              title,
+              content,
+              scope,
+              folderPath ?? undefined,
+            )
         : undefined,
       readMemoryFn: memoryFileService
         ? (options) =>
@@ -192,7 +189,10 @@ export class AgentSession {
           const ae = e.assistantMessageEvent;
           if (ae?.type === "text_delta") {
             this.assistantContent += ae.delta;
-            this.win.webContents.send(IPC.MESSAGE_CHUNK, ae.delta);
+            this.eventBus.emit({
+              type: "agent:chunk",
+              payload: { projectId: this.projectId, delta: ae.delta },
+            });
           }
         } else if (e.type === "agent_end") {
           const content = this.assistantContent;
@@ -215,7 +215,7 @@ export class AgentSession {
               console.error("[AgentSession] save failed:", err);
             }
           }
-          this.win.webContents.send(IPC.MESSAGE_DONE);
+          this.eventBus.emit({ type: "agent:done", payload: { projectId: this.projectId } });
         }
       } catch (err) {
         console.error("[AgentSession] subscriber error:", err);
@@ -271,11 +271,15 @@ export class AgentSession {
       // Manual crystallization trigger detection
       const lowerContent = content.toLowerCase();
       if (lowerContent.includes("/crystallize") || lowerContent.includes("always do it this way")) {
-        this.win.webContents.send(
-          IPC.MESSAGE_CHUNK,
-          "Skill crystallization happens automatically after successful research tasks when the approach is novel and reusable. No manual action needed.",
-        );
-        this.win.webContents.send(IPC.MESSAGE_DONE);
+        this.eventBus.emit({
+          type: "agent:chunk",
+          payload: {
+            projectId: this.projectId,
+            delta:
+              "Skill crystallization happens automatically after successful research tasks when the approach is novel and reusable. No manual action needed.",
+          },
+        });
+        this.eventBus.emit({ type: "agent:done", payload: { projectId: this.projectId } });
         this.lastUserContent = "";
         return;
       }

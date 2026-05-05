@@ -48,6 +48,13 @@ export function registerChatHandler(
     allowlistService,
   } = deps;
 
+  eventBus.on("agent:chunk", (payload) => {
+    win.webContents.send(IPC.MESSAGE_CHUNK, payload.delta);
+  });
+  eventBus.on("agent:done", () => {
+    win.webContents.send(IPC.MESSAGE_DONE);
+  });
+
   ipcMain.handle(IPC.GET_MESSAGES, async (_event, payload: unknown) => {
     const p = parseOrThrow(ProjectIdSchema, payload, "GET_MESSAGES");
     return messageService.getHistory(p.projectId);
@@ -101,7 +108,6 @@ export function registerChatHandler(
         );
         const initialMemoryContext = await memoryManager.buildContext(projectId, 20);
         const session = new AgentSession({
-          win,
           messageService,
           eventBus,
           homeService,

@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { IPC } from "../../shared/ipc-channels";
+import { EventBus } from "../event-bus";
 import { AllowlistService } from "../services/AllowlistService";
 
 // Capture the subscriber so tests can trigger Pi events manually
@@ -68,8 +68,10 @@ function makeMessageService() {
   };
 }
 
-function makeWin() {
-  return { webContents: { send: vi.fn() } } as unknown as Electron.BrowserWindow;
+function makeEventBus() {
+  const bus = new EventBus();
+  vi.spyOn(bus, "emit");
+  return bus;
 }
 
 function makeHomeService() {
@@ -95,16 +97,16 @@ function makeMemoryManager() {
 
 describe("AgentSession", () => {
   let messageService: ReturnType<typeof makeMessageService>;
-  let win: Electron.BrowserWindow;
+  let eventBus: EventBus;
   let session: InstanceType<typeof AgentSession>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     capturedSubscriber = null;
     messageService = makeMessageService();
-    win = makeWin();
+    eventBus = makeEventBus();
     session = new AgentSession({
-      win,
+      eventBus,
       messageService: messageService as never,
       homeService: makeHomeService() as never,
       researchService: makeResearchService() as never,
@@ -160,21 +162,35 @@ describe("AgentSession", () => {
     it("sends info message and skips agent.prompt for /crystallize", async () => {
       await session.send("/crystallize");
       expect(mockAgent.prompt).not.toHaveBeenCalled();
-      expect(win.webContents.send).toHaveBeenCalledWith(
-        IPC.MESSAGE_CHUNK,
-        expect.stringContaining("automatic"),
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "agent:chunk",
+          payload: expect.objectContaining({
+            projectId: "p-1",
+            delta: expect.stringContaining("automatic"),
+          }),
+        }),
       );
-      expect(win.webContents.send).toHaveBeenCalledWith(IPC.MESSAGE_DONE);
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
+      );
     });
 
     it("sends info message and skips agent.prompt for 'always do it this way'", async () => {
       await session.send("Please always do it this way");
       expect(mockAgent.prompt).not.toHaveBeenCalled();
-      expect(win.webContents.send).toHaveBeenCalledWith(
-        IPC.MESSAGE_CHUNK,
-        expect.stringContaining("automatic"),
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "agent:chunk",
+          payload: expect.objectContaining({
+            projectId: "p-1",
+            delta: expect.stringContaining("automatic"),
+          }),
+        }),
       );
-      expect(win.webContents.send).toHaveBeenCalledWith(IPC.MESSAGE_DONE);
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
+      );
     });
   });
 
@@ -184,7 +200,12 @@ describe("AgentSession", () => {
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "Hello" },
       });
-      expect(win.webContents.send).toHaveBeenCalledWith(IPC.MESSAGE_CHUNK, "Hello");
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "agent:chunk",
+          payload: { projectId: "p-1", delta: "Hello" },
+        }),
+      );
     });
 
     it("accumulates deltas and persists full content on agent_end", async () => {
@@ -208,7 +229,9 @@ describe("AgentSession", () => {
 
     it("sends MESSAGE_DONE on agent_end", async () => {
       await triggerEvent({ type: "agent_end", messages: [] });
-      expect(win.webContents.send).toHaveBeenCalledWith(IPC.MESSAGE_DONE);
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
+      );
     });
 
     it("does not persist empty assistant content on agent_end", async () => {
@@ -248,12 +271,12 @@ describe("AgentSession", () => {
         type: "message_update",
         assistantMessageEvent: { type: "thinking_delta", delta: "hmm" },
       });
-      expect(win.webContents.send).not.toHaveBeenCalled();
+      expect(eventBus.emit).not.toHaveBeenCalled();
     });
 
-    it("logs subscriber error when webContents.send throws", async () => {
+    it("logs subscriber error when eventBus.emit throws", async () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      (win.webContents.send as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      (eventBus.emit as ReturnType<typeof vi.fn>).mockImplementation(() => {
         throw new Error("IPC broken");
       });
       await session.send("hello");
@@ -290,7 +313,7 @@ describe("AgentSession", () => {
     it("works without eventBus (emitBlocked undefined)", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
       new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
@@ -342,7 +365,7 @@ describe("AgentSession", () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
       const { createAgentTools } = await import("./tools");
       new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
@@ -368,7 +391,7 @@ describe("AgentSession", () => {
       const researchService = makeResearchService();
       const { createAgentTools } = await import("./tools");
       new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: researchService as never,
@@ -404,7 +427,7 @@ describe("AgentSession", () => {
     it("includes first-run interview instructions when isFirstRun=true", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
       new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
@@ -432,7 +455,7 @@ describe("AgentSession", () => {
     it("does not include first-run instructions when isFirstRun=false", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
       new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
@@ -519,7 +542,7 @@ describe("AgentSession", () => {
     it("calls memoryManager.save() with user + assistant content on agent_end", async () => {
       const memoryManager = makeMemoryManager();
       const localSession = new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
@@ -555,7 +578,7 @@ describe("AgentSession", () => {
     it("does not call memoryManager.save() when assistant content is empty", async () => {
       const memoryManager = makeMemoryManager();
       const localSession = new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
@@ -583,7 +606,7 @@ describe("AgentSession", () => {
     it("injects memory summary into system prompt when non-empty", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
       new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
@@ -614,7 +637,7 @@ describe("AgentSession", () => {
     it("does not call memoryManager.save() when lastUserContent is empty (follow-up turn)", async () => {
       const memoryManager = makeMemoryManager();
       const localSession = new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
@@ -649,7 +672,7 @@ describe("AgentSession", () => {
     it("injects recent messages as conversation history block when non-empty", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
       new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
@@ -738,7 +761,7 @@ describe("AgentSession", () => {
       });
 
       const localSession = new AgentSession({
-        win: makeWin() as never,
+        eventBus: makeEventBus(),
         messageService: makeMessageService() as never,
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
