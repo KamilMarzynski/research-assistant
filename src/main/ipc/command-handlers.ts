@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { PathApprovalPayload } from "../../shared/ipc-types";
+import { resolveBlockedCommand } from "../agent/extensions/safe-bash";
 import { ResolveBlockedCommandSchema, ResolvePathApprovalSchema } from "../ipc-validation";
 import type { AllowlistService } from "../services/AllowlistService";
 import { parseOrThrow } from "./parse-util";
@@ -17,7 +18,6 @@ export function registerCommandHandlers(
       payload,
       "RESOLVE_BLOCKED_COMMAND",
     );
-    const { resolveBlockedCommand } = await import("../agent/extensions/safe-bash");
     resolveBlockedCommand(commandId, action, projectId);
   });
 

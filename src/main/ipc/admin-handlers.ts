@@ -1,3 +1,5 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import { ApproveRejectToolSchema, DeleteSkillSchema, ToggleSkillSchema } from "../ipc-validation";
@@ -39,8 +41,6 @@ export function registerAdminHandlers(
   });
 
   ipcMain.handle(IPC.GET_AUDIT_LOG, async () => {
-    const { readFile } = await import("node:fs/promises");
-    const { join } = await import("node:path");
     const path = join(homeService.getHomePath(), "audit.log");
     try {
       const raw = await readFile(path, "utf-8");
@@ -55,8 +55,6 @@ export function registerAdminHandlers(
   });
 
   ipcMain.handle(IPC.CLEAR_AUDIT_LOG, async () => {
-    const { writeFile } = await import("node:fs/promises");
-    const { join } = await import("node:path");
     const path = join(homeService.getHomePath(), "audit.log");
     await writeFile(path, "", "utf-8");
   });

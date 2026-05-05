@@ -1,8 +1,12 @@
+import { readdir, readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { ipcMain, shell } from "electron";
 import { z } from "zod/v4";
 import { IPC } from "../../shared/ipc-channels";
 import type { FileNode } from "../../shared/ipc-types";
+import { PathJail } from "../agent/path-jail";
 import { ProjectIdSchema, ReadArtifactFileSchema } from "../ipc-validation";
+import { getResearchAssistantHome } from "../paths";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { ArtifactService } from "../services/ArtifactService";
 import type { ProjectService } from "../services/ProjectService";
@@ -57,11 +61,6 @@ export function registerArtifactHandlers(
     } catch {
       throw new Error("Project not found");
     }
-
-    const { stat, readdir } = await import("node:fs/promises");
-    const { join } = await import("node:path");
-    const { getResearchAssistantHome } = await import("../paths");
-    const { PathJail } = await import("../agent/path-jail");
 
     const jail = new PathJail(project.id, project.folderPath, project.name, allowlistService);
     let count = 0;
@@ -160,8 +159,6 @@ export function registerArtifactHandlers(
       "READ_ARTIFACT_FILE",
     );
 
-    const { stat, readFile } = await import("node:fs/promises");
-
     // Resolve project to get folder path for PathJail
     let project: Awaited<ReturnType<typeof projectService.getProject>>;
     try {
@@ -170,7 +167,6 @@ export function registerArtifactHandlers(
       throw new Error("Project not found");
     }
 
-    const { PathJail } = await import("../agent/path-jail");
     const jail = new PathJail(projectId, project.folderPath, project.name, allowlistService);
 
     // PathJail validates the path is within allowed zones
@@ -230,7 +226,6 @@ export function registerArtifactHandlers(
       throw new Error("Project not found");
     }
 
-    const { PathJail } = await import("../agent/path-jail");
     const jail = new PathJail(projectId, project.folderPath, project.name, allowlistService);
     const resolvedPath = jail.validate(filePath, "read");
 

@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import { getOllamaModels, getOpenAiModels, getOpenRouterModels } from "../agent/model-discovery";
+import { checkOllamaAvailable } from "../agent/model-provider";
 import { CheckOllamaSchema, GetProviderModelsSchema, SaveSettingsSchema } from "../ipc-validation";
 import type { SettingsService } from "../services/SettingsService";
 import { parseOrThrow } from "./parse-util";
@@ -43,7 +44,6 @@ export function registerSettingsHandlers(
 
   ipcMain.handle(IPC.CHECK_OLLAMA, async (_event, payload: unknown) => {
     const host = parseOrThrow(CheckOllamaSchema, payload, "CHECK_OLLAMA");
-    const { checkOllamaAvailable } = await import("../agent/model-provider");
     const available = await checkOllamaAvailable(host);
     return { available, host };
   });
