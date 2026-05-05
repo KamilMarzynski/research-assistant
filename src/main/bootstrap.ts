@@ -28,6 +28,7 @@ import { ProjectService } from "./services/ProjectService";
 import { ResearchService } from "./services/ResearchService";
 import { SettingsService } from "./services/SettingsService";
 import { SkillWatcherService } from "./services/SkillWatcherService";
+import { TaskPersistenceService } from "./services/TaskPersistenceService";
 
 export async function bootstrap(): Promise<DependencyContainer> {
   const userDataPath = app.getPath("userData");
@@ -51,6 +52,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);
   appContainer.registerSingleton(MemoryManager);
+  appContainer.registerSingleton(TaskPersistenceService);
   appContainer.registerSingleton(HomeService);
   appContainer.registerSingleton(OutputNotificationService);
   appContainer.registerSingleton(AllowlistService);

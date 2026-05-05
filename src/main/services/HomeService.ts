@@ -1,37 +1,21 @@
-import { access, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
-import { z } from "zod/v4";
 import type { SkillInfo } from "../../shared/ipc-channels";
 import { EVALUATE_RESEARCH_SKILL } from "../agent/builtin-skills";
-import type { DrizzleDB } from "../db/client";
-import { tasks } from "../db/schema";
-import { DB_TOKEN } from "../di/tokens";
 import { getAgentsPath, getHomePath } from "../paths";
 import { parseFrontmatter } from "../utils/frontmatter";
+import { type ResearchTask, TaskPersistenceService } from "./TaskPersistenceService";
 
-export interface ResearchTask {
-  taskId: string;
-  projectId: string;
-  projectName: string;
-  query: string;
-  folderPath: string | null;
-  startedAt: string;
-}
-
-const ResearchTaskSchema = z.object({
-  taskId: z.string(),
-  projectId: z.string(),
-  projectName: z.string(),
-  query: z.string(),
-  folderPath: z.string().nullable(),
-  startedAt: z.string(),
-});
+export type { ResearchTask };
 
 @injectable()
 export class HomeService {
-  constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
+  constructor(
+    @inject(TaskPersistenceService)
+    private readonly taskPersistence: TaskPersistenceService,
+  ) {}
+
   getHomePath(): string {
     return getHomePath();
   }
@@ -76,36 +60,18 @@ export class HomeService {
     return dir;
   }
 
+  // --- Task persistence delegation ---
+
   async saveTask(task: ResearchTask): Promise<void> {
-    await this.db
-      .insert(tasks)
-      .values({
-        id: task.taskId,
-        projectId: task.projectId,
-        projectName: task.projectName,
-        query: task.query,
-        folderPath: task.folderPath,
-        status: "in_progress",
-        createdAt: new Date(task.startedAt),
-        updatedAt: new Date(task.startedAt),
-      })
-      .onConflictDoNothing();
+    return this.taskPersistence.saveTask(task);
   }
 
   async deleteTask(taskId: string): Promise<void> {
-    await this.db.delete(tasks).where(eq(tasks.id, taskId));
+    return this.taskPersistence.deleteTask(taskId);
   }
 
   async getInProgressTasks(): Promise<ResearchTask[]> {
-    const rows = await this.db.select().from(tasks).where(eq(tasks.status, "in_progress"));
-    return rows.map((r) => ({
-      taskId: r.id,
-      projectId: r.projectId,
-      projectName: r.projectName,
-      query: r.query,
-      folderPath: r.folderPath,
-      startedAt: new Date(r.createdAt).toISOString(),
-    }));
+    return this.taskPersistence.getInProgressTasks();
   }
 
   async updateTaskStatus(
@@ -113,32 +79,14 @@ export class HomeService {
     status: "pending" | "in_progress" | "complete" | "failed",
     error?: string,
   ): Promise<void> {
-    await this.db
-      .update(tasks)
-      .set({ status, error: error ?? null, updatedAt: new Date() })
-      .where(eq(tasks.id, taskId));
+    return this.taskPersistence.updateTaskStatus(taskId, status, error);
   }
 
   async migrateTasksFromJson(): Promise<void> {
-    const dir = join(this.getHomePath(), "tasks");
-    let entries: string[] = [];
-    try {
-      entries = (await readdir(dir)).filter((e) => e.endsWith(".json"));
-    } catch {
-      return; // no JSON tasks directory — nothing to migrate
-    }
-    for (const entry of entries) {
-      try {
-        const raw = await readFile(join(dir, entry), "utf-8");
-        const parsed = JSON.parse(raw);
-        const task = ResearchTaskSchema.parse(parsed);
-        await this.saveTask(task);
-        await unlink(join(dir, entry));
-      } catch (err) {
-        console.error(`[HomeService] migrateTasksFromJson: skipping malformed file ${entry}:`, err);
-      }
-    }
+    return this.taskPersistence.migrateTasksFromJson();
   }
+
+  // --- Pending tool management ---
 
   async savePendingTool(name: string, skillContent: string, script?: string): Promise<void> {
     const dir = join(this.getHomePath(), "pending-tools", name);
