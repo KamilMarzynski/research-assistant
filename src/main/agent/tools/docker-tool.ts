@@ -3,12 +3,11 @@ import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { runInDocker } from "../extensions/docker-sandbox";
 import type { PathJail } from "../path-jail";
-import { makeTool } from "./make-tool";
 
 export function createDockerTool(
   jail: PathJail,
 ): AgentTool<typeof dockerParameters, Awaited<ReturnType<typeof runInDocker>>> {
-  return makeTool({
+  return {
     name: "run_in_docker",
     label: "Run code in Docker",
     description:
@@ -41,7 +40,7 @@ export function createDockerTool(
         details: result,
       };
     },
-  });
+  };
 }
 
 const dockerParameters = Type.Object({

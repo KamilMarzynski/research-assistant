@@ -1,11 +1,10 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { makeTool } from "./make-tool";
 
 export function createCompressTool(
   compressFn: (path: string, maxWords: number) => Promise<string>,
 ): AgentTool<typeof compressParameters, { summary: string }> {
-  return makeTool({
+  return {
     name: "compress",
     label: "Compress file content",
     description:
@@ -18,7 +17,7 @@ export function createCompressTool(
         details: { summary },
       };
     },
-  });
+  };
 }
 
 const compressParameters = Type.Object({

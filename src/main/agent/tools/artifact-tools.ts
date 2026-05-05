@@ -1,13 +1,12 @@
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import type { PathJail } from "../path-jail";
-import { makeTool } from "./make-tool";
 
 export function createSaveArtifactTool(
   jail: PathJail,
   saveFn: (path: string, title: string) => Promise<{ artifactId: string }>,
 ): AgentTool<typeof saveArtifactParameters, { artifactId: string }> {
-  return makeTool({
+  return {
     name: "save_artifact",
     label: "Save artifact",
     description: "Register a file as a named research artifact so it appears in the UI.",
@@ -20,7 +19,7 @@ export function createSaveArtifactTool(
         details: result,
       };
     },
-  });
+  };
 }
 
 const saveArtifactParameters = Type.Object({

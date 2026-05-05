@@ -1,11 +1,10 @@
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { makeTool } from "./make-tool";
 
 export function createProposeToolTool(
   proposeFn: (name: string, skillContent: string, script?: string) => Promise<void>,
 ): AgentTool<typeof proposeToolParameters, null> {
-  return makeTool({
+  return {
     name: "propose_tool",
     label: "Propose new tool",
     description:
@@ -28,7 +27,7 @@ export function createProposeToolTool(
         details: null,
       };
     },
-  });
+  };
 }
 
 const proposeToolParameters = Type.Object({

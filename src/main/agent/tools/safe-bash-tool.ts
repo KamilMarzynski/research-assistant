@@ -3,7 +3,6 @@ import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import { runSafeBash } from "../extensions/safe-bash";
 import type { AgentToolsOptions } from "../tools";
-import { makeTool } from "./make-tool";
 
 export function createSafeBashTool(
   projectId: string,
@@ -11,7 +10,7 @@ export function createSafeBashTool(
   auditLogPath: string,
   emitBlocked: AgentToolsOptions["emitBlocked"],
 ): AgentTool<typeof safeBashParameters, Awaited<ReturnType<typeof runSafeBash>>> {
-  return makeTool({
+  return {
     name: "safe_bash",
     label: "Run safe bash command",
     description:
@@ -40,7 +39,7 @@ export function createSafeBashTool(
         details: result,
       };
     },
-  });
+  };
 }
 
 const safeBashParameters = Type.Object({

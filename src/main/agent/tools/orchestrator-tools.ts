@@ -2,13 +2,12 @@ import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import type { PathJail } from "../path-jail";
 import type { AgentType, SpawnResult } from "../tools";
-import { makeTool } from "./make-tool";
 
 export function createSpawnAgentTool(
   jail: PathJail,
   spawnFn: (type: AgentType, query: string, outputPath: string) => Promise<SpawnResult>,
 ): AgentTool<typeof spawnAgentParameters, SpawnResult> {
-  return makeTool({
+  return {
     name: "spawn_agent",
     label: "Spawn agent",
     description:
@@ -22,7 +21,7 @@ export function createSpawnAgentTool(
         details: result,
       };
     },
-  });
+  };
 }
 
 const spawnAgentParameters = Type.Object({
@@ -42,7 +41,7 @@ export function createSpawnAgentsParallelTool(
     agents: Array<{ type: AgentType; query: string; outputPath: string }>,
   ) => Promise<SpawnResult[]>,
 ): AgentTool<typeof spawnAgentsParallelParameters, SpawnResult[]> {
-  return makeTool({
+  return {
     name: "spawn_agents_parallel",
     label: "Spawn agents in parallel",
     description:
@@ -61,7 +60,7 @@ export function createSpawnAgentsParallelTool(
         details: results,
       };
     },
-  });
+  };
 }
 
 const spawnAgentsParallelParameters = Type.Object({

@@ -2,13 +2,12 @@ import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import type { PathJail } from "../path-jail";
 import type { EvaluationVerdict } from "../tools";
-import { makeTool } from "./make-tool";
 
 export function createRequestEvaluationTool(
   jail: PathJail,
   evaluateFn: (filePath: string, criteria: string[]) => Promise<EvaluationVerdict>,
 ): AgentTool<typeof requestEvaluationParameters, EvaluationVerdict> {
-  return makeTool({
+  return {
     name: "request_evaluation",
     label: "Request evaluation",
     description:
@@ -22,7 +21,7 @@ export function createRequestEvaluationTool(
         details: verdict,
       };
     },
-  });
+  };
 }
 
 const requestEvaluationParameters = Type.Object({

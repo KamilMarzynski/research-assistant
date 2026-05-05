@@ -6,7 +6,6 @@ import { Type } from "@sinclair/typebox";
 import { ApprovalRequiredError } from "../../services/AllowlistService";
 import type { CompressionService } from "../CompressionService";
 import type { PathJail } from "../path-jail";
-import { makeTool } from "./make-tool";
 
 export type SmartReadResult = {
   content: string;
@@ -101,7 +100,7 @@ export function createReadFileTool(
     projectId: string;
   }) => void,
 ): AgentTool<typeof readFileParameters, SmartReadResult> {
-  return makeTool({
+  return {
     name: "read_file",
     label: "Read file",
     description:
@@ -219,7 +218,7 @@ export function createReadFileTool(
         },
       };
     },
-  });
+  };
 }
 
 const readFileParameters = Type.Object({
@@ -238,7 +237,7 @@ export function createWriteFileTool(
     projectId: string;
   }) => void,
 ): AgentTool<typeof writeFileParameters, null> {
-  return makeTool({
+  return {
     name: "write_file",
     label: "Write file",
     description:
@@ -364,7 +363,7 @@ export function createWriteFileTool(
         details: null,
       };
     },
-  });
+  };
 }
 
 const writeFileParameters = Type.Object({
@@ -398,7 +397,7 @@ export function createListDirTool(
     projectId: string;
   }) => void,
 ): AgentTool<typeof listDirParameters, string[]> {
-  return makeTool({
+  return {
     name: "list_dir",
     label: "List directory",
     description:
@@ -432,7 +431,7 @@ export function createListDirTool(
         details: entries.map((e) => e.name),
       };
     },
-  });
+  };
 }
 
 const listDirParameters = Type.Object({

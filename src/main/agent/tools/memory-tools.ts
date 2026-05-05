@@ -1,6 +1,5 @@
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { makeTool } from "./make-tool";
 
 export function createSaveMemoryTool(
   saveMemoryFn: (
@@ -10,7 +9,7 @@ export function createSaveMemoryTool(
     scope: "app" | "project",
   ) => Promise<{ path: string }>,
 ): AgentTool<typeof saveMemoryParameters, { path: string }> {
-  return makeTool({
+  return {
     name: "save_memory",
     label: "Save memory",
     description:
@@ -26,7 +25,7 @@ export function createSaveMemoryTool(
         details: result,
       };
     },
-  });
+  };
 }
 
 const saveMemoryParameters = Type.Object({
@@ -47,7 +46,7 @@ export function createReadMemoryTool(
     scope: "app" | "project" | "both";
   }) => Promise<string>,
 ): AgentTool<typeof readMemoryParameters, string> {
-  return makeTool({
+  return {
     name: "read_memory",
     label: "Read memory",
     description:
@@ -60,7 +59,7 @@ export function createReadMemoryTool(
         details: text,
       };
     },
-  });
+  };
 }
 
 const readMemoryParameters = Type.Object({

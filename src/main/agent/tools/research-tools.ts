@@ -1,11 +1,10 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { makeTool } from "./make-tool";
 
 export function createStartResearchTool(
   startResearchFn: (query: string, deep?: boolean) => Promise<{ taskId: string }>,
 ): AgentTool<typeof startResearchParameters, { taskId: string }> {
-  return makeTool({
+  return {
     name: "start_research",
     label: "Start background research",
     description:
@@ -23,7 +22,7 @@ export function createStartResearchTool(
         details: { taskId },
       };
     },
-  });
+  };
 }
 
 const startResearchParameters = Type.Object({
