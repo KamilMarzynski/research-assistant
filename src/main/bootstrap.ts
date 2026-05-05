@@ -7,6 +7,8 @@ import {
   AGENT_HOME_PATH_TOKEN,
   ARTIFACT_REPO_TOKEN,
   DB_TOKEN,
+  FALLBACK_MEMORY_PATH_TOKEN,
+  MEMORY_FILE_PATH_TOKEN,
   MESSAGE_REPO_TOKEN,
   PROJECT_REPO_TOKEN,
   USER_DATA_PATH_TOKEN,
@@ -69,15 +71,12 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(OutputNotificationService);
   appContainer.registerSingleton(AllowlistService);
 
+  appContainer.registerInstance(MEMORY_FILE_PATH_TOKEN, join(homePath, "app-memory"));
+  appContainer.registerInstance(FALLBACK_MEMORY_PATH_TOKEN, homePath);
+  appContainer.registerSingleton(MemoryFileService);
+
   const homeService = appContainer.resolve(HomeService);
   await homeService.ensureDirectories();
-
-  appContainer.register(MemoryFileService, {
-    useValue: new MemoryFileService(
-      join(homePath, "app-memory"),
-      homePath, // fallback project memory path
-    ),
-  });
 
   const skillDirs = [join(homePath, "skills"), join(getAgentsHome(), "skills")];
   const eventBus = appContainer.resolve(EventBus);

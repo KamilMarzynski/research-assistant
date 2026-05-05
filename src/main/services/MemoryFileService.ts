@@ -1,5 +1,7 @@
 import { access, mkdir, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { inject, injectable } from "tsyringe";
+import { FALLBACK_MEMORY_PATH_TOKEN, MEMORY_FILE_PATH_TOKEN } from "../di/tokens";
 import { parseFrontmatter } from "../utils/frontmatter";
 
 const VALID_CATEGORIES = [
@@ -23,10 +25,11 @@ export interface ReadMemoryOptions {
   projectFolderPath?: string;
 }
 
+@injectable()
 export class MemoryFileService {
   constructor(
-    private readonly appMemoryPath: string,
-    private readonly projectMemoryPath: string,
+    @inject(MEMORY_FILE_PATH_TOKEN) private readonly appMemoryPath: string,
+    @inject(FALLBACK_MEMORY_PATH_TOKEN) private readonly projectMemoryPath: string,
   ) {}
 
   async saveMemory(

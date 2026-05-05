@@ -12,4 +12,6 @@ export const ARTIFACT_REPO_TOKEN: InjectionToken<IArtifactRepository> =
   Symbol("IArtifactRepository");
 export const USER_DATA_PATH_TOKEN: InjectionToken<string> = Symbol("userDataPath");
 export const AGENT_HOME_PATH_TOKEN: InjectionToken<string> = Symbol("agentHomePath");
+export const MEMORY_FILE_PATH_TOKEN: InjectionToken<string> = Symbol("memoryFilePath");
+export const FALLBACK_MEMORY_PATH_TOKEN: InjectionToken<string> = Symbol("fallbackMemoryPath");
 export const MEMORY_MANAGER_TOKEN: InjectionToken<IMemoryManager> = Symbol("IMemoryManager");
