@@ -1,26 +1,19 @@
 import { Box, Button, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { decodeBlockedCommandPayload } from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
 import type { BlockedCommandPayload } from "../../../../shared/ipc-types";
+import { usePendingItems } from "../../../hooks/usePendingItems";
 import { glassSx } from "../../../styles/glass";
 import PendingCommandModal from "./PendingCommandModal";
 
 export default function PendingCommandBanner() {
-  const [blocked, setBlocked] = useState<BlockedCommandPayload[]>([]);
+  const { items, remove } = usePendingItems<BlockedCommandPayload>({
+    channel: IPC.BASH_BLOCKED,
+    decode: decodeBlockedCommandPayload,
+    getKey: (c) => c.commandId,
+  });
   const [selected, setSelected] = useState<BlockedCommandPayload | null>(null);
-
-  useEffect(() => {
-    const unsub = window.electronAPI.on(IPC.BASH_BLOCKED, (data) => {
-      const cmd = decodeBlockedCommandPayload(data);
-      if (!cmd) return;
-      setBlocked((prev) => {
-        if (prev.some((c) => c.commandId === cmd.commandId)) return prev;
-        return [...prev, cmd];
-      });
-    });
-    return unsub;
-  }, []);
 
   const handleResolve = async (
     cmd: BlockedCommandPayload,
@@ -35,15 +28,15 @@ export default function PendingCommandBanner() {
     } catch {
       // Handler may throw if commandId already resolved
     }
-    setBlocked((prev) => prev.filter((c) => c.commandId !== cmd.commandId));
+    remove(cmd);
     setSelected(null);
   };
 
-  if (blocked.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <>
-      {blocked.map((cmd) => (
+      {items.map((cmd) => (
         <Box
           key={cmd.commandId}
           data-testid={`pending-command-banner-${cmd.key}`}

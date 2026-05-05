@@ -1,15 +1,6 @@
-import {
-  Box,
-  Button,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Typography,
-} from "@mui/material";
+import { Box, Chip, Typography } from "@mui/material";
 import type { PathApprovalPayload } from "../../../../shared/ipc-types";
-import { glassSx } from "../../../styles/glass";
+import ReviewDialog from "./ReviewDialog";
 
 interface PendingPathModalProps {
   request: PathApprovalPayload;
@@ -32,67 +23,48 @@ export default function PendingPathModal({
   onClose,
 }: PendingPathModalProps) {
   return (
-    <Dialog
-      open
+    <ReviewDialog
+      title="Review Path Access Request"
+      onApproveOnce={onApproveOnce}
+      onApproveSession={onApproveSession}
+      onDeny={onDeny}
       onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      slotProps={{ paper: { sx: glassSx } }}
-      data-testid="pending-path-modal"
+      dataTestid="pending-path-modal"
     >
-      <DialogTitle>Review Path Access Request</DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-          <Chip
-            label={request.mode}
-            sx={{
-              bgcolor: modeColors[request.mode] ?? "grey.500",
-              color: "#fff",
-              textTransform: "capitalize",
-            }}
-            size="small"
-          />
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          The agent tried to access a path outside the allowed zones. Review before approving.
-        </Typography>
-        <Box
-          component="pre"
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+        <Chip
+          label={request.mode}
           sx={{
-            p: 2,
-            bgcolor: "grey.900",
-            color: "grey.100",
-            borderRadius: 1,
-            overflow: "auto",
-            fontSize: 12,
-            maxHeight: 200,
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            mb: 2,
+            bgcolor: modeColors[request.mode] ?? "grey.500",
+            color: "#fff",
+            textTransform: "capitalize",
           }}
-        >
-          {request.path}
-        </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-          <strong>Project:</strong> {request.projectId}
-        </Typography>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={onDeny} color="error" data-testid="deny-path-btn">
-          Deny
-        </Button>
-        <Button
-          onClick={onApproveSession}
-          variant="outlined"
-          data-testid="approve-session-path-btn"
-        >
-          Approve Session
-        </Button>
-        <Button onClick={onApproveOnce} variant="contained" data-testid="approve-once-path-btn">
-          Approve Once
-        </Button>
-      </DialogActions>
-    </Dialog>
+          size="small"
+        />
+      </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        The agent tried to access a path outside the allowed zones. Review before approving.
+      </Typography>
+      <Box
+        component="pre"
+        sx={{
+          p: 2,
+          bgcolor: "grey.900",
+          color: "grey.100",
+          borderRadius: 1,
+          overflow: "auto",
+          fontSize: 12,
+          maxHeight: 200,
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+          mb: 2,
+        }}
+      >
+        {request.path}
+      </Box>
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+        <strong>Project:</strong> {request.projectId}
+      </Typography>
+    </ReviewDialog>
   );
 }

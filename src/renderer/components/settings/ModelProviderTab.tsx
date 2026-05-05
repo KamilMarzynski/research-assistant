@@ -1,9 +1,7 @@
 import {
-  Autocomplete,
   Box,
   Button,
   Chip,
-  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
@@ -11,6 +9,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import ModelAutocomplete from "./ModelAutocomplete";
 
 export interface ProviderCredentials {
   openrouter: { apiKey: string; defaultModel: string };
@@ -96,49 +95,18 @@ export default function ModelProviderTab({
             placeholder="sk-or-..."
             helperText="Get your key at openrouter.ai/keys"
           />
-          <Autocomplete
+          <ModelAutocomplete
+            value={credentials.openrouter.defaultModel}
             options={availableModels}
-            getOptionLabel={(o) => (typeof o === "string" ? o : o.name)}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
-            value={
-              availableModels.find((m) => m.id === credentials.openrouter.defaultModel) ?? {
-                id: credentials.openrouter.defaultModel,
-                name: credentials.openrouter.defaultModel,
-              }
-            }
-            onChange={(_, v) =>
+            onChange={(id) =>
               onCredentialsChange({
                 ...credentials,
-                openrouter: {
-                  ...credentials.openrouter,
-                  defaultModel:
-                    v && typeof v !== "string" ? v.id : credentials.openrouter.defaultModel,
-                },
+                openrouter: { ...credentials.openrouter, defaultModel: id },
               })
             }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Model"
-                margin="normal"
-                helperText={modelsError ?? "Select a model from the list"}
-                error={!!modelsError}
-                slotProps={{
-                  ...params.slotProps,
-                  input: {
-                    ...params.slotProps?.input,
-                    endAdornment: (
-                      <>
-                        {modelsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                        {params.slotProps?.input?.endAdornment}
-                      </>
-                    ),
-                  },
-                }}
-              />
-            )}
-            fullWidth
-            disableClearable
+            modelsLoading={modelsLoading}
+            modelsError={modelsError}
+            helperText="Select a model from the list"
           />
         </>
       )}
@@ -158,53 +126,22 @@ export default function ModelProviderTab({
               })
             }
           />
-          <Autocomplete
+          <ModelAutocomplete
+            value={credentials.openai.defaultModel}
             options={availableModels}
-            getOptionLabel={(o) => (typeof o === "string" ? o : o.name)}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
-            value={
-              availableModels.find((m) => m.id === credentials.openai.defaultModel) ?? {
-                id: credentials.openai.defaultModel,
-                name: credentials.openai.defaultModel,
-              }
-            }
-            onChange={(_, v) =>
+            onChange={(id) =>
               onCredentialsChange({
                 ...credentials,
-                openai: {
-                  ...credentials.openai,
-                  defaultModel: v && typeof v !== "string" ? v.id : credentials.openai.defaultModel,
-                },
+                openai: { ...credentials.openai, defaultModel: id },
               })
             }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Model"
-                margin="normal"
-                helperText={
-                  modelsError ??
-                  (credentials.openai.apiKey
-                    ? "Select a model from the list"
-                    : "Enter API key to list models")
-                }
-                error={!!modelsError}
-                slotProps={{
-                  ...params.slotProps,
-                  input: {
-                    ...params.slotProps?.input,
-                    endAdornment: (
-                      <>
-                        {modelsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                        {params.slotProps?.input?.endAdornment}
-                      </>
-                    ),
-                  },
-                }}
-              />
-            )}
-            fullWidth
-            disableClearable
+            modelsLoading={modelsLoading}
+            modelsError={modelsError}
+            helperText={
+              credentials.openai.apiKey
+                ? "Select a model from the list"
+                : "Enter API key to list models"
+            }
           />
         </>
       )}
@@ -224,53 +161,22 @@ export default function ModelProviderTab({
             }
             helperText="e.g. http://localhost:11434"
           />
-          <Autocomplete
+          <ModelAutocomplete
+            value={credentials.ollama.defaultModel}
             options={availableModels}
-            getOptionLabel={(o) => (typeof o === "string" ? o : o.name)}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
-            value={
-              availableModels.find((m) => m.id === credentials.ollama.defaultModel) ?? {
-                id: credentials.ollama.defaultModel,
-                name: credentials.ollama.defaultModel,
-              }
-            }
-            onChange={(_, v) =>
+            onChange={(id) =>
               onCredentialsChange({
                 ...credentials,
-                ollama: {
-                  ...credentials.ollama,
-                  defaultModel: v && typeof v !== "string" ? v.id : credentials.ollama.defaultModel,
-                },
+                ollama: { ...credentials.ollama, defaultModel: id },
               })
             }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Model"
-                margin="normal"
-                helperText={
-                  modelsError ??
-                  (availableModels.length === 0 && !modelsLoading
-                    ? "No models found. Run `ollama pull <model>` in terminal."
-                    : "Select a model from the list")
-                }
-                error={!!modelsError}
-                slotProps={{
-                  ...params.slotProps,
-                  input: {
-                    ...params.slotProps?.input,
-                    endAdornment: (
-                      <>
-                        {modelsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                        {params.slotProps?.input?.endAdornment}
-                      </>
-                    ),
-                  },
-                }}
-              />
-            )}
-            fullWidth
-            disableClearable
+            modelsLoading={modelsLoading}
+            modelsError={modelsError}
+            helperText={
+              availableModels.length === 0 && !modelsLoading
+                ? "No models found. Run `ollama pull <model>` in terminal."
+                : "Select a model from the list"
+            }
           />
           <Button variant="outlined" onClick={onRefreshModels} sx={{ mt: 1, mr: 1 }}>
             Refresh models

@@ -1,27 +1,19 @@
 import { Box, Button, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { decodePathApprovalPayload } from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
 import type { PathApprovalPayload } from "../../../../shared/ipc-types";
+import { usePendingItems } from "../../../hooks/usePendingItems";
 import { glassSx } from "../../../styles/glass";
 import PendingPathModal from "./PendingPathModal";
 
 export default function PendingPathBanner() {
-  const [blocked, setBlocked] = useState<PathApprovalPayload[]>([]);
+  const { items, remove } = usePendingItems<PathApprovalPayload>({
+    channel: IPC.PATH_APPROVAL_REQUIRED,
+    decode: decodePathApprovalPayload,
+    getKey: (r) => `${r.projectId}:${r.path}:${r.mode}`,
+  });
   const [selected, setSelected] = useState<PathApprovalPayload | null>(null);
-
-  useEffect(() => {
-    const unsub = window.electronAPI.on(IPC.PATH_APPROVAL_REQUIRED, (data) => {
-      const req = decodePathApprovalPayload(data);
-      if (!req) return;
-      setBlocked((prev) => {
-        const key = `${req.projectId}:${req.path}:${req.mode}`;
-        if (prev.some((r) => `${r.projectId}:${r.path}:${r.mode}` === key)) return prev;
-        return [...prev, req];
-      });
-    });
-    return unsub;
-  }, []);
 
   const handleResolve = async (
     req: PathApprovalPayload,
@@ -37,16 +29,15 @@ export default function PendingPathBanner() {
     } catch {
       // Handler may throw if already resolved
     }
-    const key = `${req.projectId}:${req.path}:${req.mode}`;
-    setBlocked((prev) => prev.filter((r) => `${r.projectId}:${r.path}:${r.mode}` !== key));
+    remove(req);
     setSelected(null);
   };
 
-  if (blocked.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <>
-      {blocked.map((req) => (
+      {items.map((req) => (
         <Box
           key={`${req.projectId}:${req.path}:${req.mode}`}
           data-testid={`pending-path-banner-${req.mode}`}
