@@ -1,11 +1,12 @@
 import type { BrowserWindow } from "electron";
 import type { DependencyContainer } from "tsyringe";
+import { MEMORY_MANAGER_TOKEN } from "../di/tokens";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "../services/AllowlistService";
 import { ArtifactService } from "../services/ArtifactService";
 import { HomeService } from "../services/HomeService";
 import { MemoryFileService } from "../services/MemoryFileService";
-import { MemoryManager } from "../services/MemoryManager";
+import type { IMemoryManager } from "../services/MemoryManager";
 import { MessageService } from "../services/MessageService";
 import { OutputNotificationService } from "../services/OutputNotificationService";
 import { ProjectService } from "../services/ProjectService";
@@ -29,7 +30,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const settingsService = container.resolve(SettingsService);
   const homeService = container.resolve(HomeService);
   const researchService = container.resolve(ResearchService);
-  const memoryManager = container.resolve(MemoryManager);
+  const memoryManager = container.resolve<IMemoryManager>(MEMORY_MANAGER_TOKEN);
   const eventBus = container.resolve(EventBus);
 
   const sessionManager = new SessionManager();

@@ -9,6 +9,7 @@ import {
   DB_TOKEN,
   FALLBACK_MEMORY_PATH_TOKEN,
   MEMORY_FILE_PATH_TOKEN,
+  MEMORY_MANAGER_TOKEN,
   MESSAGE_REPO_TOKEN,
   PROJECT_REPO_TOKEN,
   USER_DATA_PATH_TOKEN,
@@ -24,7 +25,7 @@ import { CrystallizationService } from "./services/CrystallizationService";
 import { HomeService } from "./services/HomeService";
 import { MemoryCompressionService } from "./services/MemoryCompressionService";
 import { MemoryFileService } from "./services/MemoryFileService";
-import { MemoryManager } from "./services/MemoryManager";
+import { type IMemoryManager, MemoryManager } from "./services/MemoryManager";
 import { MessageService } from "./services/MessageService";
 import { OutputNotificationService } from "./services/OutputNotificationService";
 import { ProjectService } from "./services/ProjectService";
@@ -63,7 +64,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);
   appContainer.registerSingleton(MemoryCompressionService);
-  appContainer.registerSingleton(MemoryManager);
+  appContainer.register<IMemoryManager>(MEMORY_MANAGER_TOKEN, { useClass: MemoryManager });
   appContainer.registerSingleton(TaskPersistenceService);
   appContainer.registerSingleton(SkillManagementService);
   appContainer.registerSingleton(ToolApprovalService);

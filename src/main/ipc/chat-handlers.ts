@@ -8,7 +8,7 @@ import { ProjectIdSchema, SendMessageSchema } from "../ipc-validation";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
-import type { MemoryManager } from "../services/MemoryManager";
+import type { IMemoryManager } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { OutputNotificationService } from "../services/OutputNotificationService";
 import type { ProjectService } from "../services/ProjectService";
@@ -25,7 +25,7 @@ export function registerChatHandler(
     eventBus: EventBus;
     homeService: HomeService;
     researchService: ResearchService;
-    memoryManager: MemoryManager;
+    memoryManager: IMemoryManager;
     messageService: MessageService;
     projectService: ProjectService;
     outputNotificationService: OutputNotificationService;
