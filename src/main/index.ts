@@ -14,6 +14,7 @@ function createWindow(): BrowserWindow {
       preload: join(import.meta.dirname, "../preload/index.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
   });
 
