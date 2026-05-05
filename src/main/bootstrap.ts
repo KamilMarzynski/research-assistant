@@ -23,7 +23,6 @@ import { HomeService } from "./services/HomeService";
 import { MemoryCompressionService } from "./services/MemoryCompressionService";
 import { MemoryFileService } from "./services/MemoryFileService";
 import { MemoryManager } from "./services/MemoryManager";
-import { MemorySummaryService } from "./services/MemorySummaryService";
 import { MessageService } from "./services/MessageService";
 import { OutputNotificationService } from "./services/OutputNotificationService";
 import { ProjectService } from "./services/ProjectService";
@@ -78,15 +77,6 @@ export async function bootstrap(): Promise<DependencyContainer> {
       join(homePath, "app-memory"),
       homePath, // fallback project memory path
     ),
-  });
-
-  appContainer.register(MemorySummaryService, {
-    useValue: new MemorySummaryService({
-      summarizeFn: async (text) => {
-        // Placeholder — will be replaced with actual LLM call later
-        return text.slice(0, 500);
-      },
-    }),
   });
 
   const skillDirs = [join(homePath, "skills"), join(getAgentsHome(), "skills")];
