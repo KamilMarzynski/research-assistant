@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { safeStorage } from "electron";
+import { dialog, safeStorage } from "electron";
 import { inject, injectable } from "tsyringe";
 import { USER_DATA_PATH_TOKEN } from "../di/tokens";
 
@@ -67,8 +67,11 @@ function encryptApiKey(key: string | null): string | undefined {
   if (safeStorage.isEncryptionAvailable()) {
     return safeStorage.encryptString(key).toString("base64");
   }
-  console.warn("[SettingsService] safeStorage unavailable — key stored without encryption");
-  return Buffer.from(key).toString("base64");
+  dialog.showErrorBox(
+    "Encryption Unavailable",
+    "Your system does not support secure credential storage. API keys cannot be saved securely and the application will exit.",
+  );
+  throw new Error("safeStorage unavailable — cannot securely store API keys");
 }
 
 function decryptApiKey(encrypted: string | undefined): string | null {
@@ -77,7 +80,11 @@ function decryptApiKey(encrypted: string | undefined): string | null {
   if (safeStorage.isEncryptionAvailable()) {
     return safeStorage.decryptString(buf);
   }
-  return buf.toString("utf-8");
+  dialog.showErrorBox(
+    "Encryption Unavailable",
+    "Your system does not support secure credential storage. Stored API keys cannot be read securely.",
+  );
+  throw new Error("safeStorage unavailable — cannot securely store API keys");
 }
 
 @injectable()

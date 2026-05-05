@@ -11,6 +11,9 @@ vi.mock("electron", () => ({
     encryptString: vi.fn((s: string) => Buffer.from(s)),
     decryptString: vi.fn((b: Buffer) => b.toString("utf-8")),
   },
+  dialog: {
+    showErrorBox: vi.fn(),
+  },
 }));
 
 // Import after mock is registered
@@ -161,31 +164,32 @@ describe("SettingsService", () => {
   });
 
   describe("safeStorage unavailable fallback", () => {
-    it("stores and retrieves API key as plain base64 when encryption is unavailable", async () => {
-      const { safeStorage } = await import("electron");
+    it("throws when encryption is unavailable on save", async () => {
+      const { safeStorage, dialog } = await import("electron");
       (safeStorage.isEncryptionAvailable as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
-      await service.saveSettings({
-        providerCredentials: {
-          openrouter: { apiKey: "sk-plain-key", defaultModel: "anthropic/claude-sonnet-4-6" },
-          openai: { apiKey: null, defaultModel: "gpt-4o" },
-          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
-          ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
-        },
-      });
-      const settings = await service.getSettings();
+      await expect(
+        service.saveSettings({
+          providerCredentials: {
+            openrouter: { apiKey: "sk-plain-key", defaultModel: "anthropic/claude-sonnet-4-6" },
+            openai: { apiKey: null, defaultModel: "gpt-4o" },
+            anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
+            ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
+          },
+        }),
+      ).rejects.toThrow("safeStorage unavailable");
 
-      expect(settings.providerCredentials.openrouter.apiKey).toBe("sk-plain-key");
+      expect(dialog.showErrorBox).toHaveBeenCalledWith(
+        "Encryption Unavailable",
+        expect.stringContaining("secure credential storage"),
+      );
 
       // Restore default
       (safeStorage.isEncryptionAvailable as ReturnType<typeof vi.fn>).mockReturnValue(true);
     });
 
-    it("emits console.warn when saving without encryption", async () => {
-      const { safeStorage } = await import("electron");
-      (safeStorage.isEncryptionAvailable as ReturnType<typeof vi.fn>).mockReturnValue(false);
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
+    it("throws when encryption is unavailable on get (decrypt fails)", async () => {
+      // First save with encryption available (stores encrypted data)
       await service.saveSettings({
         providerCredentials: {
           openrouter: { apiKey: "sk-plain-key", defaultModel: "anthropic/claude-sonnet-4-6" },
@@ -195,9 +199,18 @@ describe("SettingsService", () => {
         },
       });
 
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("safeStorage unavailable"));
+      // Now make decryption unavailable
+      const { safeStorage, dialog } = await import("electron");
+      (safeStorage.isEncryptionAvailable as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
-      warnSpy.mockRestore();
+      await expect(service.getSettings()).rejects.toThrow("safeStorage unavailable");
+
+      expect(dialog.showErrorBox).toHaveBeenCalledWith(
+        "Encryption Unavailable",
+        expect.stringContaining("secure credential storage"),
+      );
+
+      // Restore default
       (safeStorage.isEncryptionAvailable as ReturnType<typeof vi.fn>).mockReturnValue(true);
     });
   });
