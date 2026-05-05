@@ -81,7 +81,7 @@ export default function ChatPanel() {
         createdAt: new Date(),
       },
     ]);
-    window.electronAPI.send(IPC.SEND_MESSAGE, { projectId: activeProjectId, content });
+    void window.electronAPI.invoke(IPC.SEND_MESSAGE, { projectId: activeProjectId, content });
   };
 
   if (!activeProjectId) {
