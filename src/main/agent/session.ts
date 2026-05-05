@@ -4,6 +4,7 @@ import type { BrowserWindow } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { EventBus } from "../event-bus";
 import { addPendingPathApproval } from "../ipc/command-handlers";
+import type { AllowlistService } from "../services/AllowlistService";
 import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
@@ -46,6 +47,7 @@ export interface AgentSessionOptions {
   webAccessEnabled?: boolean;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   memoryFileService?: MemoryFileService;
+  allowlistService: AllowlistService;
 }
 
 export class AgentSession {
@@ -84,6 +86,7 @@ export class AgentSession {
     webAccessEnabled,
     onFileWrite,
     memoryFileService,
+    allowlistService,
   }: AgentSessionOptions) {
     this.win = win;
     this.messageService = messageService;
@@ -147,6 +150,7 @@ export class AgentSession {
         homePath,
         provider,
         webAccessEnabled,
+        allowlistService,
       }),
       saveMemoryFn: memoryFileService
         ? (category, title, content, scope) =>
@@ -157,6 +161,7 @@ export class AgentSession {
             memoryFileService.readMemory({ ...options, projectFolderPath: folderPath ?? undefined })
         : undefined,
       compressionService,
+      allowlistService,
     });
 
     this.agent = new Agent({

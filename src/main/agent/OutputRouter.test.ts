@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { AllowlistService } from "../services/AllowlistService";
 import { type OutputConvention, OutputRouter } from "./OutputRouter";
 import { PathJail } from "./path-jail";
 
@@ -12,7 +13,7 @@ describe("OutputRouter", () => {
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), "output-router-test-"));
-    jail = new PathJail("test-project", tempDir, "Test Project");
+    jail = new PathJail("test-project", tempDir, "Test Project", new AllowlistService());
     router = new OutputRouter(jail);
   });
 

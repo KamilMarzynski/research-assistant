@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import type { AllowlistService } from "../services/AllowlistService";
 import type { CompressionService } from "./CompressionService";
 import { PathJail } from "./path-jail";
 import { createSaveArtifactTool } from "./tools/artifact-tools";
@@ -87,11 +88,12 @@ export interface AgentToolsOptions {
     projectId: string;
   }) => void;
   compressionService?: CompressionService;
+  allowlistService: AllowlistService;
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
   const { projectId, projectName, folderPath, homePath, startResearchFn, onFileWrite } = opts;
-  const jail = new PathJail(projectId, folderPath, projectName);
+  const jail = new PathJail(projectId, folderPath, projectName, opts.allowlistService);
   const workspacePath = join(homePath, "workspace", projectId);
   const auditLogPath = join(homePath, "audit.log");
 

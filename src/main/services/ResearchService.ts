@@ -9,6 +9,7 @@ import { PathJail } from "../agent/path-jail";
 import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
+import { AllowlistService } from "./AllowlistService";
 import { HomeService } from "./HomeService";
 import { SettingsService } from "./SettingsService";
 
@@ -34,6 +35,7 @@ export class ResearchService {
     @inject(EventBus) private readonly eventBus: EventBus,
     @inject(SettingsService) private readonly settingsService: SettingsService,
     @inject(HomeService) private readonly homeService: HomeService,
+    @inject(AllowlistService) private readonly allowlistService: AllowlistService,
   ) {}
 
   async startResearch(
@@ -55,6 +57,7 @@ export class ResearchService {
       folderPath,
       homePath: this.homeService.getHomePath(),
       remainingDepth: 0,
+      allowlistService: this.allowlistService,
     }));
   }
 
@@ -81,6 +84,7 @@ export class ResearchService {
       folderPath,
       homePath,
       remainingDepth: 3,
+      allowlistService: this.allowlistService,
     }));
   }
 
@@ -106,6 +110,7 @@ export class ResearchService {
       provider,
       remainingDepth: 0,
       webAccessEnabled: settings.webAccessEnabled,
+      allowlistService: this.allowlistService,
     });
 
     const prompt = `Research query: "${query}"\n\nWas this approach novel, reusable, and >3 tool calls?\nRespond with JSON: { crystallize: boolean, reason: string, skillName?: string, skillDescription?: string }`;
@@ -205,6 +210,7 @@ export class ResearchService {
       provider,
       onProgress,
       webAccessEnabled: settings.webAccessEnabled,
+      allowlistService: this.allowlistService,
     };
 
     const { agent } = await createWorkerAgent(workerConfig);
@@ -261,7 +267,12 @@ export class ResearchService {
             }
 
             if (agentsMdContent) {
-              const jail = new PathJail(config.projectId, config.folderPath, config.projectName);
+              const jail = new PathJail(
+                config.projectId,
+                config.folderPath,
+                config.projectName,
+                this.allowlistService,
+              );
               const router = new OutputRouter(jail);
               const conventions = router.parseConventions(agentsMdContent);
               if (conventions) {

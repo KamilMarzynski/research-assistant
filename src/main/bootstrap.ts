@@ -16,6 +16,7 @@ import { getAgentsHome } from "./paths";
 import { DrizzleArtifactRepository } from "./repositories/drizzle/DrizzleArtifactRepository";
 import { DrizzleMessageRepository } from "./repositories/drizzle/DrizzleMessageRepository";
 import { DrizzleProjectRepository } from "./repositories/drizzle/DrizzleProjectRepository";
+import { AllowlistService } from "./services/AllowlistService";
 import { ArtifactService } from "./services/ArtifactService";
 import { HomeService } from "./services/HomeService";
 import { MemoryFileService } from "./services/MemoryFileService";
@@ -52,6 +53,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(MemoryManager);
   appContainer.registerSingleton(HomeService);
   appContainer.registerSingleton(OutputNotificationService);
+  appContainer.registerSingleton(AllowlistService);
 
   const homeService = appContainer.resolve(HomeService);
   await homeService.ensureDirectories();

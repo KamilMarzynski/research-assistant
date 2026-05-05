@@ -1,17 +1,18 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ApprovalRequiredError } from "../services/AllowlistService";
+import { AllowlistService, ApprovalRequiredError } from "../services/AllowlistService";
 import { PathJail } from "./path-jail";
 
 const HOME = join(homedir(), ".research-assistant");
 const PROJECT_ID = "proj-123";
 const PROJECT_NAME = "Test Project";
 const FOLDER_PATH = "/Users/test/myproject";
+const allowlistService = new AllowlistService();
 
 describe("PathJail", () => {
   describe("with folderPath", () => {
-    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_NAME);
+    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_NAME, allowlistService);
 
     it("allows read inside workspace", () => {
       const p = join(HOME, "workspace", PROJECT_ID, "output.md");
@@ -74,7 +75,7 @@ describe("PathJail", () => {
   });
 
   describe("without folderPath", () => {
-    const jail = new PathJail(PROJECT_ID, null, PROJECT_NAME);
+    const jail = new PathJail(PROJECT_ID, null, PROJECT_NAME, allowlistService);
 
     it("allows workspace access", () => {
       const p = join(HOME, "workspace", PROJECT_ID, "file.md");
@@ -89,7 +90,7 @@ describe("PathJail", () => {
   });
 
   describe("returns resolved absolute path", () => {
-    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_NAME);
+    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_NAME, allowlistService);
 
     it("resolves and returns the path", () => {
       const p = join(HOME, "workspace", PROJECT_ID, "output.md");

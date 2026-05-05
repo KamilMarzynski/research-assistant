@@ -1,6 +1,6 @@
 import { join, normalize, resolve } from "node:path";
 import { getAgentsHome, getResearchAssistantHome } from "../paths";
-import { AllowlistService, ApprovalRequiredError } from "../services/AllowlistService";
+import { type AllowlistService, ApprovalRequiredError } from "../services/AllowlistService";
 import { toSlug } from "./context";
 
 export class PathJail {
@@ -17,6 +17,7 @@ export class PathJail {
     readonly projectId: string,
     folderPath: string | null,
     projectName: string,
+    private readonly allowlistService: AllowlistService,
   ) {
     this.home = getResearchAssistantHome();
     this.workspace = join(this.home, "workspace", projectId);
@@ -61,8 +62,7 @@ export class PathJail {
       return resolved;
     }
 
-    const allowlistService = new AllowlistService();
-    const result = allowlistService.isAllowed(this.projectId, resolved, mode, [
+    const result = this.allowlistService.isAllowed(this.projectId, resolved, mode, [
       ...readWriteZones,
       ...readOnlyZones,
     ]);

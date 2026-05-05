@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { normalize, resolve } from "node:path";
+import { injectable } from "tsyringe";
 import { getResearchAssistantHome } from "../paths";
 
 export class ApprovalRequiredError extends Error {
@@ -14,6 +15,7 @@ export class ApprovalRequiredError extends Error {
   }
 }
 
+@injectable()
 export class AllowlistService {
   private sessionAllowlists = new Map<string, Set<string>>(); // projectId -> Set of resolved paths
 

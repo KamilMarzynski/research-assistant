@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { IPC } from "../../shared/ipc-channels";
 import type { FileNode } from "../../shared/ipc-types";
 import { ProjectIdSchema, ReadArtifactFileSchema } from "../ipc-validation";
+import type { AllowlistService } from "../services/AllowlistService";
 import type { ArtifactService } from "../services/ArtifactService";
 import type { ProjectService } from "../services/ProjectService";
 import { parseOrThrow } from "./parse-util";
@@ -37,9 +38,10 @@ export function registerArtifactHandlers(
   deps: {
     projectService: ProjectService;
     artifactService: ArtifactService;
+    allowlistService: AllowlistService;
   },
 ): void {
-  const { projectService, artifactService } = deps;
+  const { projectService, artifactService, allowlistService } = deps;
 
   ipcMain.handle(IPC.GET_ARTIFACTS, async (_event, payload: unknown) => {
     const p = parseOrThrow(ProjectIdSchema, payload, "GET_ARTIFACTS");
@@ -61,7 +63,7 @@ export function registerArtifactHandlers(
     const { getResearchAssistantHome } = await import("../paths");
     const { PathJail } = await import("../agent/path-jail");
 
-    const jail = new PathJail(project.id, project.folderPath, project.name);
+    const jail = new PathJail(project.id, project.folderPath, project.name, allowlistService);
     let count = 0;
 
     async function walk(dirPath: string, depth: number): Promise<FileNode[]> {
@@ -169,7 +171,7 @@ export function registerArtifactHandlers(
     }
 
     const { PathJail } = await import("../agent/path-jail");
-    const jail = new PathJail(projectId, project.folderPath, project.name);
+    const jail = new PathJail(projectId, project.folderPath, project.name, allowlistService);
 
     // PathJail validates the path is within allowed zones
     const resolvedPath = jail.validate(filePath, "read");
@@ -229,7 +231,7 @@ export function registerArtifactHandlers(
     }
 
     const { PathJail } = await import("../agent/path-jail");
-    const jail = new PathJail(projectId, project.folderPath, project.name);
+    const jail = new PathJail(projectId, project.folderPath, project.name, allowlistService);
     const resolvedPath = jail.validate(filePath, "read");
 
     shell.showItemInFolder(resolvedPath);

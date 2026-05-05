@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AllowlistService } from "../services/AllowlistService";
 
 // Captured subscriber so tests can fire Pi events manually
 let capturedSubscriber: ((event: unknown) => Promise<void>) | null = null;
@@ -42,6 +43,8 @@ vi.mock("./tools", () => ({
 
 const { createWorkerAgent, makeEvaluatorFn } = await import("./worker-agent");
 
+const allowlistService = new AllowlistService();
+
 const BASE_CONFIG = {
   toolNames: ["read_file", "safe_bash"] as const,
   systemPromptAddition: "You are a worker.",
@@ -54,6 +57,7 @@ const BASE_CONFIG = {
     apiKey: "sk-or-test",
     model: "anthropic/claude-sonnet-4-5",
   },
+  allowlistService,
 };
 
 describe("createWorkerAgent", () => {

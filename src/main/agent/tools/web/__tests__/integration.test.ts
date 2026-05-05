@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { AllowlistService } from "../../../../services/AllowlistService";
 import { createAgentTools } from "../../../tools";
 import { createWorkerAgent } from "../../../worker-agent";
+
+const allowlistService = new AllowlistService();
 
 vi.mock("@mariozechner/pi-agent-core", () => ({
   // biome-ignore lint/complexity/useArrowFunction: vitest constructable mock
@@ -30,6 +33,7 @@ describe("tool registration", () => {
       folderPath: null,
       homePath: "/tmp",
       webAccessEnabled: true,
+      allowlistService,
     });
     const names = tools.map((t) => t.name);
     expect(names).toContain("fetch_url");
@@ -43,6 +47,7 @@ describe("tool registration", () => {
       folderPath: null,
       homePath: "/tmp",
       webAccessEnabled: false,
+      allowlistService,
     });
     const names = tools.map((t) => t.name);
     expect(names).not.toContain("fetch_url");
@@ -55,6 +60,7 @@ describe("tool registration", () => {
       projectName: "Test",
       folderPath: null,
       homePath: "/tmp",
+      allowlistService,
     });
     const names = tools.map((t) => t.name);
     expect(names).toContain("fetch_url");
@@ -73,6 +79,7 @@ describe("researcher preset", () => {
       homePath: "/tmp/home",
       provider: { type: "openrouter", apiKey: "test", model: "test-model" },
       webAccessEnabled: true,
+      allowlistService,
     });
     const names = agent.state.tools.map((t: { name: string }) => t.name);
     expect(names).toContain("fetch_url");

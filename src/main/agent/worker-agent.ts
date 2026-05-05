@@ -1,5 +1,6 @@
 import { Agent } from "@mariozechner/pi-agent-core";
 import { z } from "zod";
+import type { AllowlistService } from "../services/AllowlistService";
 import { loadSkillsByContent } from "./context";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
@@ -43,6 +44,7 @@ export interface WorkerAgentConfig {
   agentLabel?: string;
   onProgress?: (label: string, delta: string) => void;
   webAccessEnabled?: boolean;
+  allowlistService: AllowlistService;
 }
 
 export interface WorkerAgent {
@@ -57,6 +59,7 @@ export interface EvaluatorBaseConfig {
   homePath: string;
   provider: ModelProvider;
   webAccessEnabled?: boolean;
+  allowlistService: AllowlistService;
 }
 
 const EvaluationCriterionSchema = z.object({
@@ -194,6 +197,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     proposeToolFn,
     onProgress,
     webAccessEnabled,
+    allowlistService,
   } = config;
 
   // Depth-guard: remove orchestrator-only tools when at leaf depth
@@ -221,6 +225,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       proposeToolFn,
       onProgress,
       webAccessEnabled,
+      allowlistService,
     };
 
     const spawnAgentImpl = async (
@@ -275,11 +280,13 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       homePath,
       provider,
       webAccessEnabled,
+      allowlistService,
     }),
     saveArtifactFn,
     proposeToolFn,
     spawnAgentFn,
     spawnAgentsParallelFn,
+    allowlistService,
   });
 
   const agent = new Agent({

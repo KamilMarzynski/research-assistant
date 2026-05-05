@@ -2,13 +2,15 @@ import { ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { PathApprovalPayload } from "../../shared/ipc-types";
 import { ResolveBlockedCommandSchema, ResolvePathApprovalSchema } from "../ipc-validation";
-import { AllowlistService } from "../services/AllowlistService";
+import type { AllowlistService } from "../services/AllowlistService";
 import { parseOrThrow } from "./parse-util";
 
 const pendingPathApprovals = new Map<string, PathApprovalPayload>();
-const allowlistService = new AllowlistService();
 
-export function registerCommandHandlers(_win: Electron.BrowserWindow): void {
+export function registerCommandHandlers(
+  _win: Electron.BrowserWindow,
+  allowlistService: AllowlistService,
+): void {
   ipcMain.handle(IPC.RESOLVE_BLOCKED_COMMAND, async (_event, payload: unknown) => {
     const { commandId, action, projectId } = parseOrThrow(
       ResolveBlockedCommandSchema,

@@ -1,6 +1,7 @@
 import type { BrowserWindow } from "electron";
 import type { DependencyContainer } from "tsyringe";
 import { EventBus } from "../event-bus";
+import { AllowlistService } from "../services/AllowlistService";
 import { ArtifactService } from "../services/ArtifactService";
 import { HomeService } from "../services/HomeService";
 import { MemoryFileService } from "../services/MemoryFileService";
@@ -34,10 +35,11 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const sessionManager = new SessionManager();
   const outputNotificationService = container.resolve(OutputNotificationService);
   const memoryFileService = container.resolve(MemoryFileService);
+  const allowlistService = container.resolve(AllowlistService);
 
   registerProjectHandlers(win, { projectService, sessionManager });
   registerSettingsHandlers(win, { settingsService, sessionManager });
-  registerArtifactHandlers(win, { projectService, artifactService });
+  registerArtifactHandlers(win, { projectService, artifactService, allowlistService });
   registerChatHandler(win, {
     sessionManager,
     settingsService,
@@ -49,10 +51,11 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     projectService,
     outputNotificationService,
     memoryFileService,
+    allowlistService,
   });
   registerAdminHandlers(win, { homeService });
   registerResearchHandlers(win, { projectService, researchService });
-  registerCommandHandlers(win);
+  registerCommandHandlers(win, allowlistService);
   registerEventForwarders(win, { eventBus, sessionManager });
   registerStartupTasks({ homeService, researchService, eventBus });
 }

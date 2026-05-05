@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkerAgentConfig } from "../../agent/worker-agent";
+import { AllowlistService } from "../AllowlistService";
 
 vi.mock("electron", () => ({
   safeStorage: {
@@ -98,6 +99,7 @@ describe("ResearchService", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskId).toBeTruthy();
@@ -109,6 +111,7 @@ describe("ResearchService", () => {
       bus as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -120,6 +123,7 @@ describe("ResearchService", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       home as never,
+      new AllowlistService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(home.saveTask).toHaveBeenCalledWith(
@@ -130,7 +134,12 @@ describe("ResearchService", () => {
   it("calls updateTaskStatus with complete on research:complete", async () => {
     const home = makeHomeService();
     const bus = makeEventBus();
-    const svc = new ResearchService(bus as never, makeSettingsService() as never, home as never);
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      home as never,
+      new AllowlistService() as never,
+    );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
     await capturedSubscriber?.({ type: "agent_end" });
@@ -156,6 +165,7 @@ describe("ResearchService", () => {
       makeEventBus() as never,
       settingsSvc as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     await expect(svc.startResearch("p1", "My Project", "research X", null)).rejects.toThrow(
       "No API key configured",
@@ -179,7 +189,12 @@ describe("ResearchService", () => {
       } as never,
       run: vi.fn(),
     });
-    const svc = new ResearchService(bus as never, makeSettingsService() as never, home as never);
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      home as never,
+      new AllowlistService() as never,
+    );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
     // Let the promise rejection propagate
@@ -194,6 +209,7 @@ describe("ResearchService", () => {
       bus as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -216,6 +232,7 @@ describe("ResearchService", () => {
       bus as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -245,6 +262,7 @@ describe("ResearchService", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       home as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await new Promise((r) => setTimeout(r, 200));
@@ -272,6 +290,7 @@ describe("ResearchService", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       home as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await new Promise((r) => setTimeout(r, 200));
@@ -289,6 +308,7 @@ describe("ResearchService", () => {
       bus as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -325,6 +345,7 @@ describe("ResearchService", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       home as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await capturedSubscriber?.({ type: "agent_end" });
@@ -355,6 +376,7 @@ describe("ResearchService", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       home as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await capturedSubscriber?.({ type: "agent_end" });
@@ -380,6 +402,7 @@ describe("ResearchService", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       home as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await capturedSubscriber?.({ type: "agent_end" });
@@ -404,6 +427,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -422,6 +446,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 3 }));
@@ -435,6 +460,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     const call = createWorkerAgent.mock.calls[0][0];
@@ -448,6 +474,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       home as never,
+      new AllowlistService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -466,6 +493,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       bus as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -477,6 +505,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       home as never,
+      new AllowlistService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -507,6 +536,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query A", null);
@@ -529,6 +559,7 @@ describe("ResearchService – _runResearch internals", () => {
       bus as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -553,6 +584,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
 
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
@@ -571,6 +603,7 @@ describe("ResearchService – _runResearch internals", () => {
       bus as never,
       makeSettingsService() as never,
       makeHomeService() as never,
+      new AllowlistService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -590,6 +623,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeEventBus() as never,
       makeSettingsService() as never,
       home as never,
+      new AllowlistService() as never,
     );
     await svc.startResearch("p1", "My Project", "query", null);
     await new Promise((r) => setTimeout(r, 50));

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { AllowlistService } from "../services/AllowlistService";
 import { CompressionService } from "./CompressionService";
 import { createAgentTools } from "./tools";
 
@@ -7,7 +8,8 @@ const BASE = {
   projectName: "Test",
   folderPath: null,
   homePath: "/tmp/home",
-};
+  allowlistService: new AllowlistService(),
+} as const;
 
 describe("createAgentTools – toolNames filter", () => {
   it("returns all built-in tools when toolNames not provided", () => {
