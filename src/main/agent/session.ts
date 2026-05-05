@@ -154,7 +154,7 @@ export class AgentSession {
       }),
       saveMemoryFn: memoryFileService
         ? (category, title, content, scope) =>
-            memoryFileService.saveMemory(category, title, content, scope, folderPath ?? undefined)
+            memoryFileService.saveMemory(projectId, category, title, content, scope, folderPath ?? undefined)
         : undefined,
       readMemoryFn: memoryFileService
         ? (options) =>

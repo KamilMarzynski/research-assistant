@@ -1,7 +1,9 @@
 import { access, mkdir, readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, normalize, resolve } from "node:path";
 import { inject, injectable } from "tsyringe";
 import { FALLBACK_MEMORY_PATH_TOKEN, MEMORY_FILE_PATH_TOKEN } from "../di/tokens";
+import { EventBus } from "../event-bus";
+import { AllowlistService, ApprovalRequiredError } from "./AllowlistService";
 import { parseFrontmatter } from "../utils/frontmatter";
 
 const VALID_CATEGORIES = [
@@ -30,9 +32,12 @@ export class MemoryFileService {
   constructor(
     @inject(MEMORY_FILE_PATH_TOKEN) private readonly appMemoryPath: string,
     @inject(FALLBACK_MEMORY_PATH_TOKEN) private readonly projectMemoryPath: string,
+    @inject(AllowlistService) private readonly allowlistService: AllowlistService,
+    @inject(EventBus) private readonly eventBus: EventBus,
   ) {}
 
   async saveMemory(
+    projectId: string,
     category: string,
     title: string,
     content: string,
@@ -66,6 +71,24 @@ export class MemoryFileService {
     }
 
     const filePath = join(actualDir, fileName);
+    const resolvedPath = resolve(normalize(filePath));
+    const zones = [
+      this.appMemoryPath,
+      this.projectMemoryPath,
+      ...(projectFolderPath ? [resolve(normalize(projectFolderPath))] : []),
+    ];
+    const result = this.allowlistService.isAllowed(projectId, resolvedPath, "write", zones);
+    if (!result.allowed) {
+      if (result.needsApproval) {
+        this.eventBus.emit({
+          type: "path:approval_required",
+          payload: { path: resolvedPath, mode: "write", projectId },
+        });
+        throw new ApprovalRequiredError(resolvedPath, "write");
+      }
+      throw new Error(`Path "${resolvedPath}" is outside allowed memory directories.`);
+    }
+
     const frontmatter = [
       "---",
       `title: "${title.replace(/"/g, '\\"')}"`,
