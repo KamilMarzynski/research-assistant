@@ -12,7 +12,7 @@ import {
   USER_DATA_PATH_TOKEN,
 } from "./di/tokens";
 import { EventBus } from "./event-bus";
-import { getAgentsHome } from "./paths";
+import { getAgentsHome, getHomePath } from "./paths";
 import { DrizzleArtifactRepository } from "./repositories/drizzle/DrizzleArtifactRepository";
 import { DrizzleMessageRepository } from "./repositories/drizzle/DrizzleMessageRepository";
 import { DrizzleProjectRepository } from "./repositories/drizzle/DrizzleProjectRepository";
@@ -27,6 +27,7 @@ import { OutputNotificationService } from "./services/OutputNotificationService"
 import { ProjectService } from "./services/ProjectService";
 import { ResearchService } from "./services/ResearchService";
 import { SettingsService } from "./services/SettingsService";
+import { SkillManagementService } from "./services/SkillManagementService";
 import { SkillWatcherService } from "./services/SkillWatcherService";
 import { TaskPersistenceService } from "./services/TaskPersistenceService";
 
@@ -41,6 +42,11 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerInstance(DB_TOKEN, db);
   appContainer.registerInstance(USER_DATA_PATH_TOKEN, userDataPath);
 
+  // Compute home path early — services that inject AGENT_HOME_PATH_TOKEN need it
+  // registered before their first resolution.
+  const homePath = getHomePath();
+  appContainer.registerInstance(AGENT_HOME_PATH_TOKEN, homePath);
+
   appContainer.register(PROJECT_REPO_TOKEN, { useClass: DrizzleProjectRepository });
   appContainer.register(MESSAGE_REPO_TOKEN, { useClass: DrizzleMessageRepository });
   appContainer.register(ARTIFACT_REPO_TOKEN, { useClass: DrizzleArtifactRepository });
@@ -53,14 +59,13 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(SettingsService);
   appContainer.registerSingleton(MemoryManager);
   appContainer.registerSingleton(TaskPersistenceService);
+  appContainer.registerSingleton(SkillManagementService);
   appContainer.registerSingleton(HomeService);
   appContainer.registerSingleton(OutputNotificationService);
   appContainer.registerSingleton(AllowlistService);
 
   const homeService = appContainer.resolve(HomeService);
   await homeService.ensureDirectories();
-  const homePath = homeService.getHomePath();
-  appContainer.registerInstance(AGENT_HOME_PATH_TOKEN, homePath);
 
   appContainer.register(MemoryFileService, {
     useValue: new MemoryFileService(

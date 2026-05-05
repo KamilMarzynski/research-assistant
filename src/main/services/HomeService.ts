@@ -4,7 +4,7 @@ import { inject, injectable } from "tsyringe";
 import type { SkillInfo } from "../../shared/ipc-channels";
 import { EVALUATE_RESEARCH_SKILL } from "../agent/builtin-skills";
 import { getAgentsPath, getHomePath } from "../paths";
-import { parseFrontmatter } from "../utils/frontmatter";
+import { SkillManagementService } from "./SkillManagementService";
 import { type ResearchTask, TaskPersistenceService } from "./TaskPersistenceService";
 
 export type { ResearchTask };
@@ -14,6 +14,8 @@ export class HomeService {
   constructor(
     @inject(TaskPersistenceService)
     private readonly taskPersistence: TaskPersistenceService,
+    @inject(SkillManagementService)
+    private readonly skillManagement: SkillManagementService,
   ) {}
 
   getHomePath(): string {
@@ -128,59 +130,18 @@ export class HomeService {
     await rm(join(this.getHomePath(), "pending-tools", name), { recursive: true, force: true });
   }
 
-  async getSkills(): Promise<SkillInfo[]> {
-    const dir = join(this.getHomePath(), "skills");
-    let entries: string[] = [];
-    try {
-      entries = await readdir(dir);
-    } catch {
-      return [];
-    }
+  // --- Skill management delegation ---
 
-    const skills: SkillInfo[] = [];
-    for (const entry of entries) {
-      const skillDir = join(dir, entry);
-      const skillMdPath = join(skillDir, "SKILL.md");
-      try {
-        const content = await readFile(skillMdPath, "utf-8");
-        const meta = parseFrontmatter(content);
-        const disabledFile = join(skillDir, ".disabled");
-        let enabled = true;
-        try {
-          await access(disabledFile);
-          enabled = false;
-        } catch {
-          // not disabled
-        }
-        skills.push({
-          name: meta.name ?? entry,
-          description: meta.description ?? "",
-          enabled,
-          content,
-        });
-      } catch (err) {
-        console.error(`[HomeService] getSkills: skipping malformed entry ${entry}:`, err);
-      }
-    }
-    return skills;
+  async getSkills(): Promise<SkillInfo[]> {
+    return this.skillManagement.getSkills();
   }
 
   async toggleSkill(name: string, enabled: boolean): Promise<void> {
-    const dir = join(this.getHomePath(), "skills", name);
-    const disabledFile = join(dir, ".disabled");
-    if (enabled) {
-      try {
-        await rm(disabledFile);
-      } catch {
-        /* already not disabled */
-      }
-    } else {
-      await writeFile(disabledFile, "");
-    }
+    return this.skillManagement.toggleSkill(name, enabled);
   }
 
   async deleteSkill(name: string): Promise<void> {
-    await rm(join(this.getHomePath(), "skills", name), { recursive: true, force: true });
+    return this.skillManagement.deleteSkill(name);
   }
 
   private async copyBuiltinSkillsIfNeeded(): Promise<void> {

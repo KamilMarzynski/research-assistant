@@ -35,8 +35,13 @@ function makeTaskPersistence(db?: ReturnType<typeof mockDb>) {
   return new TaskPersistenceService(db ?? mockDb(), join(tmpHome, ".research-assistant"));
 }
 
+function makeSkillManagement() {
+  return new SkillManagementService(join(tmpHome, ".research-assistant"));
+}
+
 const { HomeService } = await import("../HomeService");
 const { TaskPersistenceService } = await import("../TaskPersistenceService");
+const { SkillManagementService } = await import("../SkillManagementService");
 
 describe("HomeService", () => {
   beforeEach(async () => {
@@ -48,7 +53,7 @@ describe("HomeService", () => {
   });
 
   it("ensureDirectories creates required dirs", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
 
     const { access } = await import("node:fs/promises");
@@ -62,20 +67,20 @@ describe("HomeService", () => {
   });
 
   it("isFirstRun returns true when config.md missing", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     expect(await svc.isFirstRun()).toBe(true);
   });
 
   it("isFirstRun returns false after config.md is written", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     await writeFile(join(tmpHome, ".research-assistant", "config.md"), "# Config");
     expect(await svc.isFirstRun()).toBe(false);
   });
 
   it("ensureWorkspaceForProject creates and returns workspace dir", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     const dir = await svc.ensureWorkspaceForProject("proj-abc");
     const { access } = await import("node:fs/promises");
@@ -84,7 +89,7 @@ describe("HomeService", () => {
   });
 
   it("ensureDirectories copies builtin skills when skills dir is empty", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     const entries = await readdir(join(tmpHome, ".research-assistant", "skills"));
     expect(entries).toContain("evaluate-research");
@@ -96,7 +101,7 @@ describe("HomeService", () => {
     await mkdir(evalSkillDir, { recursive: true });
     await writeFile(join(evalSkillDir, "SKILL.md"), "# Custom overridden");
 
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
 
     const { readFile } = await import("node:fs/promises");
@@ -122,7 +127,7 @@ describe("task persistence", () => {
   it("saveTask calls db.insert with correct values", async () => {
     const db = mockDb();
     const insertFn = db.insert as ReturnType<typeof vi.fn>;
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const task = {
       taskId: "task-abc",
@@ -138,7 +143,7 @@ describe("task persistence", () => {
 
   it("deleteTask calls db.delete with correct id", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     await svc.deleteTask("task-del");
     const deleteFn = db.delete as ReturnType<typeof vi.fn>;
@@ -150,14 +155,14 @@ describe("task persistence", () => {
     (db.select as ReturnType<typeof vi.fn>).mockReturnValue({
       from: () => ({ where: vi.fn().mockResolvedValue([]) }),
     });
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     expect(await svc.getInProgressTasks()).toEqual([]);
   });
 
   it("updateTaskStatus calls db.update with correct params", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     await svc.updateTaskStatus("task-1", "failed", "something broke");
     const updateFn = db.update as ReturnType<typeof vi.fn>;
@@ -167,7 +172,7 @@ describe("task persistence", () => {
   it("migrateTasksFromJson reads JSON files and saves to DB", async () => {
     const db = mockDb();
     const insertFn = db.insert as ReturnType<typeof vi.fn>;
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const tasksDir = join(tmpHome, ".research-assistant", "tasks");
     await mkdir(tasksDir, { recursive: true });
@@ -188,7 +193,7 @@ describe("task persistence", () => {
 
   it("migrateTasksFromJson does nothing when tasks dir missing", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     // do NOT call ensureDirectories — tasks dir won't exist
     await svc.migrateTasksFromJson();
     expect(true).toBe(true);
@@ -197,7 +202,7 @@ describe("task persistence", () => {
   it("migrateTasksFromJson skips malformed JSON files", async () => {
     const db = mockDb();
     const insertFn = db.insert as ReturnType<typeof vi.fn>;
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const tasksDir = join(tmpHome, ".research-assistant", "tasks");
     await writeFile(join(tasksDir, "bad.json"), "not json");
@@ -216,7 +221,7 @@ describe("pending tools", () => {
   });
 
   it("ensureDirectories creates pending-tools dir", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     const { access } = await import("node:fs/promises");
     await expect(
@@ -225,7 +230,7 @@ describe("pending tools", () => {
   });
 
   it("savePendingTool writes SKILL.md", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     await svc.savePendingTool("fetch-arxiv", "# fetch-arxiv\n\nFetches papers.");
     const { readFile } = await import("node:fs/promises");
@@ -237,7 +242,7 @@ describe("pending tools", () => {
   });
 
   it("savePendingTool writes script.py for Python script", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     await svc.savePendingTool("run-analysis", "# run-analysis", "import pandas as pd\nprint('hi')");
     const { readFile } = await import("node:fs/promises");
@@ -249,7 +254,7 @@ describe("pending tools", () => {
   });
 
   it("savePendingTool writes script.sh for bash script", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     await svc.savePendingTool("run-bash", "# run-bash", "#!/bin/bash\necho hello");
     const { readFile } = await import("node:fs/promises");
@@ -261,13 +266,13 @@ describe("pending tools", () => {
   });
 
   it("getPendingTools returns empty array when no pending tools", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     expect(await svc.getPendingTools()).toEqual([]);
   });
 
   it("getPendingTools returns empty array when pending-tools dir does not exist", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     const pendingDir = join(tmpHome, ".research-assistant", "pending-tools");
     await rm(pendingDir, { recursive: true, force: true });
@@ -275,7 +280,7 @@ describe("pending tools", () => {
   });
 
   it("getPendingTools skips malformed entries where readFile throws", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     await svc.savePendingTool("good-tool", "# good");
     const pendingDir = join(tmpHome, ".research-assistant", "pending-tools");
@@ -287,7 +292,7 @@ describe("pending tools", () => {
   });
 
   it("getPendingTools returns saved tools", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     await svc.savePendingTool("tool-a", "# tool-a");
     await svc.savePendingTool("tool-b", "# tool-b");
@@ -297,7 +302,7 @@ describe("pending tools", () => {
   });
 
   it("approvePendingTool moves dir to skills/", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     await svc.savePendingTool("my-tool", "# my-tool");
     await svc.approvePendingTool("my-tool");
@@ -311,7 +316,7 @@ describe("pending tools", () => {
   });
 
   it("rejectPendingTool deletes the dir", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     await svc.savePendingTool("bad-tool", "# bad-tool");
     await svc.rejectPendingTool("bad-tool");
@@ -332,7 +337,7 @@ describe("builtin skills", () => {
   });
 
   it("evaluate-research skill is written on ensureDirectories", async () => {
-    const svc = new HomeService(makeTaskPersistence());
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement());
     await svc.ensureDirectories();
     const { readFile } = await import("node:fs/promises");
     const content = await readFile(
@@ -354,7 +359,7 @@ describe("skill management", () => {
 
   it("getSkills returns array (builtin skills present after ensureDirectories)", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const skills = await svc.getSkills();
     expect(Array.isArray(skills)).toBe(true);
@@ -363,7 +368,7 @@ describe("skill management", () => {
 
   it("getSkills returns empty array when skills dir does not exist", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const skillsDir = join(tmpHome, ".research-assistant", "skills");
     await rm(skillsDir, { recursive: true, force: true });
@@ -372,7 +377,7 @@ describe("skill management", () => {
 
   it("getSkills skips malformed entries where readFile throws", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const skillsDir = join(svc.getHomePath(), "skills");
     await mkdir(join(skillsDir, "bad-skill", "SKILL.md"), { recursive: true });
@@ -382,7 +387,7 @@ describe("skill management", () => {
 
   it("getSkills returns skills with parsed frontmatter", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const skillDir = join(svc.getHomePath(), "skills", "test-skill");
     await mkdir(skillDir, { recursive: true });
@@ -402,7 +407,7 @@ describe("skill management", () => {
 
   it("getSkills falls back to entry name and empty description when frontmatter missing", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const skillDir = join(svc.getHomePath(), "skills", "no-meta");
     await mkdir(skillDir, { recursive: true });
@@ -416,7 +421,7 @@ describe("skill management", () => {
 
   it("getSkills returns enabled=false when .disabled file exists", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const skillDir = join(svc.getHomePath(), "skills", "disabled-skill");
     await mkdir(skillDir, { recursive: true });
@@ -434,7 +439,7 @@ describe("skill management", () => {
 
   it("toggleSkill creates and removes .disabled file", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const skillDir = join(svc.getHomePath(), "skills", "togglable");
     await mkdir(skillDir, { recursive: true });
@@ -453,7 +458,7 @@ describe("skill management", () => {
 
   it("deleteSkill removes the skill directory", async () => {
     const db = mockDb();
-    const svc = new HomeService(makeTaskPersistence(db));
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement());
     await svc.ensureDirectories();
     const skillDir = join(svc.getHomePath(), "skills", "deletable");
     await mkdir(skillDir, { recursive: true });
