@@ -30,6 +30,7 @@ import { SettingsService } from "./services/SettingsService";
 import { SkillManagementService } from "./services/SkillManagementService";
 import { SkillWatcherService } from "./services/SkillWatcherService";
 import { TaskPersistenceService } from "./services/TaskPersistenceService";
+import { ToolApprovalService } from "./services/ToolApprovalService";
 
 export async function bootstrap(): Promise<DependencyContainer> {
   const userDataPath = app.getPath("userData");
@@ -60,6 +61,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(MemoryManager);
   appContainer.registerSingleton(TaskPersistenceService);
   appContainer.registerSingleton(SkillManagementService);
+  appContainer.registerSingleton(ToolApprovalService);
   appContainer.registerSingleton(HomeService);
   appContainer.registerSingleton(OutputNotificationService);
   appContainer.registerSingleton(AllowlistService);

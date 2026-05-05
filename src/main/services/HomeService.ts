@@ -1,4 +1,4 @@
-import { access, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import type { SkillInfo } from "../../shared/ipc-channels";
@@ -6,6 +6,7 @@ import { EVALUATE_RESEARCH_SKILL } from "../agent/builtin-skills";
 import { getAgentsPath, getHomePath } from "../paths";
 import { SkillManagementService } from "./SkillManagementService";
 import { type ResearchTask, TaskPersistenceService } from "./TaskPersistenceService";
+import { ToolApprovalService } from "./ToolApprovalService";
 
 export type { ResearchTask };
 
@@ -16,6 +17,8 @@ export class HomeService {
     private readonly taskPersistence: TaskPersistenceService,
     @inject(SkillManagementService)
     private readonly skillManagement: SkillManagementService,
+    @inject(ToolApprovalService)
+    private readonly toolApproval: ToolApprovalService,
   ) {}
 
   getHomePath(): string {
@@ -88,46 +91,22 @@ export class HomeService {
     return this.taskPersistence.migrateTasksFromJson();
   }
 
-  // --- Pending tool management ---
+  // --- Tool approval delegation ---
 
   async savePendingTool(name: string, skillContent: string, script?: string): Promise<void> {
-    const dir = join(this.getHomePath(), "pending-tools", name);
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, "SKILL.md"), skillContent, "utf-8");
-    if (script) {
-      const ext = script.trimStart().startsWith("#!/bin/bash") ? ".sh" : ".py";
-      await writeFile(join(dir, `script${ext}`), script, "utf-8");
-    }
+    return this.toolApproval.savePendingTool(name, skillContent, script);
   }
 
   async getPendingTools(): Promise<Array<{ name: string; skillContent: string }>> {
-    const dir = join(this.getHomePath(), "pending-tools");
-    let entries: string[] = [];
-    try {
-      entries = await readdir(dir);
-    } catch {
-      return [];
-    }
-    const tools: Array<{ name: string; skillContent: string }> = [];
-    for (const name of entries) {
-      try {
-        const skillContent = await readFile(join(dir, name, "SKILL.md"), "utf-8");
-        tools.push({ name, skillContent });
-      } catch (err) {
-        console.error(`[HomeService] getPendingTools: skipping malformed entry ${name}:`, err);
-      }
-    }
-    return tools;
+    return this.toolApproval.getPendingTools();
   }
 
   async approvePendingTool(name: string): Promise<void> {
-    const src = join(this.getHomePath(), "pending-tools", name);
-    const dst = join(this.getHomePath(), "skills", name);
-    await rename(src, dst);
+    return this.toolApproval.approvePendingTool(name);
   }
 
   async rejectPendingTool(name: string): Promise<void> {
-    await rm(join(this.getHomePath(), "pending-tools", name), { recursive: true, force: true });
+    return this.toolApproval.rejectPendingTool(name);
   }
 
   // --- Skill management delegation ---
