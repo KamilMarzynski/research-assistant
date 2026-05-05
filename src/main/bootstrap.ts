@@ -18,6 +18,7 @@ import { DrizzleMessageRepository } from "./repositories/drizzle/DrizzleMessageR
 import { DrizzleProjectRepository } from "./repositories/drizzle/DrizzleProjectRepository";
 import { AllowlistService } from "./services/AllowlistService";
 import { ArtifactService } from "./services/ArtifactService";
+import { CrystallizationService } from "./services/CrystallizationService";
 import { HomeService } from "./services/HomeService";
 import { MemoryFileService } from "./services/MemoryFileService";
 import { MemoryManager } from "./services/MemoryManager";
@@ -55,6 +56,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(ProjectService);
   appContainer.registerSingleton(MessageService);
   appContainer.registerSingleton(ArtifactService);
+  appContainer.registerSingleton(CrystallizationService);
   appContainer.registerSingleton(ResearchService);
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);

@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { WorkerAgentConfig } from "../../agent/worker-agent";
 import { AllowlistService } from "../AllowlistService";
 
 vi.mock("electron", () => ({
@@ -11,37 +10,50 @@ vi.mock("electron", () => ({
   },
 }));
 
-let capturedSubscriber: ((event: unknown) => void) | null = null;
-
-const mockAgent = {
-  state: { tools: [] as never[] },
-  subscribe: vi.fn((cb: (event: unknown) => void) => {
-    capturedSubscriber = cb;
-  }),
-  prompt: vi.fn().mockResolvedValue(undefined),
-};
-
-vi.mock("../../agent/worker-agent", () => ({
-  createWorkerAgent: vi.fn().mockResolvedValue({
-    agent: mockAgent,
-    run: vi.fn(),
-  }),
-  ORCHESTRATOR_TOOL_NAMES: [
-    "read_file",
-    "write_file",
-    "list_dir",
-    "safe_bash",
-    "run_in_docker",
-    "spawn_agent",
-    "spawn_agents_parallel",
-    "save_artifact",
-    "propose_tool",
-  ],
-}));
+vi.mock("../../agent/worker-agent", () => {
+  const captured = { current: null as ((event: unknown) => void) | null };
+  const agent = {
+    state: { tools: [] as never[] },
+    subscribe: vi.fn((cb: (event: unknown) => void) => {
+      captured.current = cb;
+    }),
+    prompt: vi.fn().mockResolvedValue(undefined),
+  };
+  (globalThis as Record<string, unknown>).__testMockAgent = agent;
+  (globalThis as Record<string, unknown>).__testCaptured = captured;
+  return {
+    createWorkerAgent: vi.fn().mockResolvedValue({ agent, run: vi.fn() }),
+    ORCHESTRATOR_TOOL_NAMES: [
+      "read_file",
+      "write_file",
+      "list_dir",
+      "safe_bash",
+      "run_in_docker",
+      "spawn_agent",
+      "spawn_agents_parallel",
+      "save_artifact",
+      "propose_tool",
+    ],
+  };
+});
 
 type MockFn = ReturnType<typeof vi.fn>;
 
 const { ResearchService } = await import("../ResearchService");
+
+function getMockAgent() {
+  return (globalThis as Record<string, unknown>).__testMockAgent as {
+    state: { tools: never[] };
+    subscribe: MockFn;
+    prompt: MockFn;
+  };
+}
+
+function getCaptured() {
+  return (globalThis as Record<string, unknown>).__testCaptured as {
+    current: ((event: unknown) => void) | null;
+  };
+}
 
 function makeEventBus() {
   const handlers = new Map<string, (payload: unknown) => void>();
@@ -73,6 +85,10 @@ function makeSettingsService() {
   };
 }
 
+function makeCrystallizationService() {
+  return { crystallizeAndSave: vi.fn().mockResolvedValue(undefined) };
+}
+
 function makeHomeService() {
   return {
     getHomePath: vi.fn().mockReturnValue("/tmp/home"),
@@ -86,12 +102,12 @@ function makeHomeService() {
 
 describe("ResearchService", () => {
   beforeEach(() => {
-    capturedSubscriber = null;
+    getCaptured().current = null;
     vi.clearAllMocks();
-    mockAgent.subscribe.mockImplementation((cb: (event: unknown) => void) => {
-      capturedSubscriber = cb;
+    getMockAgent().subscribe.mockImplementation((cb: (event: unknown) => void) => {
+      getCaptured().current = cb;
     });
-    mockAgent.prompt.mockResolvedValue(undefined);
+    getMockAgent().prompt.mockResolvedValue(undefined);
   });
 
   it("returns a taskId immediately", async () => {
@@ -100,6 +116,7 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskId).toBeTruthy();
@@ -112,6 +129,7 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -124,6 +142,7 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(home.saveTask).toHaveBeenCalledWith(
@@ -139,10 +158,11 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
-    await capturedSubscriber?.({ type: "agent_end" });
+    await getCaptured().current?.({ type: "agent_end" });
 
     expect(home.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
   });
@@ -166,6 +186,7 @@ describe("ResearchService", () => {
       settingsSvc as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await expect(svc.startResearch("p1", "My Project", "research X", null)).rejects.toThrow(
       "No API key configured",
@@ -180,9 +201,9 @@ describe("ResearchService", () => {
     };
     createWorkerAgent.mockResolvedValueOnce({
       agent: {
-        ...mockAgent,
+        ...getMockAgent(),
         subscribe: vi.fn((cb) => {
-          capturedSubscriber = cb;
+          getCaptured().current = cb;
           return () => {};
         }),
         prompt: vi.fn().mockRejectedValue(new Error("worker crashed")),
@@ -194,6 +215,7 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -210,10 +232,11 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
-    await capturedSubscriber?.({
+    await getCaptured().current?.({
       type: "message_update",
       assistantMessageEvent: { type: "text_delta", delta: "hello" },
     });
@@ -233,10 +256,11 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
-    await capturedSubscriber?.({
+    await getCaptured().current?.({
       type: "message_update",
       assistantMessageEvent: { type: "thinking_delta", delta: "hmm" },
     });
@@ -263,6 +287,7 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await new Promise((r) => setTimeout(r, 200));
@@ -291,6 +316,7 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await new Promise((r) => setTimeout(r, 200));
@@ -309,10 +335,11 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
-    await capturedSubscriber?.({ type: "agent_end" });
+    await getCaptured().current?.({ type: "agent_end" });
 
     expect(bus.emit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -322,104 +349,38 @@ describe("ResearchService", () => {
     );
   });
 
-  it("calls savePendingTool when evaluator approves crystallization", async () => {
-    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
-      createWorkerAgent: MockFn;
-    };
+  it("calls crystallizeAndSave when agent completes", async () => {
     const home = makeHomeService();
-    const evaluatorRun = vi.fn().mockResolvedValue(
-      JSON.stringify({
-        crystallize: true,
-        skillName: "novel-research-pattern",
-        skillDescription: "A reusable research pattern.",
-      }),
-    );
-    createWorkerAgent.mockImplementation(async (config: WorkerAgentConfig) => {
-      if (config.systemPromptAddition?.includes("skill evaluator")) {
-        return { agent: { subscribe: vi.fn(), prompt: vi.fn() }, run: evaluatorRun };
-      }
-      return { agent: mockAgent, run: vi.fn() };
-    });
-
+    const bus = makeEventBus();
+    const crystallization = makeCrystallizationService();
     const svc = new ResearchService(
-      makeEventBus() as never,
+      bus as never,
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
+      crystallization as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
-    await capturedSubscriber?.({ type: "agent_end" });
+    await getCaptured().current?.({ type: "agent_end" });
+    await new Promise((r) => setTimeout(r, 50));
 
-    expect(evaluatorRun).toHaveBeenCalled();
-    expect(home.savePendingTool).toHaveBeenCalledWith(
-      "novel-research-pattern",
-      expect.stringContaining("A reusable research pattern."),
+    expect(crystallization.crystallizeAndSave).toHaveBeenCalledWith(
+      "research X",
+      "p1",
+      "My Project",
+      null,
     );
-  });
-
-  it("does not call savePendingTool when evaluator rejects crystallization", async () => {
-    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
-      createWorkerAgent: MockFn;
-    };
-    const home = makeHomeService();
-    const evaluatorRun = vi
-      .fn()
-      .mockResolvedValue(JSON.stringify({ crystallize: false, reason: "not reusable" }));
-    createWorkerAgent.mockImplementation(async (config: WorkerAgentConfig) => {
-      if (config.systemPromptAddition?.includes("skill evaluator")) {
-        return { agent: { subscribe: vi.fn(), prompt: vi.fn() }, run: evaluatorRun };
-      }
-      return { agent: mockAgent, run: vi.fn() };
-    });
-
-    const svc = new ResearchService(
-      makeEventBus() as never,
-      makeSettingsService() as never,
-      home as never,
-      new AllowlistService() as never,
-    );
-    await svc.startResearch("p1", "My Project", "research X", null);
-    await capturedSubscriber?.({ type: "agent_end" });
-
-    expect(evaluatorRun).toHaveBeenCalled();
-    expect(home.savePendingTool).not.toHaveBeenCalled();
-  });
-
-  it("does not call savePendingTool when evaluator returns invalid JSON", async () => {
-    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
-      createWorkerAgent: MockFn;
-    };
-    const home = makeHomeService();
-    const evaluatorRun = vi.fn().mockResolvedValue("not json");
-    createWorkerAgent.mockImplementation(async (config: WorkerAgentConfig) => {
-      if (config.systemPromptAddition?.includes("skill evaluator")) {
-        return { agent: { subscribe: vi.fn(), prompt: vi.fn() }, run: evaluatorRun };
-      }
-      return { agent: mockAgent, run: vi.fn() };
-    });
-
-    const svc = new ResearchService(
-      makeEventBus() as never,
-      makeSettingsService() as never,
-      home as never,
-      new AllowlistService() as never,
-    );
-    await svc.startResearch("p1", "My Project", "research X", null);
-    await capturedSubscriber?.({ type: "agent_end" });
-
-    expect(evaluatorRun).toHaveBeenCalled();
-    expect(home.savePendingTool).not.toHaveBeenCalled();
   });
 });
 
 describe("ResearchService – startOrchestratedResearch", () => {
   beforeEach(() => {
-    capturedSubscriber = null;
+    getCaptured().current = null;
     vi.clearAllMocks();
-    mockAgent.subscribe.mockImplementation((cb: (event: unknown) => void) => {
-      capturedSubscriber = cb;
+    getMockAgent().subscribe.mockImplementation((cb: (event: unknown) => void) => {
+      getCaptured().current = cb;
     });
-    mockAgent.prompt.mockResolvedValue(undefined);
+    getMockAgent().prompt.mockResolvedValue(undefined);
   });
 
   it("returns a taskId immediately", async () => {
@@ -428,6 +389,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -447,6 +409,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 3 }));
@@ -461,6 +424,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     const call = createWorkerAgent.mock.calls[0][0];
@@ -475,6 +439,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -494,6 +459,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -506,6 +472,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -513,19 +480,19 @@ describe("ResearchService – startOrchestratedResearch", () => {
       "deep research",
       null,
     );
-    await capturedSubscriber?.({ type: "agent_end" });
+    await getCaptured().current?.({ type: "agent_end" });
     expect(home.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
   });
 });
 
 describe("ResearchService – _runResearch internals", () => {
   beforeEach(() => {
-    capturedSubscriber = null;
+    getCaptured().current = null;
     vi.clearAllMocks();
-    mockAgent.subscribe.mockImplementation((cb: (event: unknown) => void) => {
-      capturedSubscriber = cb;
+    getMockAgent().subscribe.mockImplementation((cb: (event: unknown) => void) => {
+      getCaptured().current = cb;
     });
-    mockAgent.prompt.mockResolvedValue(undefined);
+    getMockAgent().prompt.mockResolvedValue(undefined);
   });
 
   it("two sequential startResearch calls on same project produce identical system prompts", async () => {
@@ -537,6 +504,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query A", null);
@@ -560,6 +528,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -585,6 +554,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
 
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
@@ -604,6 +574,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -624,6 +595,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
+      makeCrystallizationService() as never,
     );
     await svc.startResearch("p1", "My Project", "query", null);
     await new Promise((r) => setTimeout(r, 50));
