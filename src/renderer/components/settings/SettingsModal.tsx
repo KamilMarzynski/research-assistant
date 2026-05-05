@@ -9,12 +9,14 @@ import {
   Tabs,
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
-import type { AuditLogEntry, SkillInfo } from "../../../shared/ipc-channels";
 import { IPC } from "../../../shared/ipc-channels";
 import { glassSx } from "../../styles/glass";
+import { useAuditLog } from "../../hooks/useAuditLog";
+import { useProviderSettings } from "../../hooks/useProviderSettings";
+import { useSkillManager } from "../../hooks/useSkillManager";
 import AuditTab from "./AuditTab";
 import GeneralTab from "./GeneralTab";
-import ModelProviderTab, { type ProviderCredentials } from "./ModelProviderTab";
+import ModelProviderTab from "./ModelProviderTab";
 import SkillsTab from "./SkillsTab";
 
 interface SettingsModalProps {
@@ -24,165 +26,48 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [tab, setTab] = useState(0);
-  const [activeProvider, setActiveProvider] = useState<string>("openrouter");
-  const [defaultCloudProvider, setDefaultCloudProvider] = useState<string>("openrouter");
-  const [credentials, setCredentials] = useState<ProviderCredentials>({
-    openrouter: { apiKey: "", defaultModel: "anthropic/claude-sonnet-4-6" },
-    openai: { apiKey: "", defaultModel: "gpt-4o" },
-    anthropic: { apiKey: "", defaultModel: "claude-3-5-sonnet-20241022" },
-    ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
-  });
-  const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "ok" | "error">("idle");
-  const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string }>>([]);
-  const [modelsLoading, setModelsLoading] = useState(false);
-  const [modelsError, setModelsError] = useState<string | null>(null);
-  const [langfuseEnabled, setLangfuseEnabled] = useState(false);
-  const [webAccessEnabled, setWebAccessEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
-  const [auditFilter, setAuditFilter] = useState<"all" | "executed" | "blocked">("all");
   const [confirmClear, setConfirmClear] = useState(false);
-  const [skills, setSkills] = useState<SkillInfo[]>([]);
-  const [skillsLoading, setSkillsLoading] = useState(false);
-  const [skillsError, setSkillsError] = useState<string | null>(null);
-  const [expandedSkill, setExpandedSkill] = useState<string | null>(null);
   const [confirmDeleteSkill, setConfirmDeleteSkill] = useState<string | null>(null);
 
-  const fetchModels = useCallback(async (provider: string, host?: string, apiKey?: string) => {
-    if (provider !== "ollama" && provider !== "openrouter" && provider !== "openai") {
-      setAvailableModels([]);
-      setModelsError(null);
-      return;
-    }
-    if (provider === "openai" && !apiKey) {
-      setAvailableModels([]);
-      setModelsError(null);
-      return;
-    }
-    setModelsLoading(true);
-    setModelsError(null);
-    try {
-      const result = await window.electronAPI.invoke(IPC.GET_PROVIDER_MODELS, {
-        provider,
-        host,
-        apiKey,
-      });
-      setAvailableModels(result.models);
-      if (result.error) {
-        setModelsError(result.error);
-      }
-    } catch {
-      setModelsError("Failed to fetch models");
-      setAvailableModels([]);
-    } finally {
-      setModelsLoading(false);
-    }
-  }, []);
+  const [langfuseEnabled, setLangfuseEnabled] = useState(false);
+  const [webAccessEnabled, setWebAccessEnabled] = useState(true);
+
+  const provider = useProviderSettings(open);
+  const audit = useAuditLog(open && tab === 2);
+  const skills = useSkillManager(open && tab === 3);
 
   useEffect(() => {
     if (!open) return;
-    window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
-      setActiveProvider(settings.activeProvider ?? "openrouter");
-      setDefaultCloudProvider(settings.defaultCloudProvider ?? "openrouter");
-      setCredentials({
-        openrouter: {
-          apiKey: settings.providerCredentials.openrouter.apiKey ?? "",
-          defaultModel:
-            settings.providerCredentials.openrouter.defaultModel ?? "anthropic/claude-sonnet-4-6",
-        },
-        openai: {
-          apiKey: settings.providerCredentials.openai.apiKey ?? "",
-          defaultModel: settings.providerCredentials.openai.defaultModel ?? "gpt-4o",
-        },
-        anthropic: {
-          apiKey: settings.providerCredentials.anthropic.apiKey ?? "",
-          defaultModel:
-            settings.providerCredentials.anthropic.defaultModel ?? "claude-3-5-sonnet-20241022",
-        },
-        ollama: {
-          host: settings.providerCredentials.ollama.host ?? "http://localhost:11434",
-          defaultModel: settings.providerCredentials.ollama.defaultModel ?? "llama3.2:3b",
-        },
+    void provider.loadFromSettings().then(() => {
+      window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
+        setLangfuseEnabled(settings.langfuseEnabled ?? false);
+        setWebAccessEnabled(settings.webAccessEnabled ?? true);
       });
-      setLangfuseEnabled(settings.langfuseEnabled ?? false);
-      setWebAccessEnabled(settings.webAccessEnabled ?? true);
-
-      const provider = settings.activeProvider ?? "openrouter";
-      void fetchModels(
-        provider,
-        settings.providerCredentials.ollama.host,
-        provider === "openai"
-          ? (settings.providerCredentials.openai.apiKey ?? undefined)
-          : provider === "openrouter"
-            ? (settings.providerCredentials.openrouter.apiKey ?? undefined)
-            : undefined,
-      );
     });
-  }, [open, fetchModels]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-fetch when provider changes, not on every keystroke in credential fields
-  useEffect(() => {
-    if (!open) return;
-    const apiKey =
-      activeProvider === "openai"
-        ? credentials.openai.apiKey || undefined
-        : activeProvider === "openrouter"
-          ? credentials.openrouter.apiKey || undefined
-          : undefined;
-    void fetchModels(activeProvider, credentials.ollama.host, apiKey);
-  }, [open, activeProvider, fetchModels]);
-
-  const loadAuditLog = useCallback(async () => {
-    const entries = await window.electronAPI.invoke(IPC.GET_AUDIT_LOG);
-    setAuditEntries(entries);
-  }, []);
-
-  const fetchSkills = useCallback(async () => {
-    setSkillsLoading(true);
-    setSkillsError(null);
-    try {
-      const result = await window.electronAPI.invoke(IPC.GET_SKILLS);
-      setSkills(result);
-    } catch {
-      setSkillsError("Failed to load skills");
-    } finally {
-      setSkillsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (open && tab === 2) {
-      void loadAuditLog();
-    }
-  }, [open, tab, loadAuditLog]);
-
-  useEffect(() => {
-    if (open && tab === 3) {
-      void fetchSkills();
-    }
-  }, [open, tab, fetchSkills]);
+  }, [open, provider]);
 
   const handleSave = async () => {
     setSaving(true);
     await window.electronAPI.invoke(IPC.SAVE_SETTINGS, {
-      activeProvider,
-      defaultCloudProvider,
+      activeProvider: provider.activeProvider,
+      defaultCloudProvider: provider.defaultCloudProvider,
       providerCredentials: {
         openrouter: {
-          apiKey: credentials.openrouter.apiKey.trim() || null,
-          defaultModel: credentials.openrouter.defaultModel,
+          apiKey: provider.credentials.openrouter.apiKey.trim() || null,
+          defaultModel: provider.credentials.openrouter.defaultModel,
         },
         openai: {
-          apiKey: credentials.openai.apiKey.trim() || null,
-          defaultModel: credentials.openai.defaultModel,
+          apiKey: provider.credentials.openai.apiKey.trim() || null,
+          defaultModel: provider.credentials.openai.defaultModel,
         },
         anthropic: {
-          apiKey: credentials.anthropic.apiKey.trim() || null,
-          defaultModel: credentials.anthropic.defaultModel,
+          apiKey: provider.credentials.anthropic.apiKey.trim() || null,
+          defaultModel: provider.credentials.anthropic.defaultModel,
         },
         ollama: {
-          host: credentials.ollama.host,
-          defaultModel: credentials.ollama.defaultModel,
+          host: provider.credentials.ollama.host,
+          defaultModel: provider.credentials.ollama.defaultModel,
         },
       },
       langfuseEnabled,
@@ -192,29 +77,18 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     onClose();
   };
 
-  const testOllama = async () => {
-    setOllamaTestStatus("idle");
-    const host = credentials.ollama.host;
-    const result = await window.electronAPI.invoke(IPC.CHECK_OLLAMA, host);
-    setOllamaTestStatus(result.available ? "ok" : "error");
-  };
-
-  const handleClearAuditLog = async () => {
-    await window.electronAPI.invoke(IPC.CLEAR_AUDIT_LOG);
-    setAuditEntries([]);
+  const handleClearAuditLog = useCallback(async () => {
+    await audit.clear();
     setConfirmClear(false);
-  };
+  }, [audit]);
 
-  const handleToggleSkill = async (name: string, enabled: boolean) => {
-    await window.electronAPI.invoke(IPC.TOGGLE_SKILL, { name, enabled });
-    setSkills((prev) => prev.map((s) => (s.name === name ? { ...s, enabled } : s)));
-  };
-
-  const handleDeleteSkill = async (name: string) => {
-    await window.electronAPI.invoke(IPC.DELETE_SKILL, { name });
-    setSkills((prev) => prev.filter((s) => s.name !== name));
-    setConfirmDeleteSkill(null);
-  };
+  const handleDeleteSkill = useCallback(
+    async (name: string) => {
+      await skills.deleteSkill(name);
+      setConfirmDeleteSkill(null);
+    },
+    [skills],
+  );
 
   return (
     <Dialog
@@ -243,49 +117,49 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
 
         {tab === 1 && (
           <ModelProviderTab
-            activeProvider={activeProvider}
-            onActiveProviderChange={setActiveProvider}
-            defaultCloudProvider={defaultCloudProvider}
-            onDefaultCloudProviderChange={setDefaultCloudProvider}
-            credentials={credentials}
-            onCredentialsChange={setCredentials}
-            availableModels={availableModels}
-            modelsLoading={modelsLoading}
-            modelsError={modelsError}
+            activeProvider={provider.activeProvider}
+            onActiveProviderChange={provider.setActiveProvider}
+            defaultCloudProvider={provider.defaultCloudProvider}
+            onDefaultCloudProviderChange={provider.setDefaultCloudProvider}
+            credentials={provider.credentials}
+            onCredentialsChange={provider.setCredentials}
+            availableModels={provider.availableModels}
+            modelsLoading={provider.modelsLoading}
+            modelsError={provider.modelsError}
             onRefreshModels={() => {
               const apiKey =
-                activeProvider === "openai"
-                  ? credentials.openai.apiKey || undefined
-                  : activeProvider === "openrouter"
-                    ? credentials.openrouter.apiKey || undefined
+                provider.activeProvider === "openai"
+                  ? provider.credentials.openai.apiKey || undefined
+                  : provider.activeProvider === "openrouter"
+                    ? provider.credentials.openrouter.apiKey || undefined
                     : undefined;
-              void fetchModels(activeProvider, credentials.ollama.host, apiKey);
+              void provider.fetchModels(provider.activeProvider, provider.credentials.ollama.host, apiKey);
             }}
-            ollamaTestStatus={ollamaTestStatus}
-            onTestOllama={testOllama}
+            ollamaTestStatus={provider.ollamaTestStatus}
+            onTestOllama={provider.testOllama}
           />
         )}
 
         {tab === 2 && (
           <AuditTab
-            entries={auditEntries}
-            filter={auditFilter}
-            onFilterChange={setAuditFilter}
-            onRefresh={loadAuditLog}
+            entries={audit.entries}
+            filter={audit.filter}
+            onFilterChange={audit.setFilter}
+            onRefresh={audit.load}
             onRequestClear={() => setConfirmClear(true)}
           />
         )}
 
         {tab === 3 && (
           <SkillsTab
-            skills={skills}
-            loading={skillsLoading}
-            error={skillsError}
-            expandedSkill={expandedSkill}
-            onToggleExpand={(name) => setExpandedSkill(expandedSkill === name ? null : name)}
-            onToggleSkill={handleToggleSkill}
+            skills={skills.skills}
+            loading={skills.loading}
+            error={skills.error}
+            expandedSkill={skills.expandedSkill}
+            onToggleExpand={(name) => skills.setExpandedSkill(skills.expandedSkill === name ? null : name)}
+            onToggleSkill={skills.toggle}
             onDeleteRequest={setConfirmDeleteSkill}
-            onRetry={fetchSkills}
+            onRetry={skills.load}
           />
         )}
       </DialogContent>
