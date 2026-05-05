@@ -1,7 +1,8 @@
 import { Box, Button, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import type { BlockedCommandPayload } from "../../../../shared/ipc-channels";
+import { decodeBlockedCommandPayload } from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
+import type { BlockedCommandPayload } from "../../../../shared/ipc-types";
 import { glassSx } from "../../../styles/glass";
 import PendingCommandModal from "./PendingCommandModal";
 
@@ -11,7 +12,8 @@ export default function PendingCommandBanner() {
 
   useEffect(() => {
     const unsub = window.electronAPI.on(IPC.BASH_BLOCKED, (data) => {
-      const cmd = data as BlockedCommandPayload;
+      const cmd = decodeBlockedCommandPayload(data);
+      if (!cmd) return;
       setBlocked((prev) => {
         if (prev.some((c) => c.commandId === cmd.commandId)) return prev;
         return [...prev, cmd];

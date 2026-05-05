@@ -1,5 +1,6 @@
 import { Box, Button, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import { decodePathApprovalPayload } from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
 import type { PathApprovalPayload } from "../../../../shared/ipc-types";
 import { glassSx } from "../../../styles/glass";
@@ -11,7 +12,8 @@ export default function PendingPathBanner() {
 
   useEffect(() => {
     const unsub = window.electronAPI.on(IPC.PATH_APPROVAL_REQUIRED, (data) => {
-      const req = data as PathApprovalPayload;
+      const req = decodePathApprovalPayload(data);
+      if (!req) return;
       setBlocked((prev) => {
         const key = `${req.projectId}:${req.path}:${req.mode}`;
         if (prev.some((r) => `${r.projectId}:${r.path}:${r.mode}` === key)) return prev;

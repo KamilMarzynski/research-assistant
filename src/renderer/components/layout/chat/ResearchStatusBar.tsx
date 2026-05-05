@@ -1,9 +1,9 @@
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type {
-  ResearchCompletePayload,
-  ResearchStatusUpdatePayload,
-} from "../../../../shared/ipc-channels";
+import {
+  decodeResearchCompletePayload,
+  decodeResearchStatusUpdatePayload,
+} from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
 import { glassSx } from "../../../styles/glass";
 
@@ -56,7 +56,8 @@ export default function ResearchStatusBar() {
 
   useEffect(() => {
     const unsubUpdate = window.electronAPI.on(IPC.RESEARCH_STATUS_UPDATE, (data) => {
-      const d = data as ResearchStatusUpdatePayload;
+      const d = decodeResearchStatusUpdatePayload(data);
+      if (!d) return;
       if (d.status === "started") {
         clearTimers();
         setState({
@@ -99,7 +100,8 @@ export default function ResearchStatusBar() {
     });
 
     const unsubComplete = window.electronAPI.on(IPC.RESEARCH_COMPLETE, (data) => {
-      const d = data as ResearchCompletePayload;
+      const d = decodeResearchCompletePayload(data);
+      if (!d) return;
       clearTimers();
       setState({
         active: false,

@@ -1,5 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import { decodeMessageChunk } from "../../../../shared/ipc-guards";
 import { IPC } from "../../../../shared/ipc-channels";
 import type { Message } from "../../../../shared/types";
 import { useProject } from "../../../contexts/ProjectContext";
@@ -40,7 +41,9 @@ export default function ChatPanel() {
   // Subscribe to streaming events
   useEffect(() => {
     const unsubChunk = window.electronAPI.on(IPC.MESSAGE_CHUNK, (delta) => {
-      setStreamingContent((prev) => (prev ?? "") + (delta as string));
+      const chunk = decodeMessageChunk(delta);
+      if (chunk === null) return;
+      setStreamingContent((prev) => (prev ?? "") + chunk);
     });
 
     const unsubDone = window.electronAPI.on(IPC.MESSAGE_DONE, () => {
