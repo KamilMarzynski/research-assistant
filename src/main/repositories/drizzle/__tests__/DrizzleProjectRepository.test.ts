@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDatabase } from "../../../../../tests/helpers/db";
 import type { DrizzleDB } from "../../../db/client";
+import { MonotonicClock } from "../../../utils/time";
 import { DrizzleProjectRepository } from "../DrizzleProjectRepository";
 
 describe("DrizzleProjectRepository", () => {
   let db: DrizzleDB;
   let repo: DrizzleProjectRepository;
+  const clock = new MonotonicClock();
 
   beforeEach(async () => {
     db = await createTestDatabase();
-    repo = new DrizzleProjectRepository(db);
+    repo = new DrizzleProjectRepository(db, clock);
   });
 
   describe("create", () => {

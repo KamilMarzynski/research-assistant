@@ -4,8 +4,10 @@ import type { IArtifactRepository } from "../repositories/IArtifactRepository";
 import type { IMessageRepository } from "../repositories/IMessageRepository";
 import type { IProjectRepository } from "../repositories/IProjectRepository";
 import type { IMemoryManager } from "../services/MemoryManager";
+import type { MonotonicClock } from "../utils/time";
 
 export const DB_TOKEN: InjectionToken<DrizzleDB> = Symbol("DrizzleDB");
+export const CLOCK_TOKEN: InjectionToken<MonotonicClock> = Symbol("MonotonicClock");
 export const PROJECT_REPO_TOKEN: InjectionToken<IProjectRepository> = Symbol("IProjectRepository");
 export const MESSAGE_REPO_TOKEN: InjectionToken<IMessageRepository> = Symbol("IMessageRepository");
 export const ARTIFACT_REPO_TOKEN: InjectionToken<IArtifactRepository> =

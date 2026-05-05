@@ -6,6 +6,7 @@ import { runMigrations } from "./db/migrate";
 import {
   AGENT_HOME_PATH_TOKEN,
   ARTIFACT_REPO_TOKEN,
+  CLOCK_TOKEN,
   DB_TOKEN,
   FALLBACK_MEMORY_PATH_TOKEN,
   MEMORY_FILE_PATH_TOKEN,
@@ -17,6 +18,7 @@ import {
 import { EventBus } from "./event-bus";
 import { getAgentsHome, getHomePath } from "./paths";
 import { DrizzleArtifactRepository } from "./repositories/drizzle/DrizzleArtifactRepository";
+import { MonotonicClock } from "./utils/time";
 import { DrizzleMessageRepository } from "./repositories/drizzle/DrizzleMessageRepository";
 import { DrizzleProjectRepository } from "./repositories/drizzle/DrizzleProjectRepository";
 import { AllowlistService } from "./services/AllowlistService";
@@ -72,6 +74,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(OutputNotificationService);
   appContainer.registerSingleton(AllowlistService);
 
+  appContainer.registerInstance(CLOCK_TOKEN, new MonotonicClock());
   appContainer.registerInstance(MEMORY_FILE_PATH_TOKEN, join(homePath, "app-memory"));
   appContainer.registerInstance(FALLBACK_MEMORY_PATH_TOKEN, homePath);
   appContainer.registerSingleton(MemoryFileService);

@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDatabase } from "../../../../../tests/helpers/db";
 import type { DrizzleDB } from "../../../db/client";
+import { MonotonicClock } from "../../../utils/time";
 import { DrizzleArtifactRepository } from "../DrizzleArtifactRepository";
 import { DrizzleProjectRepository } from "../DrizzleProjectRepository";
 
@@ -9,11 +10,12 @@ describe("DrizzleArtifactRepository", () => {
   let db: DrizzleDB;
   let repo: DrizzleArtifactRepository;
   let projectId: string;
+  const clock = new MonotonicClock();
 
   beforeEach(async () => {
     db = await createTestDatabase();
-    repo = new DrizzleArtifactRepository(db);
-    const projectRepo = new DrizzleProjectRepository(db);
+    repo = new DrizzleArtifactRepository(db, clock);
+    const projectRepo = new DrizzleProjectRepository(db, clock);
     const project = await projectRepo.create({ name: "Test Project", folderPath: null });
     projectId = project.id;
   });
@@ -67,7 +69,7 @@ describe("DrizzleArtifactRepository", () => {
     });
 
     it("only returns artifacts belonging to the given project", async () => {
-      const projectRepo = new DrizzleProjectRepository(db);
+      const projectRepo = new DrizzleProjectRepository(db, clock);
       const other = await projectRepo.create({ name: "Other", folderPath: null });
 
       await repo.create({ projectId, title: "Mine", filePath: "/mine.md" });

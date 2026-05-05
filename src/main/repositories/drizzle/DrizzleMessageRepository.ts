@@ -3,23 +3,30 @@ import { inject, injectable } from "tsyringe";
 import type { Message, MessageRole } from "../../../shared/types";
 import type { DrizzleDB } from "../../db/client";
 import { messages } from "../../db/schema";
-import { DB_TOKEN } from "../../di/tokens";
+import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
 import { MonotonicClock } from "../../utils/time";
 import type { IMessageRepository } from "../IMessageRepository";
+import { BaseDrizzleRepository } from "./BaseDrizzleRepository";
 
 @injectable()
-export class DrizzleMessageRepository implements IMessageRepository {
-  private readonly clock = new MonotonicClock();
-
-  constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
+export class DrizzleMessageRepository
+  extends BaseDrizzleRepository<typeof messages.$inferSelect, typeof messages.$inferInsert, Message>
+  implements IMessageRepository
+{
+  constructor(
+    @inject(DB_TOKEN) db: DrizzleDB,
+    @inject(CLOCK_TOKEN) clock: MonotonicClock,
+  ) {
+    super(db, clock);
+  }
 
   async create(data: Omit<Message, "id" | "createdAt">): Promise<Message> {
     const message: Message = {
-      id: crypto.randomUUID(),
+      id: this.id(),
       projectId: data.projectId,
       role: data.role,
       content: data.content,
-      createdAt: this.clock.now(),
+      createdAt: this.now(),
     };
     await this.db.insert(messages).values({
       id: message.id,
@@ -37,7 +44,7 @@ export class DrizzleMessageRepository implements IMessageRepository {
       .from(messages)
       .where(eq(messages.projectId, projectId))
       .orderBy(asc(messages.createdAt), asc(messages.id));
-    return rows.map(this.rowToMessage);
+    return rows.map(this.rowToEntity);
   }
 
   async getRecent(projectId: string, n: number): Promise<Message[]> {
@@ -48,10 +55,10 @@ export class DrizzleMessageRepository implements IMessageRepository {
       .orderBy(desc(messages.createdAt), desc(messages.id))
       .limit(n);
     // Fetched newest-first; return in ascending order for callers
-    return rows.map(this.rowToMessage).reverse();
+    return rows.map(this.rowToEntity).reverse();
   }
 
-  private rowToMessage = (row: typeof messages.$inferSelect): Message => ({
+  protected rowToEntity = (row: typeof messages.$inferSelect): Message => ({
     id: row.id,
     projectId: row.projectId,
     role: row.role as MessageRole,

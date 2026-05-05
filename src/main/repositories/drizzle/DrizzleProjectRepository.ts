@@ -3,20 +3,27 @@ import { desc, eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
 import type { DrizzleDB } from "../../db/client";
 import { projects } from "../../db/schema";
-import { DB_TOKEN } from "../../di/tokens";
+import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
 import { MonotonicClock } from "../../utils/time";
 import type { CreateProjectData, IProjectRepository } from "../IProjectRepository";
+import { BaseDrizzleRepository } from "./BaseDrizzleRepository";
 
 @injectable()
-export class DrizzleProjectRepository implements IProjectRepository {
-  private readonly clock = new MonotonicClock();
-
-  constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
+export class DrizzleProjectRepository
+  extends BaseDrizzleRepository<typeof projects.$inferSelect, typeof projects.$inferInsert, Project>
+  implements IProjectRepository
+{
+  constructor(
+    @inject(DB_TOKEN) db: DrizzleDB,
+    @inject(CLOCK_TOKEN) clock: MonotonicClock,
+  ) {
+    super(db, clock);
+  }
 
   async create(data: CreateProjectData): Promise<Project> {
-    const now = this.clock.now();
+    const now = this.now();
     const project: Project = {
-      id: crypto.randomUUID(),
+      id: this.id(),
       name: data.name,
       folderPath: data.folderPath ?? null,
       maxRecentMessages: data.maxRecentMessages ?? 20,
@@ -39,12 +46,12 @@ export class DrizzleProjectRepository implements IProjectRepository {
       .select()
       .from(projects)
       .orderBy(desc(projects.createdAt), desc(projects.id));
-    return rows.map(this.rowToProject);
+    return rows.map(this.rowToEntity);
   }
 
   async get(id: string): Promise<Project | null> {
     const rows = await this.db.select().from(projects).where(eq(projects.id, id)).limit(1);
-    return rows[0] ? this.rowToProject(rows[0]) : null;
+    return rows[0] ? this.rowToEntity(rows[0]) : null;
   }
 
   async delete(id: string): Promise<void> {
@@ -61,7 +68,7 @@ export class DrizzleProjectRepository implements IProjectRepository {
   async rename(id: string, name: string): Promise<void> {
     const result = await this.db
       .update(projects)
-      .set({ name, updatedAt: new Date() })
+      .set({ name, updatedAt: this.now() })
       .where(eq(projects.id, id));
     if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
   }
@@ -69,12 +76,12 @@ export class DrizzleProjectRepository implements IProjectRepository {
   async unlinkFolder(id: string): Promise<void> {
     const result = await this.db
       .update(projects)
-      .set({ folderPath: null, updatedAt: new Date() })
+      .set({ folderPath: null, updatedAt: this.now() })
       .where(eq(projects.id, id));
     if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
   }
 
-  private rowToProject = (row: typeof projects.$inferSelect): Project => ({
+  protected rowToEntity = (row: typeof projects.$inferSelect): Project => ({
     id: row.id,
     name: row.name,
     folderPath: row.folderPath ?? null,

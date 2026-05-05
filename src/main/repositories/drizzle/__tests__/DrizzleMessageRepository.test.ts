@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDatabase } from "../../../../../tests/helpers/db";
 import type { DrizzleDB } from "../../../db/client";
+import { MonotonicClock } from "../../../utils/time";
 import { DrizzleMessageRepository } from "../DrizzleMessageRepository";
 import { DrizzleProjectRepository } from "../DrizzleProjectRepository";
 
@@ -8,12 +9,13 @@ describe("DrizzleMessageRepository", () => {
   let db: DrizzleDB;
   let repo: DrizzleMessageRepository;
   let projectId: string;
+  const clock = new MonotonicClock();
 
   beforeEach(async () => {
     db = await createTestDatabase();
-    repo = new DrizzleMessageRepository(db);
+    repo = new DrizzleMessageRepository(db, clock);
     // Messages require an existing project (FK constraint)
-    const projectRepo = new DrizzleProjectRepository(db);
+    const projectRepo = new DrizzleProjectRepository(db, clock);
     const project = await projectRepo.create({ name: "Test Project", folderPath: null });
     projectId = project.id;
   });
@@ -47,7 +49,7 @@ describe("DrizzleMessageRepository", () => {
     });
 
     it("only returns messages belonging to the given project", async () => {
-      const projectRepo = new DrizzleProjectRepository(db);
+      const projectRepo = new DrizzleProjectRepository(db, clock);
       const other = await projectRepo.create({ name: "Other", folderPath: null });
 
       await repo.create({ projectId, role: "user", content: "Mine" });

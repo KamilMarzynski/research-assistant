@@ -3,27 +3,34 @@ import { desc, eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
 import type { DrizzleDB } from "../../db/client";
 import { artifacts } from "../../db/schema";
-import { DB_TOKEN } from "../../di/tokens";
+import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
 import { MonotonicClock } from "../../utils/time";
 import type { IArtifactRepository } from "../IArtifactRepository";
+import { BaseDrizzleRepository } from "./BaseDrizzleRepository";
 
 @injectable()
-export class DrizzleArtifactRepository implements IArtifactRepository {
-  private readonly clock = new MonotonicClock();
-
-  constructor(@inject(DB_TOKEN) private readonly db: DrizzleDB) {}
+export class DrizzleArtifactRepository
+  extends BaseDrizzleRepository<typeof artifacts.$inferSelect, typeof artifacts.$inferInsert, Artifact>
+  implements IArtifactRepository
+{
+  constructor(
+    @inject(DB_TOKEN) db: DrizzleDB,
+    @inject(CLOCK_TOKEN) clock: MonotonicClock,
+  ) {
+    super(db, clock);
+  }
 
   async create(
     data: Omit<Artifact, "id" | "createdAt" | "acknowledged"> & { acknowledged?: boolean },
   ): Promise<Artifact> {
     const artifact: Artifact = {
-      id: crypto.randomUUID(),
+      id: this.id(),
       projectId: data.projectId,
       title: data.title,
       filePath: data.filePath,
       relativePath: data.relativePath,
       acknowledged: data.acknowledged ?? false,
-      createdAt: this.clock.now(),
+      createdAt: this.now(),
     };
     await this.db.insert(artifacts).values({
       id: artifact.id,
@@ -43,12 +50,12 @@ export class DrizzleArtifactRepository implements IArtifactRepository {
       .from(artifacts)
       .where(eq(artifacts.projectId, projectId))
       .orderBy(desc(artifacts.createdAt), desc(artifacts.id));
-    return rows.map(this.rowToArtifact);
+    return rows.map(this.rowToEntity);
   }
 
   async get(id: string): Promise<Artifact | null> {
     const rows = await this.db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1);
-    return rows[0] ? this.rowToArtifact(rows[0]) : null;
+    return rows[0] ? this.rowToEntity(rows[0]) : null;
   }
 
   async acknowledge(id: string): Promise<void> {
@@ -62,7 +69,7 @@ export class DrizzleArtifactRepository implements IArtifactRepository {
       .where(eq(artifacts.projectId, projectId));
   }
 
-  private rowToArtifact = (row: typeof artifacts.$inferSelect): Artifact => ({
+  protected rowToEntity = (row: typeof artifacts.$inferSelect): Artifact => ({
     id: row.id,
     projectId: row.projectId,
     title: row.title,
