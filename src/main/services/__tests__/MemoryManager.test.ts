@@ -62,6 +62,7 @@ vi.mock("@mariozechner/pi-ai", () => ({
 }));
 
 const { MemoryManager } = await import("../MemoryManager");
+const { MemoryCompressionService } = await import("../MemoryCompressionService");
 
 // ---- Helpers ----
 
@@ -137,7 +138,11 @@ describe("MemoryManager", () => {
       content: [{ type: "text", text: "Compressed summary." }],
     });
 
-    manager = new MemoryManager("/tmp/test-userdata", makeSettingsService() as never);
+    const compressionService = new MemoryCompressionService(
+      makeSettingsService() as never,
+      "/tmp/home",
+    );
+    manager = new MemoryManager("/tmp/test-userdata", compressionService as never);
   });
 
   // ------------------------------------------------------------------ buildContext
@@ -354,7 +359,11 @@ describe("MemoryManager", () => {
     });
 
     it("skips compression when no API key configured", async () => {
-      manager = new MemoryManager("/tmp/test-userdata", makeSettingsService(null) as never);
+      const compressionService = new MemoryCompressionService(
+        makeSettingsService(null) as never,
+        "/tmp/home",
+      );
+      manager = new MemoryManager("/tmp/test-userdata", compressionService as never);
 
       // Build messages above threshold (120,001 chars)
       const longText = "x".repeat(120_001);
