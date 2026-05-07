@@ -74,6 +74,17 @@ Event mapping:
 - API key encrypted via `electron.safeStorage` (stored as base64)
 - Model stored plain
 
+## Langfuse (Local)
+
+A local Langfuse stack is available via `docker-compose.langfuse.yml` for observability during development.
+
+```bash
+docker compose -f docker-compose.langfuse.yml up -d   # start
+docker compose -f docker-compose.langfuse.yml down   # stop
+```
+
+Services: `langfuse-web` (port 3000), `postgres`, `clickhouse`, `redis`, `minio`. See `docs/langfuse-local-setup.md` for full instructions.
+
 ## Agent Home Directory (Run 6+)
 
 `~/.research-assistant/` — not yet implemented. Planned: `config.md`, `skills/`, `projects/<slug>/AGENTS.md`, `workspace/`, `audit.log`.

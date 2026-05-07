@@ -2,6 +2,7 @@ node_modules/
 dist/
 out/
 .env
+.env.langfuse
 *.local
 *.db
 .DS_Store
