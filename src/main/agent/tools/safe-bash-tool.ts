@@ -14,7 +14,7 @@ export function createSafeBashTool(
     name: "safe_bash",
     label: "Run safe bash command",
     description:
-      "Execute a bash command in the project workspace. Always state your intent. Blocked commands: rm -rf, sudo, curl, wget, eval, subshells.",
+      "Execute a bash command in the project workspace. Always state your intent. Dangerous commands are blocked automatically.",
     parameters: safeBashParameters,
     execute: async (_id, { command, intent }) => {
       await mkdir(workspacePath, { recursive: true });

@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 // ── IPC payload schemas ──
 
 export const CreateProjectSchema = z.object({
-  name: z.string(),
+  name: z.string().max(100),
   folderPath: z.string(),
 });
 
@@ -18,7 +18,7 @@ export const ReadArtifactFileSchema = z.object({
 
 export const SendMessageSchema = z.object({
   projectId: z.string(),
-  content: z.string(),
+  content: z.string().max(50_000),
 });
 
 export const RetryResearchSchema = z.object({

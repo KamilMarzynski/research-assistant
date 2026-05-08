@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { DEFAULT_OPENROUTER_MODEL } from "../../shared/constants";
 import { IPC } from "../../shared/ipc-channels";
 import type { ProviderCredentials } from "../components/settings/ModelProviderTab";
 
@@ -24,7 +25,7 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
   const [activeProvider, setActiveProvider] = useState<string>("openrouter");
   const [defaultCloudProvider, setDefaultCloudProvider] = useState<string>("openrouter");
   const [credentials, setCredentials] = useState<ProviderCredentials>({
-    openrouter: { apiKey: "", defaultModel: "anthropic/claude-sonnet-4-6" },
+    openrouter: { apiKey: "", defaultModel: DEFAULT_OPENROUTER_MODEL },
     openai: { apiKey: "", defaultModel: "gpt-4o" },
     anthropic: { apiKey: "", defaultModel: "claude-3-5-sonnet-20241022" },
     ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
@@ -73,7 +74,7 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
       openrouter: {
         apiKey: settings.providerCredentials.openrouter.apiKey ?? "",
         defaultModel:
-          settings.providerCredentials.openrouter.defaultModel ?? "anthropic/claude-sonnet-4-6",
+          settings.providerCredentials.openrouter.defaultModel ?? DEFAULT_OPENROUTER_MODEL,
       },
       openai: {
         apiKey: settings.providerCredentials.openai.apiKey ?? "",

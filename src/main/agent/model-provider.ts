@@ -126,6 +126,7 @@ export async function checkOllamaAvailable(host: string): Promise<boolean> {
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       return false;
     }
+    // HTTP is acceptable for localhost; remote hosts should use HTTPS
     const res = await fetch(url.toString(), {
       signal: AbortSignal.timeout(5000),
     });

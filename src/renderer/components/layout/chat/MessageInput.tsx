@@ -1,6 +1,7 @@
 import SendIcon from "@mui/icons-material/Send";
 import { Box, IconButton, MenuItem, Select, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
+import { DEFAULT_OPENROUTER_MODEL } from "../../../../shared/constants";
 import { IPC } from "../../../../shared/ipc-channels";
 
 interface ModelInfo {
@@ -15,7 +16,7 @@ interface MessageInputProps {
 
 export default function MessageInput({ onSend, disabled }: MessageInputProps) {
   const [content, setContent] = useState("");
-  const [model, setModel] = useState("anthropic/claude-sonnet-4-6");
+  const [model, setModel] = useState(DEFAULT_OPENROUTER_MODEL);
   const [activeProvider, setActiveProvider] = useState<string>("openrouter");
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);

@@ -5,11 +5,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  type PaperProps,
   Typography,
 } from "@mui/material";
 import type { PendingTool } from "../../../../shared/ipc-channels";
-import { glassSx } from "../../../styles/glass";
+import { glassSx } from "../../../theme";
 
 interface PendingToolModalProps {
   tool: PendingTool;
@@ -30,11 +29,11 @@ export default function PendingToolModal({
       onClose={onClose}
       maxWidth="md"
       fullWidth
+      data-testid="pending-tool-modal"
       slotProps={{
         paper: {
           sx: glassSx,
-          "data-testid": "pending-tool-modal",
-        } as PaperProps,
+        },
       }}
     >
       <DialogTitle>Review proposed tool: {tool.name}</DialogTitle>

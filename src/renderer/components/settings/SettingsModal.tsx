@@ -13,7 +13,7 @@ import { IPC } from "../../../shared/ipc-channels";
 import { useAuditLog } from "../../hooks/useAuditLog";
 import { useProviderSettings } from "../../hooks/useProviderSettings";
 import { useSkillManager } from "../../hooks/useSkillManager";
-import { glassSx } from "../../styles/glass";
+import { glassSx } from "../../theme";
 import AuditTab from "./AuditTab";
 import GeneralTab from "./GeneralTab";
 import ModelProviderTab from "./ModelProviderTab";

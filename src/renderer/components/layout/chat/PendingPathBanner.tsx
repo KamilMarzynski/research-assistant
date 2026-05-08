@@ -4,7 +4,7 @@ import { IPC } from "../../../../shared/ipc-channels";
 import { decodePathApprovalPayload } from "../../../../shared/ipc-guards";
 import type { PathApprovalPayload } from "../../../../shared/ipc-types";
 import { usePendingItems } from "../../../hooks/usePendingItems";
-import { glassSx } from "../../../styles/glass";
+import { glassSx } from "../../../theme";
 import PendingPathModal from "./PendingPathModal";
 
 export default function PendingPathBanner() {

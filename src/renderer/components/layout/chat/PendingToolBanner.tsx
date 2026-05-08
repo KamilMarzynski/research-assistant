@@ -4,7 +4,7 @@ import { IPC } from "../../../../shared/ipc-channels";
 import { decodePendingTool } from "../../../../shared/ipc-guards";
 import type { PendingTool } from "../../../../shared/ipc-types";
 import { usePendingItems } from "../../../hooks/usePendingItems";
-import { glassSx } from "../../../styles/glass";
+import { glassSx } from "../../../theme";
 import PendingToolModal from "./PendingToolModal";
 
 export default function PendingToolBanner() {

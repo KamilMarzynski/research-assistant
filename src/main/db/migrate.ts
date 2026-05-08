@@ -31,12 +31,12 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
     )
   `);
 
-function isDuplicateColumnError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  const msg = err.message ?? "";
-  const causeMsg = (err as { cause?: { message?: string } }).cause?.message ?? "";
-  return msg.includes("duplicate column name") || causeMsg.includes("duplicate column name");
-}
+  function isDuplicateColumnError(err: unknown): boolean {
+    if (!(err instanceof Error)) return false;
+    const msg = err.message ?? "";
+    const causeMsg = (err as { cause?: { message?: string } }).cause?.message ?? "";
+    return msg.includes("duplicate column name") || causeMsg.includes("duplicate column name");
+  }
 
   // Run 6: add folder_path — idempotent, ignore "duplicate column name" error
   try {

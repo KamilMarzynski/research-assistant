@@ -39,7 +39,6 @@ export async function loadSkillsByContent(
 }
 
 export async function buildSystemContext(
-  _projectId: string,
   projectName: string,
   folderPath: string | undefined,
   skillIndexXml?: string,

@@ -49,6 +49,9 @@ export function parseDdgResults(html: string, maxResults: number): WebSearchResu
 
 /**
  * Search DuckDuckGo HTML endpoint and parse results.
+ * Note: DuckDuckGo has no official search API; this uses HTML scraping
+ * as a pragmatic fallback. Results may degrade if DuckDuckGo changes markup
+ * or rate-limits requests. Treat as best-effort only.
  */
 export async function searchDuckDuckGo(
   query: string,

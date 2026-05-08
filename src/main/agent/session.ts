@@ -242,7 +242,6 @@ export class AgentSession {
         const memoryContext = await this.memoryManager.buildContext(this.projectId, 20);
         const historyBlock = formatConversationHistory(memoryContext.recentMessages);
         const systemContext = await buildSystemContext(
-          this.projectId,
           this.projectName,
           this.folderPath ?? undefined,
           this.skillRouter.toXml(),

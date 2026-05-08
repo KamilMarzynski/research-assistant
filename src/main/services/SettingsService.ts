@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { dialog, safeStorage } from "electron";
 import { inject, injectable } from "tsyringe";
+import { DEFAULT_OPENROUTER_MODEL } from "../../shared/constants";
 import { USER_DATA_PATH_TOKEN } from "../di/tokens";
 
 export interface ProviderCredentials {
@@ -26,7 +27,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   activeProvider: "openrouter",
   defaultCloudProvider: "openrouter",
   providerCredentials: {
-    openrouter: { apiKey: null, defaultModel: "anthropic/claude-sonnet-4-6" },
+    openrouter: { apiKey: null, defaultModel: DEFAULT_OPENROUTER_MODEL },
     openai: { apiKey: null, defaultModel: "gpt-4o" },
     anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
     ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
@@ -194,6 +195,13 @@ export class SettingsService {
     const next: AppSettings = { ...current, ...patch };
 
     if (patch.providerCredentials) {
+      const ollamaHost = patch.providerCredentials.ollama?.host;
+      if (ollamaHost) {
+        const url = new URL(ollamaHost);
+        if (url.protocol !== "http:" && url.protocol !== "https:") {
+          throw new Error(`Invalid Ollama host protocol: ${url.protocol}`);
+        }
+      }
       next.providerCredentials = {
         openrouter: {
           ...current.providerCredentials.openrouter,

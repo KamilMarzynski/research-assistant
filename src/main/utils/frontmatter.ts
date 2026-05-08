@@ -15,7 +15,11 @@ export function parseFrontmatter(content: string): FrontmatterMeta {
   if (!match) return {};
   try {
     return (parse(match[1]) as FrontmatterMeta) ?? {};
-  } catch {
+  } catch (err) {
+    console.warn(
+      "[frontmatter] failed to parse YAML frontmatter:",
+      err instanceof Error ? err.message : String(err),
+    );
     return {};
   }
 }

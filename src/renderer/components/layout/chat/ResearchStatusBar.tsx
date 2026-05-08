@@ -5,7 +5,7 @@ import {
   decodeResearchCompletePayload,
   decodeResearchStatusUpdatePayload,
 } from "../../../../shared/ipc-guards";
-import { glassSx } from "../../../styles/glass";
+import { glassSx } from "../../../theme";
 
 interface ResearchState {
   active: boolean;

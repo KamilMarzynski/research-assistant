@@ -3,6 +3,13 @@ import { createTheme, type Theme } from "@mui/material/styles";
 const manrope = '"Manrope", system-ui, -apple-system, sans-serif';
 const inter = '"Inter", system-ui, -apple-system, sans-serif';
 
+export const glassSx = {
+  background: "rgba(19, 22, 30, 0.6)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+} as const;
+
 export function createAppTheme(): Theme {
   return createTheme({
     palette: {

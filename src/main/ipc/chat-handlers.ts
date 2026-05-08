@@ -61,11 +61,21 @@ export function registerChatHandler(
   });
 
   const sendLocks = new Map<string, Promise<void>>();
+  const lastSendTimes = new Map<string, number>();
+  const THROTTLE_MS = 500;
 
   ipcMain.handle(IPC.SEND_MESSAGE, async (_event, payload: unknown) => {
     const parsed = parseOrThrow(SendMessageSchema, payload, "SEND_MESSAGE");
     const projectId = parsed.projectId;
     const content = parsed.content;
+
+    // Per-project throttle: minimum interval between sends
+    const last = lastSendTimes.get(projectId) ?? 0;
+    const elapsed = Date.now() - last;
+    if (elapsed < THROTTLE_MS) {
+      await new Promise((resolve) => setTimeout(resolve, THROTTLE_MS - elapsed));
+    }
+    lastSendTimes.set(projectId, Date.now());
 
     // Per-project mutex: serialize session creation and message sends
     let releaseLock: (() => void) | undefined;
@@ -102,7 +112,6 @@ export function registerChatHandler(
         const project = await projectService.getProject(projectId);
         const isFirstRun = await homeService.isFirstRun();
         const systemContext = await buildSystemContext(
-          projectId,
           project.name,
           project.folderPath ?? undefined,
         );

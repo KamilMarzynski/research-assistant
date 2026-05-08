@@ -18,8 +18,13 @@ function createWindow(): BrowserWindow {
     },
   });
 
-  if (process.env.ELECTRON_RENDERER_URL) {
-    win.loadURL(process.env.ELECTRON_RENDERER_URL);
+  const rendererUrl = process.env.ELECTRON_RENDERER_URL;
+  if (rendererUrl) {
+    const parsed = new URL(rendererUrl);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error(`Invalid ELECTRON_RENDERER_URL protocol: ${parsed.protocol}`);
+    }
+    win.loadURL(rendererUrl);
   } else {
     win.loadFile(join(import.meta.dirname, "../renderer/index.html"));
   }

@@ -1,3 +1,6 @@
+import FolderIcon from "@mui/icons-material/Folder";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
+import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import { Box, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
@@ -47,7 +50,16 @@ function FileTreeNode({ node, depth }: { node: FileNode; depth: number }) {
         }}
         onClick={() => isDir && setExpanded(!expanded)}
       >
-        {isDir ? (expanded ? "📂" : "📁") : "📄"} {node.name}
+        {isDir ? (
+          expanded ? (
+            <FolderOpenIcon fontSize="inherit" />
+          ) : (
+            <FolderIcon fontSize="inherit" />
+          )
+        ) : (
+          <InsertDriveFileIcon fontSize="inherit" />
+        )}{" "}
+        {node.name}
       </Typography>
       {isDir &&
         expanded &&

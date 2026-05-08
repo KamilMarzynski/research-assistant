@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import type { IpcChannel, IpcResponseMap } from "../shared/ipc-channels";
 import type { FileNode } from "../shared/ipc-types";
 

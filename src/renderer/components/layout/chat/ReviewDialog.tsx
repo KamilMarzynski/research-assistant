@@ -1,5 +1,5 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
-import { glassSx } from "../../../styles/glass";
+import { glassSx } from "../../../theme";
 
 interface ReviewDialogProps {
   title: string;

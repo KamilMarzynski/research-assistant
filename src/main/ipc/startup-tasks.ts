@@ -9,7 +9,9 @@ export function registerStartupTasks(deps: {
 }): void {
   const { homeService, researchService, eventBus } = deps;
 
-  // Migrate JSON tasks to DB, then auto-resume in-progress research
+  // Migrate JSON tasks to DB, then auto-resume in-progress research.
+  // Intentionally non-blocking — startup tasks run in the background
+  // and emit errors via EventBus rather than blocking app launch.
   void (async () => {
     try {
       await homeService.migrateTasksFromJson();
