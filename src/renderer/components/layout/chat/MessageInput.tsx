@@ -77,17 +77,18 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
         borderTop: "1px solid var(--line)",
       }}
     >
-      <div
-        className="card"
-        style={{
-          padding: 10,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          borderColor: "var(--line-strong)",
-          boxShadow: "var(--shadow-1)",
-        }}
-      >
+      <div style={{ maxWidth: 768, width: "100%", margin: "0 auto" }}>
+        <div
+          className="card"
+          style={{
+            padding: 10,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            borderColor: "var(--line-strong)",
+            boxShadow: "var(--shadow-1)",
+          }}
+        >
         <textarea
           className="input"
           rows={2}
@@ -204,6 +205,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
