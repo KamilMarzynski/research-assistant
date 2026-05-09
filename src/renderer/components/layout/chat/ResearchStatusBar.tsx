@@ -1,11 +1,10 @@
-import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import {
   decodeResearchCompletePayload,
   decodeResearchStatusUpdatePayload,
 } from "../../../../shared/ipc-guards";
-import { glassSx } from "../../../theme";
+import { IconChevR } from "../../shared/Icons";
 
 interface ResearchState {
   active: boolean;
@@ -62,7 +61,7 @@ export default function ResearchStatusBar() {
         clearTimers();
         setState({
           active: true,
-          message: "Research started\u2026",
+          message: "Research started…",
           doneMessage: null,
           error: null,
           failedTaskId: null,
@@ -127,42 +126,65 @@ export default function ResearchStatusBar() {
   }, [clearTimers]);
 
   if (!state.active && !state.doneMessage && !state.error) {
-    return <Box sx={{ minHeight: 40 }} />;
+    return <div style={{ minHeight: 40 }} />;
   }
 
+  const isErr = !!state.error;
+  const isDone = !!state.doneMessage && !state.error;
+
   return (
-    <Box
+    <div
       data-testid="research-status-bar"
-      sx={{
-        ...glassSx,
-        px: 2,
-        py: 1,
+      style={{
+        margin: "12px 24px 0",
+        borderRadius: 10,
+        padding: "8px 12px",
         display: "flex",
         alignItems: "center",
-        gap: 1,
-        minHeight: 40,
+        gap: 10,
+        background: isErr ? "var(--danger-soft)" : isDone ? "var(--success-soft)" : "var(--accent-soft)",
+        border: `1px solid ${isErr ? "oklch(0.82 0.07 25)" : isDone ? "oklch(0.82 0.05 145)" : "var(--accent-line)"}`,
       }}
     >
-      {state.active && <CircularProgress size={14} />}
-      <Typography
-        variant="caption"
-        color={state.error ? "error" : "text.secondary"}
-        sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-      >
+      <span className={`dot ${isErr ? "dot--danger" : isDone ? "dot--success" : "dot--accent"} ${state.active ? "dot--pulse" : ""}`} />
+      <span style={{
+        fontSize: 12,
+        fontWeight: 500,
+        color: isErr ? "oklch(0.42 0.12 25)" : isDone ? "oklch(0.38 0.09 145)" : "oklch(0.42 0.12 45)",
+      }}>
+        {state.active ? "Researching in background" : isErr ? "Research failed" : "Research complete"}
+      </span>
+      <span style={{
+        fontSize: 12,
+        color: "var(--ink-2)",
+        flex: 1,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}>
         {state.doneMessage ?? state.message}
-      </Typography>
-      {state.error && (
-        <Button
-          size="small"
-          variant="outlined"
-          color="primary"
+      </span>
+      {state.active && (
+        <>
+          <span className="chip chip--mono">subagents</span>
+          <button type="button" className="btn btn--ghost btn--sm">Cancel</button>
+        </>
+      )}
+      {isErr && (
+        <button
+          type="button"
+          className="btn btn--outline btn--sm"
           onClick={handleRetry}
           data-testid="retry-research-btn"
-          sx={{ minWidth: 60, flexShrink: 0 }}
         >
           Retry
-        </Button>
+        </button>
       )}
-    </Box>
+      {isDone && (
+        <button type="button" className="btn btn--ghost btn--sm">
+          View artifact <IconChevR size={11} />
+        </button>
+      )}
+    </div>
   );
 }
