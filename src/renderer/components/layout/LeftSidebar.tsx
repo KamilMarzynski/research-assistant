@@ -121,7 +121,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
     >
       <div
         style={{
-          padding: "14px 16px",
+          padding: "38px 16px 14px",
           display: "flex",
           alignItems: "center",
           gap: 8,

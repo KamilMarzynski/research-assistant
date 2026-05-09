@@ -10,6 +10,9 @@ function createWindow(): BrowserWindow {
     height: 800,
     minWidth: 900,
     minHeight: 600,
+    titleBarStyle: "hidden",
+    trafficLightPosition: { x: 12, y: 12 },
+    titleBarOverlay: { color: "#00000000", height: 36 },
     webPreferences: {
       preload: join(import.meta.dirname, "../preload/index.js"),
       contextIsolation: true,
