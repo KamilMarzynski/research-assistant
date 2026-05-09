@@ -2,7 +2,7 @@ import { MenuItem, Select } from "@mui/material";
 import { useEffect, useState } from "react";
 import { DEFAULT_OPENROUTER_MODEL } from "../../../../shared/constants";
 import { IPC } from "../../../../shared/ipc-channels";
-import { IconBolt, IconBrain, IconChevD, IconCpu, IconSearch, IconSend } from "../../shared/Icons";
+import { IconChevD, IconCpu, IconSend } from "../../shared/Icons";
 
 interface ModelInfo {
   id: string;
@@ -128,6 +128,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
                     alignItems: "center",
                     gap: 4,
                     fontSize: "var(--text-sm)",
+                    color: "var(--ink)",
                   }}
                 >
                   <IconCpu size={13} />
@@ -139,6 +140,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
                 minWidth: 130,
                 flexShrink: 0,
                 fontSize: "var(--text-sm)",
+                color: "var(--ink)",
                 "& .MuiSelect-select": {
                   py: 0.5,
                   px: 1,
@@ -146,41 +148,46 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
                   display: "flex",
                   alignItems: "center",
                   gap: 0.5,
+                  color: "var(--ink)",
                 },
                 "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--line-strong)" },
+                "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--accent)" },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "var(--accent)" },
+              }}
+              MenuProps={{
+                slotProps: {
+                  paper: {
+                    sx: {
+                      background: "var(--surface)",
+                      border: "1px solid var(--line)",
+                      borderRadius: "var(--r-md)",
+                      boxShadow: "var(--shadow-2)",
+                      color: "var(--ink)",
+                    },
+                  },
+                },
               }}
             >
               {modelOptions.map((m) => (
-                <MenuItem key={m.id} value={m.id} sx={{ fontSize: "var(--text-sm)" }}>
+                <MenuItem
+                  key={m.id}
+                  value={m.id}
+                  sx={{
+                    fontSize: "var(--text-sm)",
+                    color: "var(--ink)",
+                    background: "transparent",
+                    "&:hover": { background: "var(--surface-2)" },
+                    "&.Mui-selected": {
+                      background: "var(--accent-soft)",
+                      color: "oklch(0.42 0.12 45)",
+                    },
+                    "&.Mui-selected:hover": { background: "var(--accent-soft)" },
+                  }}
+                >
                   {m.name}
                 </MenuItem>
               ))}
             </Select>
-            <span style={{ width: 1, height: 14, background: "var(--line)" }} />
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              title="Quick lookup"
-              disabled={disabled}
-            >
-              <IconSearch size={13} /> Quick
-            </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              title="Standard parallel research"
-              disabled={disabled}
-            >
-              <IconBolt size={13} /> Standard
-            </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              title="Deep parallel + evaluator"
-              disabled={disabled}
-            >
-              <IconBrain size={13} /> Deep
-            </button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span className="t-tertiary t-mono" style={{ fontSize: 10 }}>

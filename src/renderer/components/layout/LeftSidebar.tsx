@@ -27,7 +27,6 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const { activeProjectId, setActiveProjectId } = useProject();
   const [projects, setProjects] = useState<Project[]>([]);
   const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
   const [newFolderPath, setNewFolderPath] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     project: Project;
@@ -47,15 +46,13 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   };
 
   const handleCreate = async () => {
-    const name = newName.trim();
-    if (!name) return;
     if (!newFolderPath) return;
+    const name = newFolderPath.split("/").pop() || "Untitled";
     const project = await window.electronAPI.invoke(IPC.CREATE_PROJECT, {
       name,
       folderPath: newFolderPath,
     });
     setProjects((prev) => [...prev, project]);
-    setNewName("");
     setNewFolderPath(null);
     setCreating(false);
     setActiveProjectId(project.id);
@@ -287,29 +284,6 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
               border: "1px dashed var(--accent-line)",
             }}
           >
-            <input
-              className="input"
-              placeholder="Project name"
-              value={newName}
-              // biome-ignore lint/a11y/noAutofocus: preserve original auto-focus behavior on create input
-              autoFocus
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreate();
-                if (e.key === "Escape") {
-                  setCreating(false);
-                  setNewName("");
-                  setNewFolderPath(null);
-                }
-              }}
-              onBlur={() => {
-                if (!newName.trim()) {
-                  setCreating(false);
-                  setNewFolderPath(null);
-                }
-              }}
-              style={{ fontSize: 12 }}
-            />
             <button
               type="button"
               className="btn btn--outline btn--sm"
@@ -339,7 +313,6 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
                 style={{ flex: 1 }}
                 onClick={() => {
                   setCreating(false);
-                  setNewName("");
                   setNewFolderPath(null);
                 }}
               >
@@ -349,6 +322,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
                 type="button"
                 className="btn btn--primary btn--sm"
                 style={{ flex: 1 }}
+                disabled={!newFolderPath}
                 onClick={handleCreate}
               >
                 Create

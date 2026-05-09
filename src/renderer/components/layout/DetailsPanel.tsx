@@ -1,6 +1,5 @@
 import { useProject } from "../../contexts/ProjectContext";
 import FileExplorer from "./FileExplorer";
-import MemoryStrip from "./MemoryStrip";
 import RecentOutputsPanel from "./RecentOutputsPanel";
 
 export default function DetailsPanel() {
@@ -35,7 +34,6 @@ export default function DetailsPanel() {
         overflow: "hidden",
       }}
     >
-      <MemoryStrip />
       <RecentOutputsPanel projectId={activeProjectId} />
       <FileExplorer projectId={activeProjectId} />
     </div>
