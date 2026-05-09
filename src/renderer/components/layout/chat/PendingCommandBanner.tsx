@@ -1,10 +1,9 @@
-import { Box, Button, Typography } from "@mui/material";
 import { useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodeBlockedCommandPayload } from "../../../../shared/ipc-guards";
 import type { BlockedCommandPayload } from "../../../../shared/ipc-types";
+import { IconAlert } from "../../../components/shared/Icons";
 import { usePendingItems } from "../../../hooks/usePendingItems";
-import { glassSx } from "../../../theme";
 import PendingCommandModal from "./PendingCommandModal";
 
 export default function PendingCommandBanner() {
@@ -37,29 +36,33 @@ export default function PendingCommandBanner() {
   return (
     <>
       {items.map((cmd) => (
-        <Box
+        <div
           key={cmd.commandId}
           data-testid={`pending-command-banner-${cmd.key}`}
-          sx={{
-            ...glassSx,
-            px: 2,
-            py: 1,
+          style={{
+            borderRadius: "var(--r-md)",
+            background: "var(--danger-soft)",
+            border: "1px solid oklch(0.82 0.07 25)",
             display: "flex",
             alignItems: "center",
-            gap: 1,
+            gap: 10,
+            padding: "8px 12px",
           }}
         >
-          <Typography variant="caption" sx={{ flex: 1 }}>
+          <IconAlert size={14} strokeColor="var(--danger)" />
+          <span className="chip chip--danger">destructive</span>
+          <span style={{ flex: 1, fontSize: 12, color: "var(--ink-2)" }}>
             Blocked command: <strong>{cmd.command}</strong> — {cmd.reason}
-          </Typography>
-          <Button
-            size="small"
+          </span>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
             data-testid={`review-command-btn-${cmd.key}`}
             onClick={() => setSelected(cmd)}
           >
             Review
-          </Button>
-        </Box>
+          </button>
+        </div>
       ))}
       {selected && (
         <PendingCommandModal

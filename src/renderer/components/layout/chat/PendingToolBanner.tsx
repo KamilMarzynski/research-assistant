@@ -1,10 +1,9 @@
-import { Box, Button, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodePendingTool } from "../../../../shared/ipc-guards";
 import type { PendingTool } from "../../../../shared/ipc-types";
+import { IconBolt } from "../../../components/shared/Icons";
 import { usePendingItems } from "../../../hooks/usePendingItems";
-import { glassSx } from "../../../theme";
 import PendingToolModal from "./PendingToolModal";
 
 export default function PendingToolBanner() {
@@ -42,29 +41,33 @@ export default function PendingToolBanner() {
   return (
     <>
       {items.map((tool) => (
-        <Box
+        <div
           key={tool.name}
           data-testid={`pending-tool-banner-${tool.name}`}
-          sx={{
-            ...glassSx,
-            px: 2,
-            py: 1,
+          style={{
+            borderRadius: "var(--r-md)",
+            background: "var(--accent-soft)",
+            border: "1px solid var(--accent-line)",
             display: "flex",
             alignItems: "center",
-            gap: 1,
+            gap: 10,
+            padding: "8px 12px",
           }}
         >
-          <Typography variant="caption" sx={{ flex: 1 }}>
+          <IconBolt size={14} strokeColor="var(--accent)" />
+          <span className="chip chip--accent">tool</span>
+          <span style={{ flex: 1, fontSize: 12, color: "var(--ink-2)" }}>
             Agent proposed a new tool: <strong>{tool.name}</strong>
-          </Typography>
-          <Button
-            size="small"
+          </span>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
             data-testid={`review-tool-btn-${tool.name}`}
             onClick={() => setSelectedTool(tool)}
           >
             Review
-          </Button>
-        </Box>
+          </button>
+        </div>
       ))}
       {selectedTool && (
         <PendingToolModal
