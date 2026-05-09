@@ -10,7 +10,7 @@ import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { CompressionService } from "./CompressionService";
-import { buildSystemContext, loadSkillsByContent } from "./context";
+import { buildSystemContext } from "./context";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
 import { createDefaultSkillRouter } from "./SkillRouter";
@@ -251,15 +251,11 @@ export class AgentSession {
           this.skillRouter.toXml(),
         );
 
-        const skillNames = this.skillRouter.getIndex().skills.map((s) => s.name);
-        const skillContents = await loadSkillsByContent(skillNames, this.folderPath ?? undefined);
-
         const systemPrompt = [
           BASE_SYSTEM_PROMPT,
           memoryContext.summary,
           historyBlock,
           systemContext,
-          skillContents,
         ]
           .filter(Boolean)
           .join("\n\n");
