@@ -1,6 +1,11 @@
-import { Box, Chip, Typography } from "@mui/material";
 import type { PathApprovalPayload } from "../../../../shared/ipc-types";
 import ReviewDialog from "./ReviewDialog";
+
+function modeChipClass(mode: string): string {
+  if (mode === "write") return "chip chip--danger";
+  if (mode === "read") return "chip chip--warn";
+  return "chip";
+}
 
 interface PendingPathModalProps {
   request: PathApprovalPayload;
@@ -9,11 +14,6 @@ interface PendingPathModalProps {
   onDeny: () => void;
   onClose: () => void;
 }
-
-const modeColors: Record<string, string> = {
-  read: "#2196f3",
-  write: "#f44336",
-};
 
 export default function PendingPathModal({
   request,
@@ -31,40 +31,30 @@ export default function PendingPathModal({
       onClose={onClose}
       dataTestid="pending-path-modal"
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-        <Chip
-          label={request.mode}
-          sx={{
-            bgcolor: modeColors[request.mode] ?? "grey.500",
-            color: "#fff",
-            textTransform: "capitalize",
-          }}
-          size="small"
-        />
-      </Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <span className={modeChipClass(request.mode)}>{request.mode}</span>
+      </div>
+      <p style={{ color: "var(--ink-2)", fontSize: 13.5, marginBottom: 8 }}>
         The agent tried to access a path outside the allowed zones. Review before approving.
-      </Typography>
-      <Box
-        component="pre"
-        sx={{
-          p: 2,
-          bgcolor: "grey.900",
-          color: "grey.100",
-          borderRadius: 1,
-          overflow: "auto",
+      </p>
+      <pre
+        className="thin-scroll"
+        style={{
+          padding: 12,
+          background: "var(--surface-2)",
+          borderRadius: "var(--r-md)",
           fontSize: 12,
           maxHeight: 200,
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
-          mb: 2,
+          marginBottom: 12,
         }}
       >
         {request.path}
-      </Box>
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+      </pre>
+      <span className="t-mono t-tertiary" style={{ fontSize: 12, marginTop: 8, display: "block" }}>
         <strong>Project:</strong> {request.projectId}
-      </Typography>
+      </span>
     </ReviewDialog>
   );
 }

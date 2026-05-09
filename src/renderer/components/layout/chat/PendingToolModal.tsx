@@ -1,14 +1,14 @@
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Typography,
-} from "@mui/material";
+import { Dialog } from "@mui/material";
 import type { PendingTool } from "../../../../shared/ipc-channels";
-import { glassSx } from "../../../theme";
+
+const paperSx = {
+  background: "var(--surface)",
+  color: "var(--ink)",
+  border: "1px solid var(--line)",
+  borderRadius: "var(--r-lg)",
+  boxShadow: "var(--shadow-3)",
+  overflow: "hidden",
+} as const;
 
 interface PendingToolModalProps {
   tool: PendingTool;
@@ -32,24 +32,24 @@ export default function PendingToolModal({
       data-testid="pending-tool-modal"
       slotProps={{
         paper: {
-          sx: glassSx,
+          sx: paperSx,
         },
       }}
     >
-      <DialogTitle>Review proposed tool: {tool.name}</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+      <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--line)" }}>
+        <span style={{ fontSize: 17, fontWeight: 600 }}>Review proposed tool: {tool.name}</span>
+      </div>
+      <div style={{ padding: "22px 26px", flex: 1, overflow: "auto" }}>
+        <p style={{ color: "var(--ink-2)", fontSize: 13.5, marginBottom: 8 }}>
           An agent has proposed this tool for your approval. Once approved, it will be available as
           a skill in future sessions.
-        </Typography>
-        <Box
-          component="pre"
-          sx={{
-            p: 2,
-            bgcolor: "grey.900",
-            color: "grey.100",
-            borderRadius: 1,
-            overflow: "auto",
+        </p>
+        <pre
+          className="thin-scroll"
+          style={{
+            padding: 12,
+            background: "var(--surface-2)",
+            borderRadius: "var(--r-md)",
             fontSize: 12,
             maxHeight: 400,
             whiteSpace: "pre-wrap",
@@ -57,17 +57,38 @@ export default function PendingToolModal({
           }}
         >
           {tool.skillContent}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={onReject} color="error" data-testid="reject-tool-btn">
+        </pre>
+      </div>
+      <div
+        style={{
+          padding: "14px 22px",
+          borderTop: "1px solid var(--line)",
+          background: "var(--surface)",
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 8,
+        }}
+      >
+        <button type="button" className="btn btn--ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn--danger"
+          onClick={onReject}
+          data-testid="reject-tool-btn"
+        >
           Reject
-        </Button>
-        <Button onClick={onApprove} variant="contained" data-testid="approve-tool-btn">
+        </button>
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={onApprove}
+          data-testid="approve-tool-btn"
+        >
           Approve
-        </Button>
-      </DialogActions>
+        </button>
+      </div>
     </Dialog>
   );
 }
