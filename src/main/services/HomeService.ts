@@ -144,5 +144,12 @@ export class HomeService {
       await mkdir(skillDir, { recursive: true });
       await writeFile(skillMdPath, content, "utf-8");
     }
+    // Mark builtin skills as protected so they cannot be deleted
+    const protectedPath = join(skillDir, ".protected");
+    try {
+      await access(protectedPath);
+    } catch {
+      await writeFile(protectedPath, "", "utf-8");
+    }
   }
 }

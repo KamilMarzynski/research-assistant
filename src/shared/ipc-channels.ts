@@ -75,6 +75,7 @@ export interface SkillInfo {
   name: string;
   description: string;
   enabled: boolean;
+  protected: boolean;
   content: string;
 }
 

@@ -351,6 +351,15 @@ describe("builtin skills", () => {
     );
     expect(content).toContain("evaluate-research");
   });
+
+  it("evaluate-research skill is marked protected", async () => {
+    const svc = new HomeService(makeTaskPersistence(), makeSkillManagement(), makeToolApproval());
+    await svc.ensureDirectories();
+    const { access } = await import("node:fs/promises");
+    await expect(
+      access(join(tmpHome, ".research-assistant", "skills", "evaluate-research", ".protected")),
+    ).resolves.toBeUndefined();
+  });
 });
 
 describe("skill management", () => {
@@ -442,6 +451,26 @@ describe("skill management", () => {
     expect(disabledSkill?.enabled).toBe(false);
   });
 
+  it("getSkills returns protected=true for builtin skills and protected=false for user skills", async () => {
+    const db = mockDb();
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement(), makeToolApproval());
+    await svc.ensureDirectories();
+    const skillDir = join(svc.getHomePath(), "skills", "user-skill");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: user-skill\ndescription: User skill.\n---\n# Content",
+    );
+
+    const skills = await svc.getSkills();
+    const builtin = skills.find((s) => s.name === "evaluate-research");
+    const user = skills.find((s) => s.name === "user-skill");
+    expect(builtin).toBeDefined();
+    expect(builtin?.protected).toBe(true);
+    expect(user).toBeDefined();
+    expect(user?.protected).toBe(false);
+  });
+
   it("toggleSkill creates and removes .disabled file", async () => {
     const db = mockDb();
     const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement(), makeToolApproval());
@@ -474,5 +503,12 @@ describe("skill management", () => {
 
     await svc.deleteSkill("deletable");
     await expect(readdir(join(svc.getHomePath(), "skills"))).resolves.not.toContain("deletable");
+  });
+
+  it("deleteSkill throws for protected skills", async () => {
+    const db = mockDb();
+    const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement(), makeToolApproval());
+    await svc.ensureDirectories();
+    await expect(svc.deleteSkill("evaluate-research")).rejects.toThrow("protected");
   });
 });

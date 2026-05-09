@@ -37,10 +37,19 @@ export class SkillManagementService {
         } catch {
           // not disabled
         }
+        const protectedFile = join(skillDir, ".protected");
+        let isProtected = false;
+        try {
+          await access(protectedFile);
+          isProtected = true;
+        } catch {
+          // not protected
+        }
         skills.push({
           name: meta.name ?? entry,
           description: meta.description ?? "",
           enabled,
+          protected: isProtected,
           content,
         });
       } catch (err) {
@@ -68,6 +77,18 @@ export class SkillManagementService {
   }
 
   async deleteSkill(name: string): Promise<void> {
-    await rm(join(this.skillsDir, name), { recursive: true, force: true });
+    const dir = join(this.skillsDir, name);
+    const protectedFile = join(dir, ".protected");
+    let isProtected = false;
+    try {
+      await access(protectedFile);
+      isProtected = true;
+    } catch {
+      // not protected
+    }
+    if (isProtected) {
+      throw new Error(`Skill "${name}" is protected and cannot be deleted.`);
+    }
+    await rm(dir, { recursive: true, force: true });
   }
 }

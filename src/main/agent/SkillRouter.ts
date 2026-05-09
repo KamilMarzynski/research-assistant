@@ -1,4 +1,4 @@
-import { watch } from "node:fs";
+import { existsSync, watch } from "node:fs";
 import { access, readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { getAgentsHome, getProjectSkillsPaths, getResearchAssistantHome } from "../paths";
@@ -96,6 +96,10 @@ export class SkillRouter {
   startWatching(): void {
     this.stopWatching();
     for (const dir of this.skillDirs) {
+      if (!existsSync(dir)) {
+        // Directory does not exist — skip silently; project-level skill dirs are optional
+        continue;
+      }
       try {
         const watcher = watch(dir, { recursive: true }, async (_eventType, filename) => {
           if (typeof filename !== "string" || !filename.endsWith("SKILL.md")) {

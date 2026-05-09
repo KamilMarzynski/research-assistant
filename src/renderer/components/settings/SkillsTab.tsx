@@ -88,14 +88,16 @@ export default function SkillsTab({
             <Button size="small" variant="text" onClick={() => onToggleExpand(skill.name)}>
               {expandedSkill === skill.name ? "Hide" : "View"}
             </Button>
-            <Button
-              size="small"
-              color="error"
-              variant="text"
-              onClick={() => onDeleteRequest(skill.name)}
-            >
-              Delete
-            </Button>
+            {!skill.protected && (
+              <Button
+                size="small"
+                color="error"
+                variant="text"
+                onClick={() => onDeleteRequest(skill.name)}
+              >
+                Delete
+              </Button>
+            )}
           </Box>
           {expandedSkill === skill.name && (
             <Box
