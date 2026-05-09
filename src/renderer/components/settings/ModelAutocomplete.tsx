@@ -1,4 +1,4 @@
-import { Autocomplete, CircularProgress, TextField } from "@mui/material";
+import { useId } from "react";
 import type { ModelOption } from "./ModelProviderTab";
 
 interface ModelAutocompleteProps {
@@ -18,40 +18,41 @@ export default function ModelAutocomplete({
   modelsError,
   helperText,
 }: ModelAutocompleteProps) {
-  const selected = options.find((m) => m.id === value) ?? { id: value, name: value };
+  const id = useId();
+  const hasValue = options.some((m) => m.id === value);
+  const displayOptions = hasValue || !value ? options : [{ id: value, name: value }, ...options];
 
   return (
-    <Autocomplete
-      options={options}
-      getOptionLabel={(o) => (typeof o === "string" ? o : o.name)}
-      isOptionEqualToValue={(a, b) => a.id === b.id}
-      value={selected}
-      onChange={(_, v) => {
-        if (v && typeof v !== "string") onChange(v.id);
-      }}
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          label="Model"
-          margin="normal"
-          helperText={modelsError ?? helperText}
-          error={!!modelsError}
-          slotProps={{
-            ...params.slotProps,
-            input: {
-              ...params.slotProps?.input,
-              endAdornment: (
-                <>
-                  {modelsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                  {params.slotProps?.input?.endAdornment}
-                </>
-              ),
-            },
-          }}
-        />
+    <div>
+      <label htmlFor={id} className="eyebrow" style={{ display: "block", marginBottom: 6 }}>
+        Model
+      </label>
+      {modelsLoading ? (
+        <select id={id} className="input" disabled value="">
+          <option>Loading models...</option>
+        </select>
+      ) : (
+        <select
+          id={id}
+          className="input"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={displayOptions.length === 0}
+        >
+          {displayOptions.length === 0 && <option value="">No models available</option>}
+          {displayOptions.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
       )}
-      fullWidth
-      disableClearable
-    />
+      <span
+        className="t-tertiary"
+        style={{ fontSize: "var(--text-xs)", marginTop: 4, display: "block" }}
+      >
+        {modelsError ?? helperText}
+      </span>
+    </div>
   );
 }

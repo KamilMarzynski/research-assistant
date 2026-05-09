@@ -37,7 +37,15 @@ export default function GeneralTab({
         title="Theme"
         sub="The app follows your system theme; you can pin one if you prefer."
         control={
-          <div style={{ display: "flex", gap: 4, padding: 3, background: "var(--surface-2)", borderRadius: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 4,
+              padding: 3,
+              background: "var(--surface-2)",
+              borderRadius: 8,
+            }}
+          >
             {(["system", "light", "dark"] as const).map((t) => (
               <button
                 key={t}

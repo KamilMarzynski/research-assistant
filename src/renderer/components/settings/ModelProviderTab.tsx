@@ -1,14 +1,12 @@
 import {
-  Box,
-  Button,
-  Chip,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Typography,
-} from "@mui/material";
+  IconAlert,
+  IconBolt,
+  IconCheck,
+  IconCpu,
+  IconGlobe,
+  IconRefresh,
+  IconX,
+} from "../../components/shared/Icons";
 import ModelAutocomplete from "./ModelAutocomplete";
 
 export interface ProviderCredentials {
@@ -38,6 +36,25 @@ interface ModelProviderTabProps {
   onTestOllama: () => void;
 }
 
+const PROVIDERS: Array<{
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ size?: number }>;
+  disabled?: boolean;
+  note?: string;
+}> = [
+  { id: "openrouter", name: "OpenRouter", icon: IconGlobe },
+  { id: "ollama", name: "Ollama", icon: IconCpu },
+  { id: "openai", name: "OpenAI", icon: IconBolt },
+  {
+    id: "anthropic",
+    name: "Anthropic",
+    icon: IconAlert,
+    disabled: true,
+    note: "not supported — use OpenRouter",
+  },
+];
+
 export default function ModelProviderTab({
   activeProvider,
   onActiveProviderChange,
@@ -53,48 +70,130 @@ export default function ModelProviderTab({
   onTestOllama,
 }: ModelProviderTabProps) {
   return (
-    <Box sx={{ pt: 2 }}>
-      <FormControl fullWidth margin="normal">
-        <InputLabel>Active Provider</InputLabel>
-        <Select
-          value={activeProvider}
-          onChange={(e) => onActiveProviderChange(e.target.value)}
-          label="Active Provider"
-        >
-          <MenuItem value="openrouter">OpenRouter</MenuItem>
-          <MenuItem value="ollama">Ollama</MenuItem>
-          <MenuItem value="openai">OpenAI</MenuItem>
-          <MenuItem value="anthropic" disabled>
-            Anthropic (not supported — use OpenRouter instead)
-          </MenuItem>
-        </Select>
-      </FormControl>
+    <div style={{ paddingTop: 16 }}>
+      <div className="eyebrow" style={{ marginBottom: 8 }}>
+        Active Provider
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {PROVIDERS.map((provider) => {
+          const isActive = activeProvider === provider.id;
+          const Icon = provider.icon;
+          return (
+            <label
+              key={provider.id}
+              style={{
+                border: `1px solid ${isActive ? "var(--accent)" : "var(--line)"}`,
+                background: isActive ? "var(--accent-soft)" : "var(--surface)",
+                borderRadius: "var(--r-md)",
+                padding: "12px 16px",
+                cursor: provider.disabled ? "not-allowed" : "pointer",
+                opacity: provider.disabled ? 0.55 : 1,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                transition: "border-color 120ms ease, background 120ms ease",
+              }}
+            >
+              <input
+                type="radio"
+                name="active-provider"
+                value={provider.id}
+                checked={isActive}
+                disabled={provider.disabled}
+                onChange={() => {
+                  if (!provider.disabled) onActiveProviderChange(provider.id);
+                }}
+                style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
+              />
+              <div
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: "50%",
+                  border: `2px solid ${isActive ? "var(--accent)" : "var(--line-strong)"}`,
+                  background: isActive ? "var(--accent)" : "transparent",
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {isActive && (
+                  <div
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: "var(--ink-on-accent)",
+                    }}
+                  />
+                )}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 500, fontSize: "var(--text-sm)" }}>{provider.name}</div>
+                {provider.note && (
+                  <span
+                    className="t-tertiary"
+                    style={{ fontSize: "var(--text-xs)", display: "block" }}
+                  >
+                    {provider.note}
+                  </span>
+                )}
+              </div>
+              <div style={{ marginLeft: "auto", flexShrink: 0, color: "var(--ink-3)" }}>
+                <Icon size={14} />
+              </div>
+            </label>
+          );
+        })}
+      </div>
 
       {activeProvider === "anthropic" && (
-        <Chip
-          label="Direct Anthropic not supported — use OpenRouter"
-          color="error"
-          sx={{ mt: 1 }}
-        />
+        <div
+          style={{
+            marginTop: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            color: "var(--danger)",
+            fontSize: "var(--text-xs)",
+          }}
+        >
+          <IconAlert size={14} />
+          <span>Direct Anthropic not supported — use OpenRouter</span>
+        </div>
       )}
 
       {activeProvider === "openrouter" && (
-        <>
-          <TextField
-            label="OpenRouter API Key"
-            type="password"
-            fullWidth
-            margin="normal"
-            value={credentials.openrouter.apiKey}
-            onChange={(e) =>
-              onCredentialsChange({
-                ...credentials,
-                openrouter: { ...credentials.openrouter, apiKey: e.target.value },
-              })
-            }
-            placeholder="sk-or-..."
-            helperText="Get your key at openrouter.ai/keys"
-          />
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label
+              htmlFor="openrouter-api-key"
+              className="eyebrow"
+              style={{ display: "block", marginBottom: 6 }}
+            >
+              OpenRouter API Key
+            </label>
+            <input
+              id="openrouter-api-key"
+              className="input"
+              type="password"
+              value={credentials.openrouter.apiKey}
+              onChange={(e) =>
+                onCredentialsChange({
+                  ...credentials,
+                  openrouter: { ...credentials.openrouter, apiKey: e.target.value },
+                })
+              }
+              placeholder="sk-or-..."
+            />
+            <span
+              className="t-tertiary"
+              style={{ fontSize: "var(--text-xs)", marginTop: 4, display: "block" }}
+            >
+              Get your key at openrouter.ai/keys
+            </span>
+          </div>
           <ModelAutocomplete
             value={credentials.openrouter.defaultModel}
             options={availableModels}
@@ -108,24 +207,32 @@ export default function ModelProviderTab({
             modelsError={modelsError}
             helperText="Select a model from the list"
           />
-        </>
+        </div>
       )}
 
       {activeProvider === "openai" && (
-        <>
-          <TextField
-            label="OpenAI API Key"
-            type="password"
-            fullWidth
-            margin="normal"
-            value={credentials.openai.apiKey}
-            onChange={(e) =>
-              onCredentialsChange({
-                ...credentials,
-                openai: { ...credentials.openai, apiKey: e.target.value },
-              })
-            }
-          />
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label
+              htmlFor="openai-api-key"
+              className="eyebrow"
+              style={{ display: "block", marginBottom: 6 }}
+            >
+              OpenAI API Key
+            </label>
+            <input
+              id="openai-api-key"
+              className="input"
+              type="password"
+              value={credentials.openai.apiKey}
+              onChange={(e) =>
+                onCredentialsChange({
+                  ...credentials,
+                  openai: { ...credentials.openai, apiKey: e.target.value },
+                })
+              }
+            />
+          </div>
           <ModelAutocomplete
             value={credentials.openai.defaultModel}
             options={availableModels}
@@ -143,24 +250,39 @@ export default function ModelProviderTab({
                 : "Enter API key to list models"
             }
           />
-        </>
+        </div>
       )}
 
       {activeProvider === "ollama" && (
-        <>
-          <TextField
-            label="Host"
-            fullWidth
-            margin="normal"
-            value={credentials.ollama.host}
-            onChange={(e) =>
-              onCredentialsChange({
-                ...credentials,
-                ollama: { ...credentials.ollama, host: e.target.value },
-              })
-            }
-            helperText="e.g. http://localhost:11434"
-          />
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label
+              htmlFor="ollama-host"
+              className="eyebrow"
+              style={{ display: "block", marginBottom: 6 }}
+            >
+              Host
+            </label>
+            <input
+              id="ollama-host"
+              className="input"
+              type="text"
+              value={credentials.ollama.host}
+              onChange={(e) =>
+                onCredentialsChange({
+                  ...credentials,
+                  ollama: { ...credentials.ollama, host: e.target.value },
+                })
+              }
+              placeholder="e.g. http://localhost:11434"
+            />
+            <span
+              className="t-tertiary"
+              style={{ fontSize: "var(--text-xs)", marginTop: 4, display: "block" }}
+            >
+              e.g. http://localhost:11434
+            </span>
+          </div>
           <ModelAutocomplete
             value={credentials.ollama.defaultModel}
             options={availableModels}
@@ -178,36 +300,44 @@ export default function ModelProviderTab({
                 : "Select a model from the list"
             }
           />
-          <Button variant="outlined" onClick={onRefreshModels} sx={{ mt: 1, mr: 1 }}>
-            Refresh models
-          </Button>
-          <Button variant="outlined" onClick={onTestOllama} sx={{ mt: 1 }}>
-            Test connection
-          </Button>
-          {ollamaTestStatus === "ok" && (
-            <Typography component="span" color="success.main" sx={{ ml: 1 }}>
-              Connected
-            </Typography>
-          )}
-          {ollamaTestStatus === "error" && (
-            <Typography component="span" color="error.main" sx={{ ml: 1 }}>
-              Not reachable
-            </Typography>
-          )}
-
-          <FormControl fullWidth margin="normal" sx={{ mt: 2 }}>
-            <InputLabel>Fallback provider</InputLabel>
-            <Select
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="btn btn--outline btn--sm" onClick={onRefreshModels}>
+              <IconRefresh size={13} /> Refresh models
+            </button>
+            <button type="button" className="btn btn--outline btn--sm" onClick={onTestOllama}>
+              Test connection
+            </button>
+            {ollamaTestStatus === "ok" && (
+              <span className="chip chip--success">
+                <IconCheck size={12} /> Connected
+              </span>
+            )}
+            {ollamaTestStatus === "error" && (
+              <span className="chip chip--danger">
+                <IconX size={12} /> Not reachable
+              </span>
+            )}
+          </div>
+          <div style={{ marginTop: 4 }}>
+            <label
+              htmlFor="fallback-provider"
+              className="eyebrow"
+              style={{ display: "block", marginBottom: 6 }}
+            >
+              Fallback provider
+            </label>
+            <select
+              id="fallback-provider"
+              className="input"
               value={defaultCloudProvider}
               onChange={(e) => onDefaultCloudProviderChange(e.target.value)}
-              label="Fallback provider"
             >
-              <MenuItem value="openrouter">OpenRouter</MenuItem>
-              <MenuItem value="openai">OpenAI</MenuItem>
-            </Select>
-          </FormControl>
-        </>
+              <option value="openrouter">OpenRouter</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }
