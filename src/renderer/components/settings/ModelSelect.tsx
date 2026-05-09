@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { ModelOption } from "./ModelProviderTab";
 
-interface ModelAutocompleteProps {
+interface ModelSelectProps {
   value: string;
   options: ModelOption[];
   onChange: (modelId: string) => void;
@@ -10,14 +10,14 @@ interface ModelAutocompleteProps {
   helperText: string;
 }
 
-export default function ModelAutocomplete({
+export default function ModelSelect({
   value,
   options,
   onChange,
   modelsLoading,
   modelsError,
   helperText,
-}: ModelAutocompleteProps) {
+}: ModelSelectProps) {
   const id = useId();
   const hasValue = options.some((m) => m.id === value);
   const displayOptions = hasValue || !value ? options : [{ id: value, name: value }, ...options];
@@ -29,7 +29,7 @@ export default function ModelAutocomplete({
       </label>
       {modelsLoading ? (
         <select id={id} className="input" disabled value="">
-          <option>Loading models...</option>
+          <option value="">Loading models...</option>
         </select>
       ) : (
         <select
@@ -38,6 +38,8 @@ export default function ModelAutocomplete({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={displayOptions.length === 0}
+          aria-invalid={!!modelsError}
+          aria-describedby={`${id}-help`}
         >
           {displayOptions.length === 0 && <option value="">No models available</option>}
           {displayOptions.map((m) => (
@@ -48,6 +50,7 @@ export default function ModelAutocomplete({
         </select>
       )}
       <span
+        id={`${id}-help`}
         className="t-tertiary"
         style={{ fontSize: "var(--text-xs)", marginTop: 4, display: "block" }}
       >

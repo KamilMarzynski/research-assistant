@@ -7,7 +7,7 @@ import {
   IconRefresh,
   IconX,
 } from "../../components/shared/Icons";
-import ModelAutocomplete from "./ModelAutocomplete";
+import ModelSelect from "./ModelSelect";
 
 export interface ProviderCredentials {
   openrouter: { apiKey: string; defaultModel: string };
@@ -82,6 +82,7 @@ export default function ModelProviderTab({
             <label
               key={provider.id}
               style={{
+                position: "relative",
                 border: `1px solid ${isActive ? "var(--accent)" : "var(--line)"}`,
                 background: isActive ? "var(--accent-soft)" : "var(--surface)",
                 borderRadius: "var(--r-md)",
@@ -194,7 +195,7 @@ export default function ModelProviderTab({
               Get your key at openrouter.ai/keys
             </span>
           </div>
-          <ModelAutocomplete
+          <ModelSelect
             value={credentials.openrouter.defaultModel}
             options={availableModels}
             onChange={(id) =>
@@ -233,7 +234,7 @@ export default function ModelProviderTab({
               }
             />
           </div>
-          <ModelAutocomplete
+          <ModelSelect
             value={credentials.openai.defaultModel}
             options={availableModels}
             onChange={(id) =>
@@ -283,7 +284,7 @@ export default function ModelProviderTab({
               e.g. http://localhost:11434
             </span>
           </div>
-          <ModelAutocomplete
+          <ModelSelect
             value={credentials.ollama.defaultModel}
             options={availableModels}
             onChange={(id) =>
