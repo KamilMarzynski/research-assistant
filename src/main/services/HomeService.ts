@@ -2,7 +2,7 @@ import { access, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import type { SkillInfo } from "../../shared/ipc-channels";
-import { EVALUATE_RESEARCH_SKILL } from "../agent/builtin-skills";
+import { BUILTIN_SKILLS } from "../agent/builtin-skills";
 import { getAgentsPath, getHomePath } from "../paths";
 import { SkillManagementService } from "./SkillManagementService";
 import { type ResearchTask, TaskPersistenceService } from "./TaskPersistenceService";
@@ -125,24 +125,31 @@ export class HomeService {
 
   private async copyBuiltinSkillsIfNeeded(): Promise<void> {
     const skillsDir = join(this.getHomePath(), "skills");
-    const builtins: Array<[name: string, content: string]> = [
-      ["evaluate-research", EVALUATE_RESEARCH_SKILL],
-    ];
-
-    for (const [name, content] of builtins) {
-      await this.ensureSkillFile(skillsDir, name, content);
+    for (const [name, files] of Object.entries(BUILTIN_SKILLS)) {
+      await this.ensureSkillDir(skillsDir, name, files);
     }
   }
 
-  private async ensureSkillFile(skillsDir: string, name: string, content: string): Promise<void> {
+  private async ensureSkillDir(
+    skillsDir: string,
+    name: string,
+    files: Record<string, string>,
+  ): Promise<void> {
     const skillDir = join(skillsDir, name);
-    const skillMdPath = join(skillDir, "SKILL.md");
-    try {
-      await access(skillMdPath);
-      // Already exists — skip
-    } catch {
+    let needsWrite = false;
+    for (const fileName of Object.keys(files)) {
+      try {
+        await access(join(skillDir, fileName));
+      } catch {
+        needsWrite = true;
+        break;
+      }
+    }
+    if (needsWrite) {
       await mkdir(skillDir, { recursive: true });
-      await writeFile(skillMdPath, content, "utf-8");
+      for (const [fileName, content] of Object.entries(files)) {
+        await writeFile(join(skillDir, fileName), content, "utf-8");
+      }
     }
     // Mark builtin skills as protected so they cannot be deleted
     const protectedPath = join(skillDir, ".protected");
