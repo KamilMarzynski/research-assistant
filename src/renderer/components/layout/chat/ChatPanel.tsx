@@ -1,9 +1,9 @@
-import { Box, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodeMessageChunk, decodeMessageDone } from "../../../../shared/ipc-guards";
 import type { Message } from "../../../../shared/types";
 import { useProject } from "../../../contexts/ProjectContext";
+import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
 import PendingCommandBanner from "./PendingCommandBanner";
@@ -98,21 +98,15 @@ export default function ChatPanel() {
 
   if (!activeProjectId) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-        }}
-      >
-        <Typography color="text.secondary">Select a project to start chatting</Typography>
-      </Box>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--ink-2)" }}>
+        Select a project to start chatting
+      </div>
     );
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <ChatHeader />
       <ResearchStatusBar />
       <PendingCommandBanner />
       <PendingPathBanner />
@@ -123,14 +117,12 @@ export default function ChatPanel() {
         processing={processing}
       />
       {hasApiKey === false ? (
-        <Box sx={{ p: 2, textAlign: "center", bgcolor: "background.paper" }}>
-          <Typography variant="body2" color="text.secondary">
-            No API key configured. Open Settings to set up your model provider.
-          </Typography>
-        </Box>
+        <div style={{ padding: 16, textAlign: "center", background: "var(--surface)", color: "var(--ink-2)", fontSize: 13 }}>
+          No API key configured. Open Settings to set up your model provider.
+        </div>
       ) : (
         <MessageInput onSend={handleSend} disabled={processing || streamingContent !== null} />
       )}
-    </Box>
+    </div>
   );
 }
