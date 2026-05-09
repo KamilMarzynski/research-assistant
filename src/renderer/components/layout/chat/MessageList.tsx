@@ -23,9 +23,6 @@ export default function MessageList({ messages, streamingContent, processing }: 
         flex: 1,
         overflowY: "auto",
         padding: "20px 24px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 18,
       }}
     >
       <style>{`
@@ -33,136 +30,143 @@ export default function MessageList({ messages, streamingContent, processing }: 
           50% { opacity: 0; }
         }
       `}</style>
-      {messages.map((msg) => (
-        <div
-          key={msg.id}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            alignItems: msg.role === "user" ? "flex-end" : "flex-start",
-            maxWidth: 640,
-          }}
-        >
+      <div
+        style={{
+          maxWidth: 768,
+          width: "100%",
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+        }}
+      >
+        {messages.map((msg) => (
           <div
+            key={msg.id}
             style={{
-              padding: "12px 16px",
-              borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-              background: msg.role === "user" ? "var(--accent)" : "var(--surface)",
-              color: msg.role === "user" ? "var(--ink-on-accent)" : "var(--ink)",
-              border: msg.role === "user" ? "none" : "1px solid var(--line)",
-              fontSize: 13.5,
-              lineHeight: 1.55,
-            }}
-          >
-            {msg.role === "user" ? (
-              <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.content}</span>
-            ) : (
-              <MarkdownRenderer content={msg.content} />
-            )}
-          </div>
-        </div>
-      ))}
-
-      {streamingContent !== null && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            alignItems: "flex-start",
-            maxWidth: 640,
-          }}
-        >
-          <div
-            style={{
-              padding: "12px 16px",
-              borderRadius: "14px 14px 14px 4px",
-              background: "var(--surface)",
-              border: "1px solid var(--line)",
-              fontSize: 13.5,
-              lineHeight: 1.55,
-            }}
-          >
-            <MarkdownRenderer content={streamingContent} />
-            <span
-              data-testid="streaming-cursor"
-              style={{
-                display: "inline-block",
-                width: 8,
-                height: "1em",
-                background: "var(--ink)",
-                marginLeft: 4,
-                verticalAlign: "text-bottom",
-                animation: "blink 1s step-end infinite",
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {processing && !streamingContent && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            alignItems: "flex-start",
-            maxWidth: 640,
-          }}
-        >
-          <div
-            style={{
-              padding: "12px 16px",
-              borderRadius: "14px 14px 14px 4px",
-              background: "var(--surface)",
-              border: "1px solid var(--line)",
               display: "flex",
-              alignItems: "center",
-              gap: 8,
+              flexDirection: "column",
+              gap: 4,
+              maxWidth: 640,
+              marginLeft: msg.role === "user" ? "auto" : undefined,
             }}
           >
-            <span className="dot dot--accent dot--pulse" />
-            <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Agent is thinking...</span>
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                background: msg.role === "user" ? "var(--accent)" : "var(--surface)",
+                color: msg.role === "user" ? "var(--ink-on-accent)" : "var(--ink)",
+                border: msg.role === "user" ? "none" : "1px solid var(--line)",
+                fontSize: 13.5,
+                lineHeight: 1.55,
+              }}
+            >
+              {msg.role === "user" ? (
+                <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.content}</span>
+              ) : (
+                <MarkdownRenderer content={msg.content} />
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        ))}
 
-      {/* empty state */}
-      {messages.length === 0 && !streamingContent && !processing && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            alignItems: "flex-start",
-            maxWidth: "85%",
-          }}
-        >
+        {streamingContent !== null && (
           <div
             style={{
-              padding: "12px 16px",
-              borderRadius: 14,
-              background: "var(--bg)",
-              border: "1px solid var(--line)",
-              fontSize: 13.5,
-              lineHeight: 1.55,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              maxWidth: 640,
             }}
           >
-            <p style={{ margin: "0 0 8px", color: "var(--ink-2)" }}>Welcome to your new project.</p>
-            <p style={{ margin: 0, color: "var(--ink-2)" }}>
-              Tell me about your project so I can help you best. Useful details:
-            </p>
-            <ul style={{ margin: "4px 0 0", paddingLeft: 18, color: "var(--ink-2)" }}>
-              <li>What is this project about?</li>
-              <li>How are files organized?</li>
-              <li>Where should research outputs go?</li>
-              <li>Any naming conventions or tech stack?</li>
-            </ul>
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: "14px 14px 14px 4px",
+                background: "var(--surface)",
+                border: "1px solid var(--line)",
+                fontSize: 13.5,
+                lineHeight: 1.55,
+              }}
+            >
+              <MarkdownRenderer content={streamingContent} />
+              <span
+                data-testid="streaming-cursor"
+                style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: "1em",
+                  background: "var(--ink)",
+                  marginLeft: 4,
+                  verticalAlign: "text-bottom",
+                  animation: "blink 1s step-end infinite",
+                }}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
+        {processing && !streamingContent && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              maxWidth: 640,
+            }}
+          >
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: "14px 14px 14px 4px",
+                background: "var(--surface)",
+                border: "1px solid var(--line)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span className="dot dot--accent dot--pulse" />
+              <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Agent is thinking...</span>
+            </div>
+          </div>
+        )}
+
+        {/* empty state */}
+        {messages.length === 0 && !streamingContent && !processing && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              maxWidth: "85%",
+            }}
+          >
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: 14,
+                background: "var(--bg)",
+                border: "1px solid var(--line)",
+                fontSize: 13.5,
+                lineHeight: 1.55,
+              }}
+            >
+              <p style={{ margin: "0 0 8px", color: "var(--ink-2)" }}>Welcome to your new project.</p>
+              <p style={{ margin: 0, color: "var(--ink-2)" }}>
+                Tell me about your project so I can help you best. Useful details:
+              </p>
+              <ul style={{ margin: "4px 0 0", paddingLeft: 18, color: "var(--ink-2)" }}>
+                <li>What is this project about?</li>
+                <li>How are files organized?</li>
+                <li>Where should research outputs go?</li>
+                <li>Any naming conventions or tech stack?</li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>  {/* close centered column */}
       <div ref={bottomRef} />
     </div>
   );
