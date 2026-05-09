@@ -1,11 +1,14 @@
-import { access } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "../../../shared/types";
 import type { IProjectRepository } from "../../repositories/IProjectRepository";
 import { NotFoundError } from "../errors";
 import { ProjectService } from "../ProjectService";
 
-vi.mock("node:fs/promises", () => ({ access: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("node:fs/promises", () => ({
+  access: vi.fn().mockResolvedValue(undefined),
+  mkdir: vi.fn().mockResolvedValue(undefined),
+}));
 
 function makeProject(overrides: Partial<Project> = {}): Project {
   return {
@@ -50,6 +53,15 @@ describe("ProjectService", () => {
 
       expect(repo.create).toHaveBeenCalledWith({ name: "New", folderPath: null });
       expect(result).toEqual(project);
+    });
+
+    it("creates .research-assistant inside folderPath when provided", async () => {
+      const project = makeProject({ name: "New", folderPath: "/my/project" });
+      vi.mocked(repo.create).mockResolvedValue(project);
+
+      await service.createProject("New", "/my/project");
+
+      expect(mkdir).toHaveBeenCalledWith("/my/project/.research-assistant", { recursive: true });
     });
   });
 
@@ -109,6 +121,7 @@ describe("ProjectService", () => {
 
       expect(access).toHaveBeenCalledWith("/some/path");
       expect(repo.linkFolder).toHaveBeenCalledWith("proj-1", "/some/path");
+      expect(mkdir).toHaveBeenCalledWith("/some/path/.research-assistant", { recursive: true });
     });
 
     it("throws NotFoundError when project does not exist", async () => {

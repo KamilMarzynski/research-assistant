@@ -127,16 +127,25 @@ export class SkillRouter {
   }
 
   private async readSkillsFromDir(dir: string): Promise<SkillMeta[]> {
+    const skillsDir = join(dir, "skills");
+    let targetDir = dir;
+    try {
+      await access(skillsDir);
+      targetDir = skillsDir;
+    } catch {
+      // no skills subdir — read from dir directly (global dirs already end in /skills)
+    }
+
     let entries: string[] = [];
     try {
-      entries = await readdir(dir);
+      entries = await readdir(targetDir);
     } catch {
       return [];
     }
 
     const skills: SkillMeta[] = [];
     for (const entry of entries) {
-      const skillDirPath = join(dir, entry);
+      const skillDirPath = join(targetDir, entry);
       const skillMdPath = join(skillDirPath, "SKILL.md");
       try {
         try {

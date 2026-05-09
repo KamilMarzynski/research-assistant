@@ -31,8 +31,5 @@ export function getWorkspacePath(): string {
 }
 
 export function getProjectSkillsPaths(projectFolderPath: string): string[] {
-  return [
-    join(projectFolderPath, ".agents", "skills"),
-    join(projectFolderPath, ".research-assistant", "skills"),
-  ];
+  return [join(projectFolderPath, ".agents"), join(projectFolderPath, ".research-assistant")];
 }

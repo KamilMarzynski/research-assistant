@@ -1,4 +1,5 @@
-import { access } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import type { Project } from "../../shared/types";
 import { PROJECT_REPO_TOKEN } from "../di/tokens";
@@ -10,7 +11,11 @@ export class ProjectService {
   constructor(@inject(PROJECT_REPO_TOKEN) private readonly repo: IProjectRepository) {}
 
   async createProject(name: string, folderPath?: string | null): Promise<Project> {
-    return this.repo.create({ name, folderPath: folderPath ?? null });
+    const project = await this.repo.create({ name, folderPath: folderPath ?? null });
+    if (folderPath) {
+      await mkdir(join(folderPath, ".research-assistant"), { recursive: true });
+    }
+    return project;
   }
 
   async listProjects(): Promise<Project[]> {
@@ -36,6 +41,7 @@ export class ProjectService {
       throw new Error(`Folder not found: ${folderPath}`);
     }
     await this.repo.linkFolder(id, folderPath);
+    await mkdir(join(folderPath, ".research-assistant"), { recursive: true });
   }
 
   async renameProject(id: string, name: string): Promise<void> {

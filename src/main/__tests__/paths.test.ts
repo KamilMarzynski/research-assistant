@@ -40,10 +40,12 @@ describe("paths", () => {
     expect(path).toContain(".research-assistant");
   });
 
-  it("getProjectSkillsPaths returns both agent and research-assistant skill dirs", () => {
+  it("getProjectSkillsPaths returns parent dirs so watch catches skills subdir creation", () => {
     const paths = getProjectSkillsPaths("/my/project");
     expect(paths).toHaveLength(2);
-    expect(paths[0]).toContain(".agents/skills");
-    expect(paths[1]).toContain(".research-assistant/skills");
+    expect(paths[0]).toContain(".agents");
+    expect(paths[1]).toContain(".research-assistant");
+    expect(paths[0]).not.toContain("skills");
+    expect(paths[1]).not.toContain("skills");
   });
 });
