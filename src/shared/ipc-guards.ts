@@ -99,8 +99,28 @@ export function decodeBlockedCommandPayload(data: unknown): BlockedCommandPayloa
   return tryDecode(BlockedCommandPayloadSchema, data, "BASH_BLOCKED");
 }
 
-export function decodeMessageChunk(data: unknown): string | null {
-  if (typeof data === "string") return data;
-  console.warn("[ipc-guard] Invalid MESSAGE_CHUNK payload: expected string");
+export function decodeMessageChunk(data: unknown): { projectId: string; delta: string } | null {
+  // Old string format (backward compat)
+  if (typeof data === "string") return { projectId: "", delta: data };
+  // New object format with projectId
+  if (typeof data === "object" && data !== null && "projectId" in data && "delta" in data) {
+    const d = data as { projectId: unknown; delta: unknown };
+    if (typeof d.projectId === "string" && typeof d.delta === "string") {
+      return { projectId: d.projectId, delta: d.delta };
+    }
+  }
+  console.warn(
+    "[ipc-guard] Invalid MESSAGE_CHUNK payload: expected string or { projectId, delta }",
+  );
+  return null;
+}
+
+export function decodeMessageDone(data: unknown): { projectId: string } | null {
+  if (data === undefined || data === null) return { projectId: "" };
+  if (typeof data === "object" && data !== null && "projectId" in data) {
+    const d = data as { projectId: unknown };
+    if (typeof d.projectId === "string") return { projectId: d.projectId };
+  }
+  console.warn("[ipc-guard] Invalid MESSAGE_DONE payload: expected null or { projectId }");
   return null;
 }

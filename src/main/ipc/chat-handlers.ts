@@ -49,10 +49,10 @@ export function registerChatHandler(
   } = deps;
 
   eventBus.on("agent:chunk", (payload) => {
-    win.webContents.send(IPC.MESSAGE_CHUNK, payload.delta);
+    win.webContents.send(IPC.MESSAGE_CHUNK, { projectId: payload.projectId, delta: payload.delta });
   });
-  eventBus.on("agent:done", () => {
-    win.webContents.send(IPC.MESSAGE_DONE);
+  eventBus.on("agent:done", (payload) => {
+    win.webContents.send(IPC.MESSAGE_DONE, { projectId: payload.projectId });
   });
 
   ipcMain.handle(IPC.GET_MESSAGES, async (_event, payload: unknown) => {
@@ -92,19 +92,20 @@ export function registerChatHandler(
 
       if (provider.type !== "ollama" && !provider.apiKey) {
         if (settings.activeProvider === "ollama") {
-          win.webContents.send(
-            IPC.MESSAGE_CHUNK,
-            `⚠️ Ollama is not reachable at ${settings.providerCredentials.ollama.host}. ` +
+          win.webContents.send(IPC.MESSAGE_CHUNK, {
+            projectId,
+            delta:
+              `⚠️ Ollama is not reachable at ${settings.providerCredentials.ollama.host}. ` +
               `Fell back to ${settings.defaultCloudProvider}, which requires an API key. ` +
               "Please start Ollama or add an API key in Settings.",
-          );
+          });
         } else {
-          win.webContents.send(
-            IPC.MESSAGE_CHUNK,
-            "⚠️ No API key configured. Open Settings to add your API key.",
-          );
+          win.webContents.send(IPC.MESSAGE_CHUNK, {
+            projectId,
+            delta: "⚠️ No API key configured. Open Settings to add your API key.",
+          });
         }
-        win.webContents.send(IPC.MESSAGE_DONE);
+        win.webContents.send(IPC.MESSAGE_DONE, { projectId });
         return { messageId: randomUUID() };
       }
 
@@ -173,12 +174,18 @@ export function registerChatHandler(
       if (err instanceof Error && err.message === "stream_timeout") {
         const session = sessionManager.get(projectId);
         session?.abort();
-        win.webContents.send(IPC.MESSAGE_CHUNK, "⚠️ The response timed out. Please try again.");
+        win.webContents.send(IPC.MESSAGE_CHUNK, {
+          projectId,
+          delta: "⚠️ The response timed out. Please try again.",
+        });
       } else {
         console.error("[IPC] SEND_MESSAGE error:", err);
-        win.webContents.send(IPC.MESSAGE_CHUNK, "⚠️ An error occurred. Please try again.");
+        win.webContents.send(IPC.MESSAGE_CHUNK, {
+          projectId,
+          delta: "⚠️ An error occurred. Please try again.",
+        });
       }
-      win.webContents.send(IPC.MESSAGE_DONE);
+      win.webContents.send(IPC.MESSAGE_DONE, { projectId });
       return { messageId: randomUUID() };
     } finally {
       releaseLock?.();

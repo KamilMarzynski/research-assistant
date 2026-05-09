@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DEFAULT_OPENROUTER_MODEL } from "../../shared/constants";
 import { IPC } from "../../shared/ipc-channels";
 import type { ProviderCredentials } from "../components/settings/ModelProviderTab";
@@ -119,19 +119,33 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
     void fetchModels(activeProvider, credentials.ollama.host, apiKey);
   }, [enabled, activeProvider, fetchModels]);
 
-  return {
-    activeProvider,
-    defaultCloudProvider,
-    credentials,
-    ollamaTestStatus,
-    availableModels,
-    modelsLoading,
-    modelsError,
-    setActiveProvider,
-    setDefaultCloudProvider,
-    setCredentials,
-    fetchModels,
-    testOllama,
-    loadFromSettings,
-  };
+  return useMemo(
+    () => ({
+      activeProvider,
+      defaultCloudProvider,
+      credentials,
+      ollamaTestStatus,
+      availableModels,
+      modelsLoading,
+      modelsError,
+      setActiveProvider,
+      setDefaultCloudProvider,
+      setCredentials,
+      fetchModels,
+      testOllama,
+      loadFromSettings,
+    }),
+    [
+      activeProvider,
+      defaultCloudProvider,
+      credentials,
+      ollamaTestStatus,
+      availableModels,
+      modelsLoading,
+      modelsError,
+      fetchModels,
+      testOllama,
+      loadFromSettings,
+    ],
+  );
 }

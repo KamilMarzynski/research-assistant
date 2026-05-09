@@ -2,7 +2,6 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
-import LinkOffIcon from "@mui/icons-material/LinkOff";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
   Box,
@@ -120,19 +119,6 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
     setDeleteTarget(null);
   };
 
-  const handleUnlinkFolder = async () => {
-    if (!contextMenu) return;
-    const id = contextMenu.project.id;
-    handleCloseMenu();
-    try {
-      await window.electronAPI.invoke(IPC.UNLINK_FOLDER, { id });
-      const projects = await window.electronAPI.invoke(IPC.GET_PROJECTS);
-      setProjects(projects);
-    } catch (err) {
-      console.error("Failed to unlink folder:", err);
-    }
-  };
-
   return (
     <Box
       sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "background.paper" }}
@@ -201,14 +187,6 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
             </ListItemIcon>
             Delete
           </MenuItem>
-          {contextMenu?.project.folderPath && (
-            <MenuItem onClick={handleUnlinkFolder}>
-              <ListItemIcon>
-                <LinkOffIcon fontSize="small" />
-              </ListItemIcon>
-              Unlink folder
-            </MenuItem>
-          )}
         </Menu>
 
         <Box sx={{ px: 1, py: 0.5 }}>

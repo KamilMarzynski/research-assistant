@@ -45,7 +45,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         setWebAccessEnabled(settings.webAccessEnabled ?? true);
       });
     });
-  }, [open, provider]);
+  }, [open, provider.loadFromSettings]);
 
   const handleSave = async () => {
     setSaving(true);
