@@ -1,0 +1,366 @@
+/* Scholar — Design Tokens
+   Warm, minimal, modern. Single terracotta accent, warm paper neutrals. */
+
+:root {
+  /* ---------- Color: surfaces ---------- */
+  --bg: oklch(0.985 0.008 70); /* page */
+  --surface: oklch(0.97 0.01 70); /* cards, sidebars */
+  --surface-2: oklch(0.94 0.012 70); /* sunken — inputs, code */
+  --surface-3: oklch(0.91 0.014 70); /* hover on surface-2 */
+  --line: oklch(0.9 0.012 70); /* hairlines */
+  --line-strong: oklch(0.85 0.014 70);
+
+  /* ---------- Color: ink ---------- */
+  --ink: oklch(0.22 0.012 60); /* body */
+  --ink-2: oklch(0.45 0.012 60); /* secondary */
+  --ink-3: oklch(0.62 0.01 70); /* tertiary / placeholder */
+  --ink-on-accent: oklch(0.99 0.005 70);
+
+  /* ---------- Color: accent (single hue) ---------- */
+  --accent: oklch(0.62 0.13 45); /* terracotta */
+  --accent-hover: oklch(0.56 0.14 45);
+  --accent-soft: oklch(0.93 0.04 45); /* tint background */
+  --accent-line: oklch(0.82 0.07 45);
+
+  /* ---------- Color: status (desaturated to match palette) ---------- */
+  --success: oklch(0.58 0.09 145);
+  --success-soft: oklch(0.94 0.03 145);
+  --warn: oklch(0.7 0.11 75);
+  --warn-soft: oklch(0.95 0.04 75);
+  --danger: oklch(0.55 0.13 25);
+  --danger-hover: oklch(0.48 0.13 25);
+  --danger-soft: oklch(0.94 0.04 25);
+  --info: oklch(0.55 0.08 240);
+  --info-soft: oklch(0.94 0.03 240);
+
+  /* ---------- Type ---------- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+
+  --leading-tight: 1.25;
+  --leading-base: 1.5;
+
+  /* ---------- Spacing (4px base) ---------- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+
+  /* ---------- Radius ---------- */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* ---------- Shadows ---------- */
+  --shadow-1: 0 1px 0 oklch(0.5 0.01 60 / 0.04), 0 1px 2px oklch(0.5 0.01 60 / 0.05);
+  --shadow-2: 0 2px 4px oklch(0.4 0.01 60 / 0.06), 0 8px 24px oklch(0.4 0.01 60 / 0.08);
+  --shadow-3: 0 4px 12px oklch(0.4 0.01 60 / 0.1), 0 24px 60px oklch(0.4 0.01 60 / 0.14);
+  --focus-ring: 0 0 0 3px oklch(0.62 0.13 45 / 0.22);
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+}
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv11";
+}
+
+/* ---------- Primitives ---------- */
+.app {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* Buttons */
+.btn {
+  font-family: inherit;
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1;
+  padding: 8px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+  white-space: nowrap;
+}
+.btn:hover {
+  background: var(--surface-2);
+}
+.btn--primary {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  border-color: var(--accent);
+}
+.btn--primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.btn--outline {
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+.btn--outline:hover {
+  background: var(--surface-2);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--ink-2);
+}
+.btn--ghost:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.btn--danger {
+  background: var(--danger);
+  color: oklch(0.99 0.005 70);
+  border-color: var(--danger);
+}
+.btn--danger:hover {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+.btn--sm {
+  padding: 5px 10px;
+  font-size: var(--text-sm);
+  border-radius: var(--r-sm);
+}
+.btn--icon {
+  padding: 6px;
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+}
+
+/* Input */
+.input {
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+  width: 100%;
+  outline: none;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+.input::placeholder {
+  color: var(--ink-3);
+}
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.input--sunken {
+  background: var(--surface-2);
+}
+
+/* Chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  letter-spacing: 0.01em;
+}
+.chip--accent {
+  background: var(--accent-soft);
+  color: oklch(0.42 0.12 45);
+  border-color: var(--accent-line);
+}
+.chip--success {
+  background: var(--success-soft);
+  color: oklch(0.38 0.09 145);
+  border-color: oklch(0.82 0.05 145);
+}
+.chip--warn {
+  background: var(--warn-soft);
+  color: oklch(0.45 0.11 75);
+  border-color: oklch(0.85 0.06 75);
+}
+.chip--danger {
+  background: var(--danger-soft);
+  color: oklch(0.42 0.12 25);
+  border-color: oklch(0.82 0.07 25);
+}
+.chip--info {
+  background: var(--info-soft);
+  color: oklch(0.4 0.08 240);
+  border-color: oklch(0.82 0.05 240);
+}
+.chip--mono {
+  font-family: var(--font-mono);
+}
+
+/* Card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+
+/* Status dot */
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  display: inline-block;
+}
+.dot--accent {
+  background: var(--accent);
+}
+.dot--success {
+  background: var(--success);
+}
+.dot--warn {
+  background: var(--warn);
+}
+.dot--danger {
+  background: var(--danger);
+}
+.dot--idle {
+  background: var(--ink-3);
+}
+
+/* Pulsing dot for live state */
+@keyframes ra-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+}
+.dot--pulse {
+  animation: ra-pulse 1.6s ease-in-out infinite;
+}
+
+/* Section heading */
+.eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+/* Mono pill for code */
+.kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+/* Scrollbar (subtle) */
+.thin-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 8px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Divider */
+.hr {
+  height: 1px;
+  background: var(--line);
+  border: 0;
+  margin: 0;
+}
+
+/* Text helpers */
+.t-secondary {
+  color: var(--ink-2);
+}
+.t-tertiary {
+  color: var(--ink-3);
+}
+.t-mono {
+  font-family: var(--font-mono);
+}
+.t-num {
+  font-feature-settings: "tnum";
+}
+
+/* Window chrome (electron) */
+.titlebar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  -webkit-user-select: none;
+}
+.traffic-lights {
+  display: flex;
+  gap: 8px;
+}
+.traffic-lights span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.tl-close {
+  background: oklch(0.72 0.16 25);
+}
+.tl-min {
+  background: oklch(0.82 0.13 80);
+}
+.tl-max {
+  background: oklch(0.78 0.15 145);
+}
