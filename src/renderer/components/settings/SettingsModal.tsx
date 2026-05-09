@@ -4,6 +4,7 @@ import { IPC } from "../../../shared/ipc-channels";
 import { useAuditLog } from "../../hooks/useAuditLog";
 import { useProviderSettings } from "../../hooks/useProviderSettings";
 import { useSkillManager } from "../../hooks/useSkillManager";
+import { useTheme } from "../../theme/ThemeContext";
 import { IconX } from "../shared/Icons";
 import AuditTab from "./AuditTab";
 import GeneralTab from "./GeneralTab";
@@ -32,7 +33,9 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
 
   const [langfuseEnabled, setLangfuseEnabled] = useState(false);
   const [webAccessEnabled, setWebAccessEnabled] = useState(true);
+  const [themeSetting, setThemeSetting] = useState<"light" | "dark" | "system">("system");
 
+  const { setTheme } = useTheme();
   const provider = useProviderSettings(open);
   const audit = useAuditLog(open && tab === 2);
   const skills = useSkillManager(open && tab === 3);
@@ -43,6 +46,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
         setLangfuseEnabled(settings.langfuseEnabled ?? false);
         setWebAccessEnabled(settings.webAccessEnabled ?? true);
+        setThemeSetting(settings.theme ?? "system");
       });
     });
   }, [open, provider.loadFromSettings]);
@@ -72,6 +76,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       },
       langfuseEnabled,
       webAccessEnabled,
+      theme: themeSetting,
     });
     setSaving(false);
     onClose();
@@ -133,6 +138,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
               onLangfuseChange={setLangfuseEnabled}
               webAccessEnabled={webAccessEnabled}
               onWebAccessChange={setWebAccessEnabled}
+              theme={themeSetting}
+              onThemeChange={(t) => {
+                setThemeSetting(t);
+                setTheme(t);
+              }}
             />
           )}
 
