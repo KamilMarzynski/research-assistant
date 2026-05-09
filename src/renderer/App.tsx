@@ -1,6 +1,6 @@
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
-import { Alert, CssBaseline, Snackbar } from "@mui/material";
+import { Alert, Snackbar } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../shared/ipc-channels";
 import { decodeModelFallbackPayload } from "../shared/ipc-guards";
@@ -26,7 +26,6 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <CssBaseline />
       <ProjectProvider>
         <AppShell onOpenSettings={() => setSettingsOpen(true)} />
         <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
