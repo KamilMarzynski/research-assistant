@@ -1,4 +1,3 @@
-import { Box } from "@mui/material";
 import ChatPanel from "./chat/ChatPanel";
 import DetailsPanel from "./DetailsPanel";
 import LeftSidebar from "./LeftSidebar";
@@ -9,23 +8,16 @@ interface AppShellProps {
 
 export default function AppShell({ onOpenSettings }: AppShellProps) {
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "row",
-        height: "100vh",
-        overflow: "hidden",
-      }}
-    >
-      <Box sx={{ width: 240, flexShrink: 0, height: "100%" }}>
+    <div className="app" style={{ display: "flex", flexDirection: "row", height: "100vh", overflow: "hidden" }}>
+      <div style={{ width: 248, flexShrink: 0, height: "100%", background: "var(--surface)", borderRight: "1px solid var(--line)" }}>
         <LeftSidebar onOpenSettings={onOpenSettings} />
-      </Box>
-      <Box sx={{ flex: 1, overflow: "hidden", height: "100%" }}>
+      </div>
+      <div style={{ flex: 1, overflow: "hidden", height: "100%", background: "var(--bg)" }}>
         <ChatPanel />
-      </Box>
-      <Box sx={{ width: 320, flexShrink: 0, height: "100%" }}>
+      </div>
+      <div style={{ width: 320, flexShrink: 0, height: "100%", background: "var(--surface)", borderLeft: "1px solid var(--line)" }}>
         <DetailsPanel />
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
