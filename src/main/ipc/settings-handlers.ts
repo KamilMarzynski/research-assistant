@@ -29,6 +29,7 @@ export function registerSettingsHandlers(
       providerCredentials: settings.providerCredentials,
       langfuseEnabled: settings.langfuseEnabled,
       webAccessEnabled: settings.webAccessEnabled,
+      theme: settings.theme,
     };
   });
 

@@ -42,8 +42,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
       if (initialized.current) return;
-      // TODO(Task 4): remove cast once SettingsResponse includes theme
-      const mode = (settings as unknown as { theme?: ThemeMode }).theme ?? "system";
+      const mode = settings.theme;
       setThemeState(mode);
       const r = resolve(mode);
       setResolved(r);

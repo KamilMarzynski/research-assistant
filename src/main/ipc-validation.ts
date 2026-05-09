@@ -33,6 +33,7 @@ export const SaveSettingsSchema = z
     providerCredentials: z.unknown().optional(),
     langfuseEnabled: z.boolean().optional(),
     webAccessEnabled: z.boolean().optional(),
+    theme: z.enum(["light", "dark", "system"]).optional(),
   })
   .passthrough();
 

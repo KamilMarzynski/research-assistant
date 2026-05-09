@@ -19,6 +19,7 @@ const baseSettings: AppSettings = {
   },
   langfuseEnabled: false,
   webAccessEnabled: true,
+  theme: "system",
 };
 
 describe("isCloudProvider", () => {

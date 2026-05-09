@@ -14,6 +14,7 @@ export interface SettingsResponse {
   };
   langfuseEnabled: boolean;
   webAccessEnabled: boolean;
+  theme: "light" | "dark" | "system";
 }
 
 /** Response from CHECK_OLLAMA */

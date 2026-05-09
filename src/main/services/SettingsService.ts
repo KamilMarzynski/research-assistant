@@ -21,6 +21,7 @@ export interface AppSettings {
   };
   langfuseEnabled: boolean;
   webAccessEnabled: boolean;
+  theme: "light" | "dark" | "system";
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   },
   langfuseEnabled: false,
   webAccessEnabled: true,
+  theme: "system",
 };
 
 interface StoredProviderCredentials {
@@ -58,6 +60,7 @@ interface StoredSettings {
   };
   langfuseEnabled?: boolean;
   webAccessEnabled?: boolean;
+  theme?: "light" | "dark" | "system";
   // Legacy fields (migrated then removed)
   encryptedApiKey?: string;
   model?: string;
@@ -138,6 +141,7 @@ export class SettingsService {
       },
       langfuseEnabled: stored.langfuseEnabled ?? false,
       webAccessEnabled: stored.webAccessEnabled ?? true,
+      theme: stored.theme ?? "system",
     };
 
     delete migrated.encryptedApiKey;
@@ -187,6 +191,7 @@ export class SettingsService {
       },
       langfuseEnabled: migrated.langfuseEnabled ?? false,
       webAccessEnabled: migrated.webAccessEnabled ?? true,
+      theme: migrated.theme ?? "system",
     };
   }
 
@@ -240,6 +245,7 @@ export class SettingsService {
       },
       langfuseEnabled: next.langfuseEnabled,
       webAccessEnabled: next.webAccessEnabled,
+      theme: next.theme,
     };
 
     await this.writeStored(stored);
