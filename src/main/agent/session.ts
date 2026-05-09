@@ -10,14 +10,18 @@ import type { MessageService } from "../services/MessageService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { CompressionService } from "./CompressionService";
-import { buildSystemContext } from "./context";
+import { buildSystemContext, loadSkillsByContent } from "./context";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
 import { createDefaultSkillRouter } from "./SkillRouter";
 import { createAgentTools } from "./tools";
 import { makeEvaluatorFn } from "./worker-agent";
 
-const BASE_SYSTEM_PROMPT = "You are a helpful research assistant.";
+const BASE_SYSTEM_PROMPT = `You are a helpful research assistant.
+
+Your primary job is to delegate non-trivial tasks to background research workers. If a user asks something that would benefit from reading files, running commands, fetching web pages, or investigating multiple sources, call start_research instead of answering from your own knowledge.
+
+When in doubt, research it. Do not guess. It is better to start a quick research task than to give an incomplete or wrong answer.`;
 
 function formatConversationHistory(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
@@ -246,11 +250,16 @@ export class AgentSession {
           this.folderPath ?? undefined,
           this.skillRouter.toXml(),
         );
+
+        const skillNames = this.skillRouter.getIndex().skills.map((s) => s.name);
+        const skillContents = await loadSkillsByContent(skillNames, this.folderPath ?? undefined);
+
         const systemPrompt = [
           BASE_SYSTEM_PROMPT,
           memoryContext.summary,
           historyBlock,
           systemContext,
+          skillContents,
         ]
           .filter(Boolean)
           .join("\n\n");

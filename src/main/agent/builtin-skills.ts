@@ -5,7 +5,10 @@ export const FIRST_RUN_SKILL = `You are setting up for first use. Ask the user t
 2. Do you use a note-taking app or work with plain folders?
 3. What file types do you mainly work with?
 4. Any naming conventions or folder structures you always follow?
-After receiving all answers, write a concise summary to ~/.research-assistant/config.md (plain Markdown, human-editable). Then confirm setup is complete.`;
+
+If the user's setup is complex (e.g. cloud sync, LaTeX pipelines, custom tooling, multiple workspaces), start a research task with start_research to understand their full workflow before writing config.md. Do not guess — research it.
+
+After receiving all answers (or after the research completes), write a concise summary to ~/.research-assistant/config.md (plain Markdown, human-editable). Then confirm setup is complete.`;
 
 export const EVALUATE_RESEARCH_SKILL: BuiltinSkill = {
   "SKILL.md": `---
