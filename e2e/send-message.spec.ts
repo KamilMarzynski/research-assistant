@@ -47,9 +47,7 @@ test("send a message and see the user bubble in the message list", async () => {
   await page.getByTestId("send-btn").click();
 
   // The user message bubble should appear immediately
-  const bubble = page.locator("[data-testid='message-bubble']", {
-    hasText: messageText,
-  });
+  const bubble = page.getByText(messageText);
   await expect(bubble).toBeVisible();
   // Streaming cursor assertion omitted — requires a live LLM connection
 });

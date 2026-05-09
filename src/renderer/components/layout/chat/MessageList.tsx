@@ -1,4 +1,3 @@
-import { Box, CircularProgress, Paper, Typography } from "@mui/material";
 import { useEffect, useRef } from "react";
 import type { Message } from "../../../../shared/types";
 import MarkdownRenderer from "../../shared/MarkdownRenderer";
@@ -18,130 +17,153 @@ export default function MessageList({ messages, streamingContent, processing }: 
   }, [messages, streamingContent]);
 
   return (
-    <Box
-      sx={{
+    <div
+      className="thin-scroll"
+      style={{
         flex: 1,
         overflowY: "auto",
-        p: 2,
+        padding: "20px 24px",
         display: "flex",
         flexDirection: "column",
-        gap: 1,
+        gap: 18,
       }}
     >
+      <style>{`
+        @keyframes blink {
+          50% { opacity: 0; }
+        }
+      `}</style>
       {messages.map((msg) => (
-        <Box
+        <div
           key={msg.id}
-          data-testid="message-bubble"
-          sx={{
-            alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-            maxWidth: "75%",
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            alignItems: msg.role === "user" ? "flex-end" : "flex-start",
+            maxWidth: 640,
           }}
         >
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1.5,
-              bgcolor: msg.role === "user" ? "primary.main" : "action.selected",
-              borderRadius: 2,
+          <div
+            style={{
+              padding: "12px 16px",
+              borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+              background: msg.role === "user" ? "var(--accent)" : "var(--surface)",
+              color: msg.role === "user" ? "var(--ink-on-accent)" : "var(--ink)",
+              border: msg.role === "user" ? "none" : "1px solid var(--line)",
+              fontSize: 13.5,
+              lineHeight: 1.55,
             }}
           >
             {msg.role === "user" ? (
-              <Typography
-                variant="body2"
-                color="primary.contrastText"
-                sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-              >
-                {msg.content}
-              </Typography>
+              <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.content}</span>
             ) : (
               <MarkdownRenderer content={msg.content} />
             )}
-          </Paper>
-        </Box>
+          </div>
+        </div>
       ))}
 
       {streamingContent !== null && (
-        <Box sx={{ alignSelf: "flex-start", maxWidth: "75%" }}>
-          <Paper elevation={0} sx={{ p: 1.5, bgcolor: "action.selected", borderRadius: 2 }}>
-            <Box sx={{ position: "relative" }}>
-              <MarkdownRenderer content={streamingContent} />
-              <Box
-                component="span"
-                data-testid="streaming-cursor"
-                sx={{
-                  display: "inline-block",
-                  width: 8,
-                  height: "1em",
-                  bgcolor: "text.primary",
-                  ml: 0.5,
-                  verticalAlign: "text-bottom",
-                  animation: "blink 1s step-end infinite",
-                  "@keyframes blink": { "50%": { opacity: 0 } },
-                }}
-              />
-            </Box>
-          </Paper>
-        </Box>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            alignItems: "flex-start",
+            maxWidth: 640,
+          }}
+        >
+          <div
+            style={{
+              padding: "12px 16px",
+              borderRadius: "14px 14px 14px 4px",
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              fontSize: 13.5,
+              lineHeight: 1.55,
+            }}
+          >
+            <MarkdownRenderer content={streamingContent} />
+            <span
+              data-testid="streaming-cursor"
+              style={{
+                display: "inline-block",
+                width: 8,
+                height: "1em",
+                background: "var(--ink)",
+                marginLeft: 4,
+                verticalAlign: "text-bottom",
+                animation: "blink 1s step-end infinite",
+              }}
+            />
+          </div>
+        </div>
       )}
 
       {processing && !streamingContent && (
-        <Box sx={{ alignSelf: "flex-start", maxWidth: "75%" }}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1.5,
-              bgcolor: "action.selected",
-              borderRadius: 2,
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            alignItems: "flex-start",
+            maxWidth: 640,
+          }}
+        >
+          <div
+            style={{
+              padding: "12px 16px",
+              borderRadius: "14px 14px 14px 4px",
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
               display: "flex",
               alignItems: "center",
-              gap: 1,
+              gap: 8,
             }}
           >
-            <CircularProgress size={16} />
-            <Typography variant="body2" color="text.secondary">
-              Agent is thinking…
-            </Typography>
-          </Paper>
-        </Box>
+            <span className="dot dot--accent dot--pulse" />
+            <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Agent is thinking...</span>
+          </div>
+        </div>
       )}
 
+      {/* empty state */}
       {messages.length === 0 && !streamingContent && !processing && (
-        <Box sx={{ alignSelf: "flex-start", maxWidth: "85%" }}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1.5,
-              bgcolor: "background.default",
-              border: 1,
-              borderColor: "divider",
-              borderRadius: 2,
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            alignItems: "flex-start",
+            maxWidth: "85%",
+          }}
+        >
+          <div
+            style={{
+              padding: "12px 16px",
+              borderRadius: 14,
+              background: "var(--bg)",
+              border: "1px solid var(--line)",
+              fontSize: 13.5,
+              lineHeight: 1.55,
             }}
           >
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Welcome to your new project.
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <p style={{ margin: "0 0 8px", color: "var(--ink-2)" }}>Welcome to your new project.</p>
+            <p style={{ margin: 0, color: "var(--ink-2)" }}>
               Tell me about your project so I can help you best. Useful details:
-            </Typography>
-            <Box component="ul" sx={{ m: 0, pl: 2, color: "text.secondary" }}>
-              <Typography component="li" variant="body2">
-                What is this project about?
-              </Typography>
-              <Typography component="li" variant="body2">
-                How are files organized?
-              </Typography>
-              <Typography component="li" variant="body2">
-                Where should research outputs go?
-              </Typography>
-              <Typography component="li" variant="body2">
-                Any naming conventions or tech stack?
-              </Typography>
-            </Box>
-          </Paper>
-        </Box>
+            </p>
+            <ul style={{ margin: "4px 0 0", paddingLeft: 18, color: "var(--ink-2)" }}>
+              <li>What is this project about?</li>
+              <li>How are files organized?</li>
+              <li>Where should research outputs go?</li>
+              <li>Any naming conventions or tech stack?</li>
+            </ul>
+          </div>
+        </div>
       )}
 
       <div ref={bottomRef} />
-    </Box>
+    </div>
   );
 }
