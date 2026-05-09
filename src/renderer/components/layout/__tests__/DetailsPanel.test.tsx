@@ -25,7 +25,7 @@ function renderWithProvider(element: React.ReactElement, projectId = "proj-1") {
 }
 
 describe("DetailsPanel", () => {
-  it("renders nothing when no project is active", () => {
+  it("renders empty state when no project is active", () => {
     setupElectronAPI();
     const ctx: ProjectContextValue = {
       activeProjectId: null,
@@ -37,15 +37,24 @@ describe("DetailsPanel", () => {
       </ProjectContext.Provider>,
     );
     expect(screen.queryByText("Project Files")).toBeNull();
+    expect(screen.getByText(/Details, artifacts and recent outputs/)).toBeTruthy();
   });
 
   it("renders file explorer for active project", async () => {
     const { invoke } = setupElectronAPI();
-    invoke.mockResolvedValue({
-      name: "Test Project",
-      path: "/project",
-      isDirectory: true,
-      children: [{ name: "readme.md", path: "/project/readme.md", isDirectory: false }],
+    invoke.mockImplementation((channel: string) => {
+      if (channel === "GET_FILE_TREE") {
+        return Promise.resolve({
+          name: "Test Project",
+          path: "/project",
+          isDirectory: true,
+          children: [{ name: "readme.md", path: "/project/readme.md", isDirectory: false }],
+        });
+      }
+      if (channel === "GET_RECENT_OUTPUTS") {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve(undefined);
     });
 
     renderWithProvider(<DetailsPanel />);

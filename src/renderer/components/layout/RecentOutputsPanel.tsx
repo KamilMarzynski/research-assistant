@@ -1,10 +1,7 @@
-import CheckIcon from "@mui/icons-material/Check";
-import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
-import FolderOpenIcon from "@mui/icons-material/FolderOpen";
-import { Box, Button, Chip, IconButton, List, ListItem, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
 import type { Artifact } from "../../../shared/types";
+import { IconCheck, IconDoc, IconFolder } from "../shared/Icons";
 
 interface RecentOutputsPanelProps {
   projectId: string;
@@ -34,63 +31,91 @@ export default function RecentOutputsPanel({ projectId }: RecentOutputsPanelProp
 
   if (outputs.length === 0) {
     return (
-      <Box sx={{ p: 2, textAlign: "center" }}>
-        <Typography variant="body2" color="text.secondary">
-          No recent outputs
-        </Typography>
-      </Box>
+      <div style={{ padding: 16, textAlign: "center" }}>
+        <span style={{ fontSize: 12, color: "var(--ink-3)" }}>No recent outputs</span>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Box sx={{ p: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Typography variant="subtitle2">Recent Outputs</Typography>
-        <Button size="small" startIcon={<CheckCircleOutlinedIcon />} onClick={handleAcknowledgeAll}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        borderBottom: "1px solid var(--line)",
+      }}
+    >
+      <div
+        style={{
+          padding: "10px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span className="dot dot--accent" />
+          <span className="eyebrow">Recent Outputs</span>
+        </div>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={handleAcknowledgeAll}>
+          <IconCheck size={12} />
           Acknowledge All
-        </Button>
-      </Box>
+        </button>
+      </div>
 
-      <List dense sx={{ flex: 1, overflow: "auto" }}>
-        {outputs.map((output) => (
-          <ListItem
+      <div className="thin-scroll" style={{ flex: 1, overflow: "auto" }}>
+        {outputs.map((output, index) => (
+          <div
             key={output.id}
-            sx={{
+            style={{
               display: "flex",
               flexDirection: "column",
-              alignItems: "flex-start",
-              gap: 0.5,
-              py: 1,
+              gap: 6,
+              padding: "10px 16px",
+              borderTop: "1px solid var(--line)",
+              background: index === 0 ? "var(--surface-2)" : undefined,
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
-              <Typography variant="body2" noWrap sx={{ flex: 1, fontSize: "0.8rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+              <IconDoc size={13} strokeColor="var(--ink-3)" style={{ flexShrink: 0 }} />
+              <span
+                style={{
+                  flex: 1,
+                  fontSize: 12,
+                  color: "var(--ink)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {output.filePath}
-              </Typography>
-              <IconButton
-                size="small"
+              </span>
+              <button
+                type="button"
+                className="btn btn--ghost btn--icon"
+                style={{ width: 24, height: 24, padding: 0 }}
                 onClick={() => handleReveal(output.filePath)}
                 title="Show in folder"
               >
-                <FolderOpenIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
+                <IconFolder size={13} />
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost btn--icon"
+                style={{ width: 24, height: 24, padding: 0 }}
                 onClick={() => handleAcknowledge(output.id)}
                 title="Acknowledge"
               >
-                <CheckIcon fontSize="small" />
-              </IconButton>
-            </Box>
-            <Chip
-              label={output.title}
-              size="small"
-              variant="outlined"
-              sx={{ fontSize: "0.7rem" }}
-            />
-          </ListItem>
+                <IconCheck size={13} />
+              </button>
+            </div>
+            <span className="chip" style={{ alignSelf: "flex-start" }}>
+              {output.title}
+            </span>
+          </div>
         ))}
-      </List>
-    </Box>
+      </div>
+    </div>
   );
 }

@@ -1,10 +1,7 @@
-import FolderIcon from "@mui/icons-material/Folder";
-import FolderOpenIcon from "@mui/icons-material/FolderOpen";
-import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
-import { Box, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
 import type { FileNode } from "../../../shared/ipc-types";
+import { IconDoc, IconFolder } from "../shared/Icons";
 
 interface FileExplorerProps {
   projectId: string;
@@ -22,16 +19,18 @@ export default function FileExplorer({ projectId }: FileExplorerProps) {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  if (loading) return <Typography variant="body2">Loading...</Typography>;
-  if (!tree) return <Typography variant="body2">No files.</Typography>;
+  if (loading)
+    return <span style={{ fontSize: 12, color: "var(--ink-3)", padding: 16 }}>Loading...</span>;
+  if (!tree)
+    return <span style={{ fontSize: 12, color: "var(--ink-3)", padding: 16 }}>No files.</span>;
 
   return (
-    <Box sx={{ p: 1, overflow: "auto" }}>
-      <Typography variant="subtitle2" gutterBottom>
+    <div className="thin-scroll" style={{ padding: 12, overflow: "auto", flex: 1 }}>
+      <div className="eyebrow" style={{ marginBottom: 8 }}>
         Project Files
-      </Typography>
+      </div>
       <FileTreeNode node={tree} depth={0} />
-    </Box>
+    </div>
   );
 }
 
@@ -39,33 +38,52 @@ function FileTreeNode({ node, depth }: { node: FileNode; depth: number }) {
   const [expanded, setExpanded] = useState(depth < 2);
   const isDir = node.isDirectory;
 
+  const baseStyle = {
+    cursor: isDir ? "pointer" : "default",
+    fontFamily: "var(--font-mono)",
+    fontSize: 12,
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    padding: "2px 0",
+    color: "var(--ink-2)",
+  } as const;
+
+  const icon = isDir ? (
+    <IconFolder size={13} strokeColor="var(--ink-3)" />
+  ) : (
+    <IconDoc size={13} strokeColor="var(--ink-3)" />
+  );
+
   return (
-    <Box sx={{ pl: depth * 1.5 }}>
-      <Typography
-        variant="body2"
-        sx={{
-          cursor: isDir ? "pointer" : "default",
-          fontFamily: "monospace",
-          fontSize: "0.8rem",
-        }}
-        onClick={() => isDir && setExpanded(!expanded)}
-      >
-        {isDir ? (
-          expanded ? (
-            <FolderOpenIcon fontSize="inherit" />
-          ) : (
-            <FolderIcon fontSize="inherit" />
-          )
-        ) : (
-          <InsertDriveFileIcon fontSize="inherit" />
-        )}{" "}
-        {node.name}
-      </Typography>
+    <div style={{ paddingLeft: depth * 12 }}>
+      {isDir ? (
+        // biome-ignore lint/a11y/useSemanticElements: styled as a file-tree row, not a native button
+        <div
+          role="button"
+          tabIndex={0}
+          style={baseStyle}
+          onClick={() => setExpanded(!expanded)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              setExpanded(!expanded);
+            }
+          }}
+        >
+          {icon}
+          <span>{node.name}</span>
+        </div>
+      ) : (
+        <div style={baseStyle}>
+          {icon}
+          <span>{node.name}</span>
+        </div>
+      )}
       {isDir &&
         expanded &&
         node.children?.map((child) => (
           <FileTreeNode key={child.path} node={child} depth={depth + 1} />
         ))}
-    </Box>
+    </div>
   );
 }

@@ -142,32 +142,52 @@ export default function ResearchStatusBar() {
         display: "flex",
         alignItems: "center",
         gap: 10,
-        background: isErr ? "var(--danger-soft)" : isDone ? "var(--success-soft)" : "var(--accent-soft)",
+        background: isErr
+          ? "var(--danger-soft)"
+          : isDone
+            ? "var(--success-soft)"
+            : "var(--accent-soft)",
         border: `1px solid ${isErr ? "oklch(0.82 0.07 25)" : isDone ? "oklch(0.82 0.05 145)" : "var(--accent-line)"}`,
       }}
     >
-      <span className={`dot ${isErr ? "dot--danger" : isDone ? "dot--success" : "dot--accent"} ${state.active ? "dot--pulse" : ""}`} />
-      <span style={{
-        fontSize: 12,
-        fontWeight: 500,
-        color: isErr ? "oklch(0.42 0.12 25)" : isDone ? "oklch(0.38 0.09 145)" : "oklch(0.42 0.12 45)",
-      }}>
-        {state.active ? "Researching in background" : isErr ? "Research failed" : "Research complete"}
+      <span
+        className={`dot ${isErr ? "dot--danger" : isDone ? "dot--success" : "dot--accent"} ${state.active ? "dot--pulse" : ""}`}
+      />
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: isErr
+            ? "oklch(0.42 0.12 25)"
+            : isDone
+              ? "oklch(0.38 0.09 145)"
+              : "oklch(0.42 0.12 45)",
+        }}
+      >
+        {state.active
+          ? "Researching in background"
+          : isErr
+            ? "Research failed"
+            : "Research complete"}
       </span>
-      <span style={{
-        fontSize: 12,
-        color: "var(--ink-2)",
-        flex: 1,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-      }}>
+      <span
+        style={{
+          fontSize: 12,
+          color: "var(--ink-2)",
+          flex: 1,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
         {state.doneMessage ?? state.message}
       </span>
       {state.active && (
         <>
           <span className="chip chip--mono">subagents</span>
-          <button type="button" className="btn btn--ghost btn--sm">Cancel</button>
+          <button type="button" className="btn btn--ghost btn--sm">
+            Cancel
+          </button>
         </>
       )}
       {isErr && (

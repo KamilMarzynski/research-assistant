@@ -98,7 +98,15 @@ export default function ChatPanel() {
 
   if (!activeProjectId) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--ink-2)" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          color: "var(--ink-2)",
+        }}
+      >
         Select a project to start chatting
       </div>
     );
@@ -117,7 +125,15 @@ export default function ChatPanel() {
         processing={processing}
       />
       {hasApiKey === false ? (
-        <div style={{ padding: 16, textAlign: "center", background: "var(--surface)", color: "var(--ink-2)", fontSize: 13 }}>
+        <div
+          style={{
+            padding: 16,
+            textAlign: "center",
+            background: "var(--surface)",
+            color: "var(--ink-2)",
+            fontSize: 13,
+          }}
+        >
           No API key configured. Open Settings to set up your model provider.
         </div>
       ) : (
