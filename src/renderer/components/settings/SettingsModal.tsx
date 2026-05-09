@@ -1,23 +1,23 @@
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Tab,
-  Tabs,
-} from "@mui/material";
+import { Dialog } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
 import { useAuditLog } from "../../hooks/useAuditLog";
 import { useProviderSettings } from "../../hooks/useProviderSettings";
 import { useSkillManager } from "../../hooks/useSkillManager";
-import { glassSx } from "../../theme";
+import { IconX } from "../shared/Icons";
 import AuditTab from "./AuditTab";
 import GeneralTab from "./GeneralTab";
 import ModelProviderTab from "./ModelProviderTab";
+import SettingsTabs from "./SettingsTabs";
 import SkillsTab from "./SkillsTab";
+
+const paperSx = {
+  background: "var(--surface)",
+  color: "var(--ink)",
+  border: "1px solid var(--line)",
+  borderRadius: "var(--r-lg)",
+  boxShadow: "var(--shadow-3)",
+} as const;
 
 interface SettingsModalProps {
   open: boolean;
@@ -96,120 +96,175 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      slotProps={{ paper: { sx: glassSx } }}
+      slotProps={{ paper: { sx: paperSx } }}
     >
-      <DialogTitle>Settings</DialogTitle>
-      <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-        <Tab label="General" />
-        <Tab label="Model Provider" />
-        <Tab label="Audit Log" />
-        <Tab label="Skills" />
-      </Tabs>
-      <DialogContent>
-        {tab === 0 && (
-          <GeneralTab
-            langfuseEnabled={langfuseEnabled}
-            onLangfuseChange={setLangfuseEnabled}
-            webAccessEnabled={webAccessEnabled}
-            onWebAccessChange={setWebAccessEnabled}
-          />
-        )}
+      <div
+        style={{
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          maxHeight: 720,
+        }}
+      >
+        <div
+          style={{
+            padding: "18px 22px 0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.005em" }}>Settings</div>
+          <button
+            type="button"
+            className="btn btn--ghost btn--icon"
+            aria-label="Close settings"
+            onClick={onClose}
+          >
+            <IconX size={14} />
+          </button>
+        </div>
+        <SettingsTabs active={tab} onChange={setTab} />
+        <div className="thin-scroll" style={{ flex: 1, overflow: "auto", padding: "22px 26px" }}>
+          {tab === 0 && (
+            <GeneralTab
+              langfuseEnabled={langfuseEnabled}
+              onLangfuseChange={setLangfuseEnabled}
+              webAccessEnabled={webAccessEnabled}
+              onWebAccessChange={setWebAccessEnabled}
+            />
+          )}
 
-        {tab === 1 && (
-          <ModelProviderTab
-            activeProvider={provider.activeProvider}
-            onActiveProviderChange={provider.setActiveProvider}
-            defaultCloudProvider={provider.defaultCloudProvider}
-            onDefaultCloudProviderChange={provider.setDefaultCloudProvider}
-            credentials={provider.credentials}
-            onCredentialsChange={provider.setCredentials}
-            availableModels={provider.availableModels}
-            modelsLoading={provider.modelsLoading}
-            modelsError={provider.modelsError}
-            onRefreshModels={() => {
-              const apiKey =
-                provider.activeProvider === "openai"
-                  ? provider.credentials.openai.apiKey || undefined
-                  : provider.activeProvider === "openrouter"
-                    ? provider.credentials.openrouter.apiKey || undefined
-                    : undefined;
-              void provider.fetchModels(
-                provider.activeProvider,
-                provider.credentials.ollama.host,
-                apiKey,
-              );
+          {tab === 1 && (
+            <ModelProviderTab
+              activeProvider={provider.activeProvider}
+              onActiveProviderChange={provider.setActiveProvider}
+              defaultCloudProvider={provider.defaultCloudProvider}
+              onDefaultCloudProviderChange={provider.setDefaultCloudProvider}
+              credentials={provider.credentials}
+              onCredentialsChange={provider.setCredentials}
+              availableModels={provider.availableModels}
+              modelsLoading={provider.modelsLoading}
+              modelsError={provider.modelsError}
+              onRefreshModels={() => {
+                const apiKey =
+                  provider.activeProvider === "openai"
+                    ? provider.credentials.openai.apiKey || undefined
+                    : provider.activeProvider === "openrouter"
+                      ? provider.credentials.openrouter.apiKey || undefined
+                      : undefined;
+                void provider.fetchModels(
+                  provider.activeProvider,
+                  provider.credentials.ollama.host,
+                  apiKey,
+                );
+              }}
+              ollamaTestStatus={provider.ollamaTestStatus}
+              onTestOllama={provider.testOllama}
+            />
+          )}
+
+          {tab === 2 && (
+            <AuditTab
+              entries={audit.entries}
+              filter={audit.filter}
+              onFilterChange={audit.setFilter}
+              onRefresh={audit.load}
+              onRequestClear={() => setConfirmClear(true)}
+            />
+          )}
+
+          {tab === 3 && (
+            <SkillsTab
+              skills={skills.skills}
+              loading={skills.loading}
+              error={skills.error}
+              expandedSkill={skills.expandedSkill}
+              onToggleExpand={(name) =>
+                skills.setExpandedSkill(skills.expandedSkill === name ? null : name)
+              }
+              onToggleSkill={skills.toggle}
+              onDeleteRequest={setConfirmDeleteSkill}
+              onRetry={skills.load}
+            />
+          )}
+        </div>
+        {(tab === 0 || tab === 1 || tab === 3) && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 8,
+              padding: "14px 22px",
+              borderTop: "1px solid var(--line)",
+              background: "var(--surface)",
             }}
-            ollamaTestStatus={provider.ollamaTestStatus}
-            onTestOllama={provider.testOllama}
-          />
+          >
+            <button type="button" className="btn btn--ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save changes"}
+            </button>
+          </div>
         )}
+      </div>
 
-        {tab === 2 && (
-          <AuditTab
-            entries={audit.entries}
-            filter={audit.filter}
-            onFilterChange={audit.setFilter}
-            onRefresh={audit.load}
-            onRequestClear={() => setConfirmClear(true)}
-          />
-        )}
-
-        {tab === 3 && (
-          <SkillsTab
-            skills={skills.skills}
-            loading={skills.loading}
-            error={skills.error}
-            expandedSkill={skills.expandedSkill}
-            onToggleExpand={(name) =>
-              skills.setExpandedSkill(skills.expandedSkill === name ? null : name)
-            }
-            onToggleSkill={skills.toggle}
-            onDeleteRequest={setConfirmDeleteSkill}
-            onRetry={skills.load}
-          />
-        )}
-      </DialogContent>
-      {(tab === 0 || tab === 1 || tab === 3) && (
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving} variant="contained">
-            Save
-          </Button>
-        </DialogActions>
-      )}
-
-      <Dialog open={confirmClear} onClose={() => setConfirmClear(false)}>
-        <DialogTitle>Clear Audit Log?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
+      <Dialog
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        slotProps={{ paper: { sx: paperSx } }}
+      >
+        <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>Clear Audit Log?</div>
+          <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 13.5 }}>
             This will permanently delete all audit log entries. This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmClear(false)}>Cancel</Button>
-          <Button onClick={handleClearAuditLog} color="error">
-            Clear
-          </Button>
-        </DialogActions>
+          </p>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+            <button type="button" className="btn btn--ghost" onClick={() => setConfirmClear(false)}>
+              Cancel
+            </button>
+            <button type="button" className="btn btn--danger" onClick={handleClearAuditLog}>
+              Clear
+            </button>
+          </div>
+        </div>
       </Dialog>
 
-      <Dialog open={confirmDeleteSkill !== null} onClose={() => setConfirmDeleteSkill(null)}>
-        <DialogTitle>Delete Skill?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
+      <Dialog
+        open={confirmDeleteSkill !== null}
+        onClose={() => setConfirmDeleteSkill(null)}
+        slotProps={{ paper: { sx: paperSx } }}
+      >
+        <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>Delete Skill?</div>
+          <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 13.5 }}>
             This will permanently delete the skill <strong>{confirmDeleteSkill}</strong>. This
             action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteSkill(null)}>Cancel</Button>
-          <Button
-            onClick={() => confirmDeleteSkill && handleDeleteSkill(confirmDeleteSkill)}
-            color="error"
-          >
-            Delete
-          </Button>
-        </DialogActions>
+          </p>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={() => setConfirmDeleteSkill(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn--danger"
+              onClick={() => confirmDeleteSkill && handleDeleteSkill(confirmDeleteSkill)}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       </Dialog>
     </Dialog>
   );
