@@ -1,10 +1,4 @@
-import { Box, Button, Chip, Typography } from "@mui/material";
 import type { AuditLogEntry } from "../../../shared/ipc-channels";
-
-const statusColors: Record<string, string> = {
-  blocked: "#f44336",
-  executed: "#4caf50",
-};
 
 function getStatus(entry: AuditLogEntry): string {
   if (entry.blocked) return "blocked";
@@ -29,88 +23,185 @@ export default function AuditTab({
   const filtered = filter === "all" ? entries : entries.filter((e) => getStatus(e) === filter);
 
   return (
-    <Box sx={{ pt: 2 }}>
-      <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
-        {(["all", "executed", "blocked"] as const).map((f) => (
-          <Chip
-            key={f}
-            label={f}
-            onClick={() => onFilterChange(f)}
-            variant={filter === f ? "filled" : "outlined"}
-            color={filter === f ? "primary" : "default"}
-          />
-        ))}
-        <Box sx={{ flex: 1 }} />
-        <Button size="small" onClick={onRefresh} variant="outlined">
+    <div style={{ paddingTop: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 16,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            padding: 3,
+            background: "var(--surface-2)",
+            borderRadius: 8,
+          }}
+        >
+          {(["all", "executed", "blocked"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => onFilterChange(f)}
+              style={{
+                padding: "5px 10px",
+                fontSize: 12,
+                borderRadius: 6,
+                background: filter === f ? "var(--surface)" : "transparent",
+                fontWeight: filter === f ? 600 : 500,
+                boxShadow: filter === f ? "var(--shadow-1)" : "none",
+                cursor: "pointer",
+                textTransform: "capitalize",
+                border: "none",
+                color: "var(--ink)",
+              }}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <div style={{ flex: 1 }} />
+        <button type="button" onClick={onRefresh} className="btn btn--outline btn--sm">
           Refresh
-        </Button>
-        <Button size="small" onClick={onRequestClear} color="error" variant="outlined">
+        </button>
+        <button
+          type="button"
+          onClick={onRequestClear}
+          className="btn btn--ghost btn--sm"
+          style={{ color: "var(--danger)" }}
+        >
           Clear Log
-        </Button>
-      </Box>
+        </button>
+      </div>
 
-      <Box
-        sx={{
-          fontFamily: "monospace",
-          fontSize: 11,
-          bgcolor: "grey.900",
-          color: "grey.100",
-          borderRadius: 1,
-          p: 2,
+      <div
+        className="thin-scroll"
+        style={{
           maxHeight: 400,
           overflow: "auto",
+          border: "1px solid var(--line)",
+          borderRadius: "var(--r-md)",
+          background: "var(--surface)",
         }}
       >
         {filtered.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <div
+            style={{
+              padding: 24,
+              textAlign: "center",
+              color: "var(--ink-3)",
+              fontSize: 14,
+            }}
+          >
             No audit log entries.
-          </Typography>
+          </div>
         ) : (
-          filtered.map((entry, i) => {
-            const status = getStatus(entry);
-            const entryKey = `${entry.ts}-${entry.command}-${i}`;
-            return (
-              <Box
-                key={entryKey}
-                sx={{
-                  display: "flex",
-                  gap: 1.5,
-                  borderBottom: "1px solid #333",
-                  py: 0.75,
-                  alignItems: "baseline",
-                }}
-              >
-                <span style={{ color: "#888", minWidth: 160 }}>
-                  {new Date(entry.ts).toLocaleString()}
-                </span>
-                <Chip
-                  label={status}
-                  size="small"
-                  sx={{
-                    bgcolor: statusColors[status] ?? "grey.500",
-                    color: "#fff",
-                    fontSize: 10,
-                    height: 18,
-                  }}
-                />
-                <span
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: "var(--surface-2)" }}>
+                <th
                   style={{
-                    flex: 1,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    padding: "8px 12px",
+                    textAlign: "left",
+                    fontSize: 10,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    fontWeight: 600,
+                    color: "var(--ink-3)",
                   }}
                 >
-                  {entry.command}
-                </span>
-                <span style={{ color: "#888" }}>
-                  {entry.blockReason ?? `exit: ${entry.exitCode}`}
-                </span>
-              </Box>
-            );
-          })
+                  Time
+                </th>
+                <th
+                  style={{
+                    padding: "8px 12px",
+                    textAlign: "left",
+                    fontSize: 10,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    fontWeight: 600,
+                    color: "var(--ink-3)",
+                  }}
+                >
+                  Status
+                </th>
+                <th
+                  style={{
+                    padding: "8px 12px",
+                    textAlign: "left",
+                    fontSize: 10,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    fontWeight: 600,
+                    color: "var(--ink-3)",
+                  }}
+                >
+                  Command
+                </th>
+                <th
+                  style={{
+                    padding: "8px 12px",
+                    textAlign: "left",
+                    fontSize: 10,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    fontWeight: 600,
+                    color: "var(--ink-3)",
+                  }}
+                >
+                  Result
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((entry, i) => {
+                const status = getStatus(entry);
+                const entryKey = `${entry.ts}-${entry.command}-${i}`;
+                return (
+                  <tr key={entryKey} style={{ borderBottom: "1px solid var(--line)" }}>
+                    <td
+                      className="t-mono"
+                      style={{ padding: "8px 12px", minWidth: 160, whiteSpace: "nowrap" }}
+                    >
+                      {new Date(entry.ts).toLocaleString()}
+                    </td>
+                    <td style={{ padding: "8px 12px" }}>
+                      <span
+                        className={`chip chip--${status === "executed" ? "success" : "danger"}`}
+                      >
+                        {status}
+                      </span>
+                    </td>
+                    <td style={{ padding: "8px 12px", maxWidth: 0, width: "100%" }}>
+                      <span
+                        className="t-mono"
+                        style={{
+                          display: "block",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {entry.command}
+                      </span>
+                    </td>
+                    <td
+                      className="t-mono"
+                      style={{ padding: "8px 12px", whiteSpace: "nowrap", color: "var(--ink-2)" }}
+                    >
+                      {entry.blockReason ?? `exit: ${entry.exitCode}`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
