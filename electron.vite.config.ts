@@ -5,6 +5,9 @@ import { defineConfig, externalizeDepsPlugin } from "electron-vite"
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin({ exclude: ["@mariozechner/pi-ai", "@mariozechner/pi-agent-core"] })],
+    build: {
+      target: "node22",
+    },
     resolve: {
       alias: {
         "@main": resolve("src/main"),
@@ -14,6 +17,9 @@ export default defineConfig({
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
+    build: {
+      target: "node22",
+    },
     define: {
       "process.env.PLAYWRIGHT_TEST": JSON.stringify(process.env.PLAYWRIGHT_TEST ?? ""),
     },
@@ -25,6 +31,9 @@ export default defineConfig({
   },
   renderer: {
     plugins: [react()],
+    build: {
+      target: "chrome130",
+    },
     resolve: {
       alias: {
         "@renderer": resolve("src/renderer"),
