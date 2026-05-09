@@ -1,8 +1,8 @@
-import SendIcon from "@mui/icons-material/Send";
-import { Box, IconButton, MenuItem, Select, TextField } from "@mui/material";
+import { MenuItem, Select } from "@mui/material";
 import { useEffect, useState } from "react";
 import { DEFAULT_OPENROUTER_MODEL } from "../../../../shared/constants";
 import { IPC } from "../../../../shared/ipc-channels";
+import { IconBolt, IconBrain, IconChevD, IconCpu, IconSearch, IconSend } from "../../shared/Icons";
 
 interface ModelInfo {
   id: string;
@@ -70,56 +70,134 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
   const modelOptions = availableModels.length > 0 ? availableModels : [{ id: model, name: model }];
 
   return (
-    <Box
-      sx={{
-        p: 1.5,
-        display: "flex",
-        gap: 1,
-        alignItems: "flex-end",
-        bgcolor: "background.paper",
+    <div
+      style={{
+        padding: "12px 24px 18px",
+        background: "var(--bg)",
+        borderTop: "1px solid var(--line)",
       }}
     >
-      <Select
-        size="small"
-        value={model}
-        disabled={modelsLoading || disabled}
-        onChange={(e) => handleModelChange(e.target.value)}
-        sx={{ minWidth: 130, flexShrink: 0 }}
-      >
-        {modelOptions.map((m) => (
-          <MenuItem key={m.id} value={m.id}>
-            {m.name}
-          </MenuItem>
-        ))}
-      </Select>
-
-      <TextField
-        multiline
-        maxRows={6}
-        fullWidth
-        size="small"
-        placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-          }
+      <div
+        className="card"
+        style={{
+          padding: 10,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          borderColor: "var(--line-strong)",
+          boxShadow: "var(--shadow-1)",
         }}
-        disabled={disabled}
-        slotProps={{ htmlInput: { "data-testid": "message-input" } }}
-      />
-
-      <IconButton
-        onClick={handleSend}
-        disabled={!content.trim() || disabled}
-        color="primary"
-        size="small"
-        data-testid="send-btn"
       >
-        <SendIcon />
-      </IconButton>
-    </Box>
+        <textarea
+          className="input"
+          rows={2}
+          placeholder="Ask, or hand off to background research..."
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          disabled={disabled}
+          data-testid="message-input"
+          style={{
+            resize: "none",
+            border: "none",
+            padding: "4px 6px",
+            background: "transparent",
+            fontSize: 13.5,
+            lineHeight: 1.5,
+            width: "100%",
+            maxHeight: "9em",
+          }}
+        />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Select
+              size="small"
+              value={model}
+              disabled={modelsLoading || disabled}
+              onChange={(e) => handleModelChange(e.target.value)}
+              IconComponent={() => null}
+              renderValue={() => (
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: "var(--text-sm)",
+                  }}
+                >
+                  <IconCpu size={13} />
+                  <span>{modelOptions.find((m) => m.id === model)?.name ?? model}</span>
+                  <IconChevD size={12} />
+                </span>
+              )}
+              sx={{
+                minWidth: 130,
+                flexShrink: 0,
+                fontSize: "var(--text-sm)",
+                "& .MuiSelect-select": {
+                  py: 0.5,
+                  px: 1,
+                  fontSize: "var(--text-sm)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                },
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--line-strong)" },
+              }}
+            >
+              {modelOptions.map((m) => (
+                <MenuItem key={m.id} value={m.id} sx={{ fontSize: "var(--text-sm)" }}>
+                  {m.name}
+                </MenuItem>
+              ))}
+            </Select>
+            <span style={{ width: 1, height: 14, background: "var(--line)" }} />
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              title="Quick lookup"
+              disabled={disabled}
+            >
+              <IconSearch size={13} /> Quick
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              title="Standard parallel research"
+              disabled={disabled}
+            >
+              <IconBolt size={13} /> Standard
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              title="Deep parallel + evaluator"
+              disabled={disabled}
+            >
+              <IconBrain size={13} /> Deep
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="t-tertiary t-mono" style={{ fontSize: 10 }}>
+              Return send · Shift+Return newline
+            </span>
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              onClick={handleSend}
+              disabled={!content.trim() || disabled}
+              data-testid="send-btn"
+            >
+              <IconSend size={13} /> Send
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
