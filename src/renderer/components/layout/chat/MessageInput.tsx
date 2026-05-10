@@ -158,6 +158,8 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
                   },
                 }}
                 MenuProps={{
+                  anchorOrigin: { vertical: "top", horizontal: "left" },
+                  transformOrigin: { vertical: "bottom", horizontal: "left" },
                   slotProps: {
                     paper: {
                       sx: {
@@ -166,6 +168,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
                         borderRadius: "var(--r-md)",
                         boxShadow: "var(--shadow-2)",
                         color: "var(--ink)",
+                        mb: 0.5,
                       },
                     },
                   },
