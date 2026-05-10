@@ -10,6 +10,7 @@ import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
+import { ArtifactService } from "./ArtifactService";
 import { CrystallizationService } from "./CrystallizationService";
 import { HomeService } from "./HomeService";
 import { ProjectService } from "./ProjectService";
@@ -34,6 +35,7 @@ export class ResearchService {
     @inject(AllowlistService) private readonly allowlistService: AllowlistService,
     @inject(CrystallizationService) private readonly crystallizationService: CrystallizationService,
     @inject(ProjectService) private readonly projectService: ProjectService,
+    @inject(ArtifactService) private readonly artifactService: ArtifactService,
   ) {}
 
   async startResearch(
@@ -225,7 +227,7 @@ export class ResearchService {
                 config.projectName,
                 this.allowlistService,
               );
-              const router = new OutputRouter(jail);
+              const router = new OutputRouter(jail, this.artifactService);
               conventions = router.parseConventions(agentsMdContent);
             }
             if (!conventions && config.folderPath) {
@@ -238,7 +240,7 @@ export class ResearchService {
                 config.projectName,
                 this.allowlistService,
               );
-              const router = new OutputRouter(jail);
+              const router = new OutputRouter(jail, this.artifactService);
               const result = await router.moveFinals(workspacePath, conventions);
               filePaths = result.moved.map((name) => join(conventions.default, name));
             }

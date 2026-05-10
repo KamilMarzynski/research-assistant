@@ -1,5 +1,6 @@
 import { mkdir, readdir, rename, stat } from "node:fs/promises";
 import { extname, join } from "node:path";
+import type { ArtifactService } from "../services/ArtifactService";
 import type { PathJail } from "./path-jail";
 
 export interface OutputConvention {
@@ -9,7 +10,10 @@ export interface OutputConvention {
 }
 
 export class OutputRouter {
-  constructor(private readonly jail: PathJail) {}
+  constructor(
+    private readonly jail: PathJail,
+    private readonly artifactService?: ArtifactService,
+  ) {}
 
   parseConventions(agentsMdContent: string): OutputConvention | null {
     const lines = agentsMdContent.split("\n");
@@ -85,6 +89,20 @@ export class OutputRouter {
       await mkdir(destDir, { recursive: true });
       const destPath = join(destDir, entry);
       await rename(sourcePath, destPath);
+
+      if (this.artifactService) {
+        const fileName = entry;
+        await this.artifactService.saveArtifact({
+          projectId: this.jail.projectId,
+          title: fileName,
+          filePath: destPath,
+          relativePath: join(destDir, fileName).replace(`${conventions.default}/`, ""),
+          acknowledged: false,
+        }).catch((err) => {
+          console.error(`[OutputRouter] artifact record failed for ${destPath}:`, err);
+        });
+      }
+
       moved.push(entry);
     }
 
