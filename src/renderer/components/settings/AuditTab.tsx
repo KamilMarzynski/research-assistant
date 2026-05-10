@@ -51,13 +51,12 @@ export default function AuditTab({
                 padding: "5px 10px",
                 fontSize: 12,
                 borderRadius: 6,
-                background: filter === f ? "var(--surface)" : "transparent",
+                background: filter === f ? "var(--accent-soft)" : "transparent",
                 fontWeight: filter === f ? 600 : 500,
-                boxShadow: filter === f ? "var(--shadow-1)" : "none",
                 cursor: "pointer",
                 textTransform: "capitalize",
                 border: "none",
-                color: "var(--ink)",
+                color: filter === f ? "oklch(0.42 0.12 45)" : "var(--ink)",
               }}
             >
               {f}

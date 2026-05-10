@@ -55,13 +55,12 @@ export default function GeneralTab({
                   padding: "5px 10px",
                   fontSize: 12,
                   borderRadius: 6,
-                  background: theme === t ? "var(--surface)" : "transparent",
+                  background: theme === t ? "var(--accent-soft)" : "transparent",
                   fontWeight: theme === t ? 600 : 500,
-                  boxShadow: theme === t ? "var(--shadow-1)" : "none",
                   cursor: "pointer",
                   textTransform: "capitalize",
                   border: "none",
-                  color: "var(--ink)",
+                  color: theme === t ? "oklch(0.42 0.12 45)" : "var(--ink)",
                 }}
               >
                 {t}
