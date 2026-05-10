@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ProjectContext, type ProjectContextValue } from "../../../contexts/ProjectContext";
@@ -45,5 +45,29 @@ describe("DetailsPanel", () => {
     renderWithProvider(<DetailsPanel />, "proj-1");
     expect(await screen.findByText("No artifacts yet")).toBeTruthy();
     expect(await screen.findByText("No research history")).toBeTruthy();
+  });
+
+  it("toggles panel collapse", async () => {
+    window.electronAPI = {
+      invoke: mockInvoke({
+        GET_PROJECT_ARTIFACTS: [],
+        GET_RESEARCHES: [],
+      }),
+      send: vi.fn(),
+      on: vi.fn().mockReturnValue(() => {}),
+    } as unknown as Window["electronAPI"];
+
+    renderWithProvider(<DetailsPanel />, "proj-1");
+    expect(await screen.findByText("No artifacts yet")).toBeTruthy();
+
+    const collapseButtons = screen.getAllByLabelText(/Collapse/);
+    expect(collapseButtons.length).toBe(2);
+
+    fireEvent.click(collapseButtons[0]);
+    expect(screen.queryByText("No artifacts yet")).toBeNull();
+    expect(screen.getByText("No research history")).toBeTruthy();
+
+    fireEvent.click(collapseButtons[1]);
+    expect(screen.queryByText("No research history")).toBeNull();
   });
 });

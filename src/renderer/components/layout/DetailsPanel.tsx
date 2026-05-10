@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useProject } from "../../contexts/ProjectContext";
 import ProjectArtifactsPanel from "./ProjectArtifactsPanel";
 import ResearchHistoryPanel from "./ResearchHistoryPanel";
@@ -5,6 +6,8 @@ import WindowDragBar from "./WindowDragBar";
 
 export default function DetailsPanel() {
   const { activeProjectId } = useProject();
+  const [artifactsCollapsed, setArtifactsCollapsed] = useState(false);
+  const [researchCollapsed, setResearchCollapsed] = useState(false);
 
   if (!activeProjectId) {
     return (
@@ -41,8 +44,16 @@ export default function DetailsPanel() {
       }}
     >
       <WindowDragBar />
-      <ProjectArtifactsPanel projectId={activeProjectId} />
-      <ResearchHistoryPanel projectId={activeProjectId} />
+      <ProjectArtifactsPanel
+        projectId={activeProjectId}
+        collapsed={artifactsCollapsed}
+        onToggleCollapse={() => setArtifactsCollapsed((c) => !c)}
+      />
+      <ResearchHistoryPanel
+        projectId={activeProjectId}
+        collapsed={researchCollapsed}
+        onToggleCollapse={() => setResearchCollapsed((c) => !c)}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { IPC } from "@shared/ipc-channels";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { IconChevD, IconChevR } from "../shared/Icons";
 
 interface ResearchItem {
   id: string;
@@ -10,6 +11,8 @@ interface ResearchItem {
 
 interface ResearchHistoryPanelProps {
   projectId: string;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 function formatDate(d: Date): string {
@@ -34,7 +37,11 @@ const statusConfig: Record<
   failed: { dotClass: "dot--danger", label: "Failed", borderColor: "oklch(0.82 0.07 25)" },
 };
 
-export default function ResearchHistoryPanel({ projectId }: ResearchHistoryPanelProps) {
+export default function ResearchHistoryPanel({
+  projectId,
+  collapsed,
+  onToggleCollapse,
+}: ResearchHistoryPanelProps) {
   const [items, setItems] = useState<ResearchItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,86 +100,117 @@ export default function ResearchHistoryPanel({ projectId }: ResearchHistoryPanel
   }, [projectId, load]);
 
   return (
-    <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", gap: 8 }}>
+    <div
+      style={{
+        flex: collapsed ? "0 0 auto" : "1 1 0%",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 4px" }}>
         <span className="dot dot--accent" />
-        <span className="eyebrow">Researches</span>
-      </div>
-      <div
-        className="thin-scroll"
-        style={{
-          flex: 1,
-          overflow: "auto",
-          border: "1px solid var(--line)",
-          borderRadius: "var(--r-lg)",
-          background: "var(--surface-2)",
-          padding: 10,
-        }}
-      >
-        {loading ? (
-          <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 12, padding: 16 }}>
-            Loading...
-          </div>
-        ) : error ? (
-          <div style={{ textAlign: "center", color: "var(--danger)", fontSize: 12, padding: 16 }}>
-            {error}
-          </div>
-        ) : items.length === 0 ? (
-          <div
+        <span className="eyebrow" style={{ flex: 1 }}>
+          Researches
+        </span>
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
             style={{
-              height: "100%",
+              background: "none",
+              border: "none",
+              padding: 2,
+              cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "var(--ink-3)",
-              fontSize: 12,
             }}
+            aria-label={collapsed ? "Expand researches" : "Collapse researches"}
           >
-            No research history
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {items.map((item) => {
-              const cfg = statusConfig[item.status];
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 3,
-                    padding: 8,
-                    borderRadius: "var(--r-md)",
-                    background: "var(--surface)",
-                    borderLeft: `3px solid ${cfg.borderColor}`,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span className={`dot ${cfg.dotClass}`} style={{ width: 6, height: 6 }} />
-                    <span style={{ fontSize: 11, fontWeight: 500 }}>{cfg.label}</span>
-                    <span
-                      style={{ flex: 1, textAlign: "right", fontSize: 10, color: "var(--ink-3)" }}
-                    >
-                      {formatDate(item.startedAt)}
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: "var(--ink-2)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {item.query}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+            {collapsed ? <IconChevR size={14} /> : <IconChevD size={14} />}
+          </button>
         )}
       </div>
+      {!collapsed && (
+        <div
+          className="thin-scroll"
+          style={{
+            flex: 1,
+            overflow: "auto",
+            border: "1px solid var(--line)",
+            borderRadius: "var(--r-lg)",
+            background: "var(--surface-2)",
+            padding: 10,
+          }}
+        >
+          {loading ? (
+            <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 12, padding: 16 }}>
+              Loading...
+            </div>
+          ) : error ? (
+            <div style={{ textAlign: "center", color: "var(--danger)", fontSize: 12, padding: 16 }}>
+              {error}
+            </div>
+          ) : items.length === 0 ? (
+            <div
+              style={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--ink-3)",
+                fontSize: 12,
+              }}
+            >
+              No research history
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {items.map((item) => {
+                const cfg = statusConfig[item.status];
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 3,
+                      padding: 8,
+                      borderRadius: "var(--r-md)",
+                      background: "var(--surface)",
+                      borderLeft: `3px solid ${cfg.borderColor}`,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span className={`dot ${cfg.dotClass}`} style={{ width: 6, height: 6 }} />
+                      <span style={{ fontSize: 11, fontWeight: 500 }}>{cfg.label}</span>
+                      <span
+                        style={{ flex: 1, textAlign: "right", fontSize: 10, color: "var(--ink-3)" }}
+                      >
+                        {formatDate(item.startedAt)}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--ink-2)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.query}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
