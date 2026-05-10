@@ -74,12 +74,22 @@ export default function ProjectArtifactsPanel({
           </button>
         )}
       </div>
-      {!collapsed && (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: collapsed ? "0fr" : "1fr",
+          transition: "grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          flex: 1,
+          overflow: "hidden",
+        }}
+      >
         <div
           className="thin-scroll"
           style={{
-            flex: 1,
             overflow: "auto",
+            minHeight: 0,
+            opacity: collapsed ? 0 : 1,
+            transition: "opacity 0.25s ease",
             border: "1px solid var(--line)",
             borderRadius: "var(--r-lg)",
             background: "var(--surface-2)",
@@ -160,7 +170,7 @@ export default function ProjectArtifactsPanel({
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -64,10 +64,11 @@ describe("DetailsPanel", () => {
     expect(collapseButtons.length).toBe(2);
 
     fireEvent.click(collapseButtons[0]);
-    expect(screen.queryByText("No artifacts yet")).toBeNull();
-    expect(screen.getByText("No research history")).toBeTruthy();
+    expect(screen.getByLabelText("Expand artifacts")).toBeTruthy();
+    expect(screen.getByLabelText("Collapse researches")).toBeTruthy();
 
     fireEvent.click(collapseButtons[1]);
-    expect(screen.queryByText("No research history")).toBeNull();
+    expect(screen.getByLabelText("Expand artifacts")).toBeTruthy();
+    expect(screen.getByLabelText("Expand researches")).toBeTruthy();
   });
 });
