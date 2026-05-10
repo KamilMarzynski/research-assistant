@@ -48,11 +48,11 @@ export default function AuditTab({
               type="button"
               onClick={() => onFilterChange(f)}
               style={{
-                padding: "5px 10px",
-                fontSize: 12,
-                borderRadius: 6,
+                padding: "7px 10px",
+                fontSize: 13,
+                borderRadius: 8,
                 background: filter === f ? "var(--accent-soft)" : "transparent",
-                fontWeight: filter === f ? 600 : 500,
+                fontWeight: filter === f ? 500 : 400,
                 cursor: "pointer",
                 textTransform: "capitalize",
                 border: "none",

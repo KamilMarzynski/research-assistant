@@ -52,11 +52,11 @@ export default function GeneralTab({
                 type="button"
                 onClick={() => onThemeChange(t)}
                 style={{
-                  padding: "5px 10px",
-                  fontSize: 12,
-                  borderRadius: 6,
+                  padding: "7px 10px",
+                  fontSize: 13,
+                  borderRadius: 8,
                   background: theme === t ? "var(--accent-soft)" : "transparent",
-                  fontWeight: theme === t ? 600 : 500,
+                  fontWeight: theme === t ? 500 : 400,
                   cursor: "pointer",
                   textTransform: "capitalize",
                   border: "none",
