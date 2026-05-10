@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AllowlistService } from "../services/AllowlistService";
+import type { ArtifactService } from "../services/ArtifactService";
 import { type OutputConvention, OutputRouter } from "./OutputRouter";
 import { PathJail } from "./path-jail";
 
@@ -182,6 +183,96 @@ Some other content.
 
       expect(result.moved).toEqual([]);
       expect(result.skipped).toEqual(["file.txt"]);
+    });
+
+    it("calls artifactService.saveArtifact for each moved file with correct fields", async () => {
+      const workspace = join(tempDir, "workspace");
+      mkdirSync(workspace, { recursive: true });
+
+      const defaultDir = join(tempDir, "default");
+      const codeDir = join(defaultDir, "code");
+      const reportsDir = join(defaultDir, "reports");
+
+      writeFileSync(join(workspace, "script.py"), "print('hello')");
+      writeFileSync(join(workspace, "app.js"), "console.log('hello');");
+      writeFileSync(join(workspace, "report.md"), "# Report");
+      writeFileSync(join(workspace, "data.json"), "{}");
+
+      const conventions: OutputConvention = {
+        default: defaultDir,
+        code: codeDir,
+        reports: reportsDir,
+      };
+
+      const mockSaveArtifact = vi.fn().mockResolvedValue({ id: "1" });
+      const mockArtifactService = {
+        saveArtifact: mockSaveArtifact,
+      } as unknown as ArtifactService;
+
+      const routerWithArtifactService = new OutputRouter(jail, mockArtifactService);
+      const result = await routerWithArtifactService.moveFinals(workspace, conventions);
+
+      expect(result.moved.sort()).toEqual(["app.js", "data.json", "report.md", "script.py"]);
+      expect(result.skipped).toEqual([]);
+
+      expect(mockSaveArtifact).toHaveBeenCalledTimes(4);
+
+      expect(mockSaveArtifact).toHaveBeenCalledWith({
+        projectId: "test-project",
+        title: "script.py",
+        filePath: join(codeDir, "script.py"),
+        relativePath: join("code", "script.py"),
+        acknowledged: false,
+      });
+
+      expect(mockSaveArtifact).toHaveBeenCalledWith({
+        projectId: "test-project",
+        title: "app.js",
+        filePath: join(codeDir, "app.js"),
+        relativePath: join("code", "app.js"),
+        acknowledged: false,
+      });
+
+      expect(mockSaveArtifact).toHaveBeenCalledWith({
+        projectId: "test-project",
+        title: "report.md",
+        filePath: join(reportsDir, "report.md"),
+        relativePath: join("reports", "report.md"),
+        acknowledged: false,
+      });
+
+      expect(mockSaveArtifact).toHaveBeenCalledWith({
+        projectId: "test-project",
+        title: "data.json",
+        filePath: join(defaultDir, "data.json"),
+        relativePath: "data.json",
+        acknowledged: false,
+      });
+    });
+
+    it("does not call artifactService when no files are moved", async () => {
+      const workspace = join(tempDir, "workspace");
+      mkdirSync(workspace, { recursive: true });
+
+      const outsidePath = "/tmp/outside-jail";
+
+      writeFileSync(join(workspace, "file.txt"), "hello");
+
+      const conventions: OutputConvention = {
+        default: outsidePath,
+      };
+
+      const mockSaveArtifact = vi.fn().mockResolvedValue({ id: "1" });
+      const mockArtifactService = {
+        saveArtifact: mockSaveArtifact,
+      } as unknown as ArtifactService;
+
+      const routerWithArtifactService = new OutputRouter(jail, mockArtifactService);
+      const result = await routerWithArtifactService.moveFinals(workspace, conventions);
+
+      expect(result.moved).toEqual([]);
+      expect(result.skipped).toEqual(["file.txt"]);
+      expect(mockSaveArtifact).not.toHaveBeenCalled();
     });
   });
 });

@@ -71,6 +71,15 @@ export class PathJail {
       return;
     }
 
+    // Resolve the containing zone so symlink comparisons are consistent
+    const realContainingZone = (() => {
+      try {
+        return realpathSync(containingZone);
+      } catch {
+        return containingZone;
+      }
+    })();
+
     // Walk from the zone root to the target, component by component
     const rel = relative(containingZone, target);
     if (rel === "") return; // Target is the zone root itself
@@ -83,7 +92,7 @@ export class PathJail {
       current = join(current, segments[i]);
       try {
         const real = realpathSync(current);
-        if (!this.isInZone(real, this.allZones)) {
+        if (!this.isInZone(real, [realContainingZone])) {
           throw new Error(
             `Path component "${current}" resolves outside allowed zones (resolved to "${real}"). Symlinks are not permitted to point outside designated areas.`,
           );
