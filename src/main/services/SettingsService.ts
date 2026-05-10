@@ -11,10 +11,12 @@ export interface ProviderCredentials {
 }
 
 export interface AppSettings {
-  activeProvider: "openrouter" | "openai" | "ollama";
+  activeProvider: "openrouter" | "openai" | "anthropic" | "ollama";
+  defaultCloudProvider: "openrouter" | "openai" | "anthropic";
   providerCredentials: {
     openrouter: ProviderCredentials;
     openai: ProviderCredentials;
+    anthropic: ProviderCredentials;
     ollama: { host: string; defaultModel: string };
   };
   langfuseEnabled: boolean;
@@ -24,9 +26,11 @@ export interface AppSettings {
 
 const DEFAULT_SETTINGS: AppSettings = {
   activeProvider: "openrouter",
+  defaultCloudProvider: "openrouter",
   providerCredentials: {
     openrouter: { apiKey: null, defaultModel: DEFAULT_OPENROUTER_MODEL },
     openai: { apiKey: null, defaultModel: "gpt-4o" },
+    anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
     ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
   },
   langfuseEnabled: false,
@@ -47,9 +51,11 @@ interface StoredOllamaCredentials {
 interface StoredSettings {
   version?: number;
   activeProvider?: string;
+  defaultCloudProvider?: string;
   providerCredentials?: {
     openrouter?: StoredProviderCredentials;
     openai?: StoredProviderCredentials;
+    anthropic?: StoredProviderCredentials;
     ollama?: StoredOllamaCredentials;
   };
   langfuseEnabled?: boolean;
@@ -58,8 +64,6 @@ interface StoredSettings {
   // Legacy fields (migrated then removed)
   encryptedApiKey?: string;
   model?: string;
-  defaultCloudProvider?: string;
-  anthropic?: StoredProviderCredentials;
 }
 
 function encryptApiKey(key: string | null): string | undefined {
@@ -115,6 +119,7 @@ export class SettingsService {
     const migrated: StoredSettings = {
       version: 1,
       activeProvider: "openrouter",
+      defaultCloudProvider: "openrouter",
       providerCredentials: {
         openrouter: {
           apiKey: stored.encryptedApiKey,
@@ -124,6 +129,10 @@ export class SettingsService {
         openai: {
           apiKey: undefined,
           defaultModel: DEFAULT_SETTINGS.providerCredentials.openai.defaultModel,
+        },
+        anthropic: {
+          apiKey: undefined,
+          defaultModel: DEFAULT_SETTINGS.providerCredentials.anthropic.defaultModel,
         },
         ollama: {
           host: DEFAULT_SETTINGS.providerCredentials.ollama.host,
@@ -137,8 +146,6 @@ export class SettingsService {
 
     delete migrated.encryptedApiKey;
     delete migrated.model;
-    delete migrated.defaultCloudProvider;
-    delete migrated.anthropic;
 
     return migrated;
   }
@@ -156,6 +163,8 @@ export class SettingsService {
     return {
       activeProvider: (migrated.activeProvider ??
         DEFAULT_SETTINGS.activeProvider) as AppSettings["activeProvider"],
+      defaultCloudProvider: (migrated.defaultCloudProvider ??
+        DEFAULT_SETTINGS.defaultCloudProvider) as AppSettings["defaultCloudProvider"],
       providerCredentials: {
         openrouter: {
           apiKey: decryptApiKey(creds.openrouter?.apiKey),
@@ -167,6 +176,12 @@ export class SettingsService {
           apiKey: decryptApiKey(creds.openai?.apiKey),
           defaultModel:
             creds.openai?.defaultModel ?? DEFAULT_SETTINGS.providerCredentials.openai.defaultModel,
+        },
+        anthropic: {
+          apiKey: decryptApiKey(creds.anthropic?.apiKey),
+          defaultModel:
+            creds.anthropic?.defaultModel ??
+            DEFAULT_SETTINGS.providerCredentials.anthropic.defaultModel,
         },
         ollama: {
           host: creds.ollama?.host ?? DEFAULT_SETTINGS.providerCredentials.ollama.host,
@@ -198,6 +213,10 @@ export class SettingsService {
           ...patch.providerCredentials.openrouter,
         },
         openai: { ...current.providerCredentials.openai, ...patch.providerCredentials.openai },
+        anthropic: {
+          ...current.providerCredentials.anthropic,
+          ...patch.providerCredentials.anthropic,
+        },
         ollama: { ...current.providerCredentials.ollama, ...patch.providerCredentials.ollama },
       };
     }
@@ -205,6 +224,7 @@ export class SettingsService {
     const stored: StoredSettings = {
       version: 1,
       activeProvider: next.activeProvider,
+      defaultCloudProvider: next.defaultCloudProvider,
       providerCredentials: {
         openrouter: {
           apiKey: encryptApiKey(next.providerCredentials.openrouter.apiKey),
@@ -213,6 +233,10 @@ export class SettingsService {
         openai: {
           apiKey: encryptApiKey(next.providerCredentials.openai.apiKey),
           defaultModel: next.providerCredentials.openai.defaultModel,
+        },
+        anthropic: {
+          apiKey: encryptApiKey(next.providerCredentials.anthropic.apiKey),
+          defaultModel: next.providerCredentials.anthropic.defaultModel,
         },
         ollama: {
           host: next.providerCredentials.ollama.host,

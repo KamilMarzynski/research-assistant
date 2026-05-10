@@ -37,11 +37,13 @@ describe("SettingsService", () => {
     it("returns defaults when no settings file exists", async () => {
       const settings = await service.getSettings();
       expect(settings.activeProvider).toBe("openrouter");
+      expect(settings.defaultCloudProvider).toBe("openrouter");
       expect(settings.providerCredentials.openrouter.apiKey).toBeNull();
       expect(settings.providerCredentials.openrouter.defaultModel).toBe(
         "anthropic/claude-sonnet-4-6",
       );
       expect(settings.providerCredentials.openai.apiKey).toBeNull();
+      expect(settings.providerCredentials.anthropic.apiKey).toBeNull();
       expect(settings.providerCredentials.ollama.host).toBe("http://localhost:11434");
       expect(settings.langfuseEnabled).toBe(false);
       expect(settings.webAccessEnabled).toBe(true);
@@ -60,6 +62,7 @@ describe("SettingsService", () => {
         providerCredentials: {
           openrouter: { apiKey: "sk-or-test", defaultModel: "anthropic/claude-sonnet-4-6" },
           openai: { apiKey: null, defaultModel: "gpt-4o" },
+          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
           ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
         },
       });
@@ -75,6 +78,7 @@ describe("SettingsService", () => {
         providerCredentials: {
           openrouter: { apiKey: "sk-or-test", defaultModel: "openai/gpt-4o" },
           openai: { apiKey: null, defaultModel: "gpt-4o" },
+          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
           ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
         },
       });
@@ -82,6 +86,7 @@ describe("SettingsService", () => {
         providerCredentials: {
           openrouter: { apiKey: "sk-or-test", defaultModel: "anthropic/claude-haiku-4-5" },
           openai: { apiKey: null, defaultModel: "gpt-4o" },
+          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
           ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
         },
       });
@@ -128,6 +133,7 @@ describe("SettingsService", () => {
         providerCredentials: {
           openrouter: { apiKey: "sk-or-test", defaultModel: "anthropic/claude-sonnet-4-6" },
           openai: { apiKey: null, defaultModel: "gpt-4o" },
+          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
           ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
         },
       });
@@ -135,6 +141,7 @@ describe("SettingsService", () => {
         providerCredentials: {
           openrouter: { apiKey: null, defaultModel: "anthropic/claude-sonnet-4-6" },
           openai: { apiKey: null, defaultModel: "gpt-4o" },
+          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
           ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
         },
       });
@@ -148,6 +155,7 @@ describe("SettingsService", () => {
         providerCredentials: {
           openrouter: { apiKey: "sk-or-test", defaultModel: "anthropic/claude-sonnet-4-6" },
           openai: { apiKey: null, defaultModel: "gpt-4o" },
+          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
           ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
         },
       });
@@ -165,6 +173,7 @@ describe("SettingsService", () => {
           providerCredentials: {
             openrouter: { apiKey: "sk-plain-key", defaultModel: "anthropic/claude-sonnet-4-6" },
             openai: { apiKey: null, defaultModel: "gpt-4o" },
+            anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
             ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
           },
         }),
@@ -185,6 +194,7 @@ describe("SettingsService", () => {
         providerCredentials: {
           openrouter: { apiKey: "sk-plain-key", defaultModel: "anthropic/claude-sonnet-4-6" },
           openai: { apiKey: null, defaultModel: "gpt-4o" },
+          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
           ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
         },
       });
@@ -221,6 +231,9 @@ describe("SettingsService", () => {
       expect(settings.providerCredentials.openrouter.apiKey).toBe("sk-legacy");
       expect(settings.providerCredentials.openrouter.defaultModel).toBe("legacy-model");
       expect(settings.providerCredentials.openai.defaultModel).toBe("gpt-4o");
+      expect(settings.providerCredentials.anthropic.defaultModel).toBe(
+        "claude-3-5-sonnet-20241022",
+      );
       expect(settings.providerCredentials.ollama.host).toBe("http://localhost:11434");
       expect(settings.langfuseEnabled).toBe(true);
       expect(settings.webAccessEnabled).toBe(true);

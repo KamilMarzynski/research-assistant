@@ -31,6 +31,8 @@ function providerLabel(provider: string): string {
       return "OpenRouter";
     case "openai":
       return "OpenAI";
+    case "anthropic":
+      return "Anthropic";
     case "ollama":
       return "Ollama";
     default:

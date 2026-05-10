@@ -1,12 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
+import { EventBus } from "../../event-bus";
 import type { AppSettings } from "../../services/SettingsService";
-import { checkOllamaAvailable, isCloudProvider, resolveProvider } from "../model-provider";
+import {
+  checkOllamaAvailable,
+  isCloudProvider,
+  resolveProvider,
+  resolveProviderWithFallback,
+} from "../model-provider";
 
 const baseSettings: AppSettings = {
   activeProvider: "openrouter",
+  defaultCloudProvider: "openrouter",
   providerCredentials: {
     openrouter: { apiKey: "sk-test", defaultModel: "anthropic/claude-sonnet-4-6" },
     openai: { apiKey: "sk-openai", defaultModel: "gpt-4o" },
+    anthropic: { apiKey: "sk-anthropic", defaultModel: "claude-3-5-sonnet-20241022" },
     ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
   },
   langfuseEnabled: false,
@@ -20,6 +28,9 @@ describe("isCloudProvider", () => {
   });
   it("returns true for openai", () => {
     expect(isCloudProvider({ type: "openai", apiKey: "", model: "" })).toBe(true);
+  });
+  it("returns true for anthropic", () => {
+    expect(isCloudProvider({ type: "anthropic", apiKey: "", model: "" })).toBe(true);
   });
   it("returns false for ollama", () => {
     expect(isCloudProvider({ type: "ollama", host: "", model: "" })).toBe(false);
@@ -127,11 +138,29 @@ describe("resolveProvider", () => {
     expect(p).toEqual({ type: "openai", apiKey: "sk-openai", model: "gpt-4o" });
   });
 
+  it("handles anthropic override", () => {
+    const p = resolveProvider({
+      settings: baseSettings,
+      projectModelOverride: "anthropic:claude-3-5-sonnet",
+    });
+    expect(p).toEqual({
+      type: "anthropic",
+      apiKey: "sk-anthropic",
+      model: "claude-3-5-sonnet",
+    });
+  });
+
   it("falls back to default when override has no model part", () => {
     const p = resolveProvider({
       settings: baseSettings,
       projectModelOverride: "openrouter:",
     });
+    expect(p.type).toBe("openrouter");
+  });
+
+  it("resolves anthropic active provider to default cloud provider", () => {
+    const settings = { ...baseSettings, activeProvider: "anthropic" as const };
+    const p = resolveProvider({ settings });
     expect(p.type).toBe("openrouter");
   });
 
@@ -158,5 +187,44 @@ describe("checkOllamaAvailable", () => {
   it("returns false for non-http protocols", async () => {
     const result = await checkOllamaAvailable("file:///etc/passwd");
     expect(result).toBe(false);
+  });
+});
+
+describe("resolveProviderWithFallback", () => {
+  it("returns ollama when available", async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true });
+    const settings = { ...baseSettings, activeProvider: "ollama" as const };
+    const p = await resolveProviderWithFallback({ settings });
+    expect(p.type).toBe("ollama");
+  });
+
+  it("falls back to default cloud when ollama unavailable", async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error("Connection refused"));
+    const settings = { ...baseSettings, activeProvider: "ollama" as const };
+    const p = await resolveProviderWithFallback({ settings });
+    expect(p.type).toBe("openrouter");
+  });
+
+  it("emits fallback event when ollama is down", async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error("Connection refused"));
+    const settings = { ...baseSettings, activeProvider: "ollama" as const };
+    const eventBus = new EventBus();
+    const emitSpy = vi.spyOn(eventBus, "emit");
+    await resolveProviderWithFallback({ settings }, eventBus);
+    expect(emitSpy).toHaveBeenCalledWith({
+      type: "model:fallback",
+      payload: {
+        reason: "ollama_unavailable",
+        requestedModel: "llama3.2:3b",
+        fallbackProvider: "openrouter",
+      },
+    });
+  });
+
+  it("does not check ollama for non-ollama providers", async () => {
+    global.fetch = vi.fn();
+    const p = await resolveProviderWithFallback({ settings: baseSettings });
+    expect(p.type).toBe("openrouter");
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

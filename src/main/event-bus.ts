@@ -26,6 +26,10 @@ type AppEvent =
         timestamp: string;
       };
     }
+  | {
+      type: "model:fallback";
+      payload: { reason: string; requestedModel: string; fallbackProvider: string };
+    }
   | { type: "startup:error"; payload: { phase: string; error: string } }
   | {
       type: "file:written";

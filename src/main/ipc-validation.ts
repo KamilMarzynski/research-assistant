@@ -29,6 +29,7 @@ export const RetryResearchSchema = z.object({
 export const SaveSettingsSchema = z
   .object({
     activeProvider: z.string().optional(),
+    defaultCloudProvider: z.string().optional(),
     providerCredentials: z.unknown().optional(),
     langfuseEnabled: z.boolean().optional(),
     webAccessEnabled: z.boolean().optional(),

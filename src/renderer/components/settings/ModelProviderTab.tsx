@@ -1,4 +1,5 @@
 import {
+  IconAlert,
   IconBolt,
   IconCheck,
   IconCpu,
@@ -11,6 +12,7 @@ import ModelSelect from "./ModelSelect";
 export interface ProviderCredentials {
   openrouter: { apiKey: string; defaultModel: string };
   openai: { apiKey: string; defaultModel: string };
+  anthropic: { apiKey: string; defaultModel: string };
   ollama: { host: string; defaultModel: string };
 }
 
@@ -22,6 +24,8 @@ export interface ModelOption {
 interface ModelProviderTabProps {
   activeProvider: string;
   onActiveProviderChange: (provider: string) => void;
+  defaultCloudProvider: string;
+  onDefaultCloudProviderChange: (provider: string) => void;
   credentials: ProviderCredentials;
   onCredentialsChange: (credentials: ProviderCredentials) => void;
   availableModels: ModelOption[];
@@ -42,11 +46,20 @@ const PROVIDERS: Array<{
   { id: "openrouter", name: "OpenRouter", icon: IconGlobe },
   { id: "ollama", name: "Ollama", icon: IconCpu },
   { id: "openai", name: "OpenAI", icon: IconBolt },
+  {
+    id: "anthropic",
+    name: "Anthropic",
+    icon: IconAlert,
+    disabled: true,
+    note: "not supported — use OpenRouter",
+  },
 ];
 
 export default function ModelProviderTab({
   activeProvider,
   onActiveProviderChange,
+  defaultCloudProvider,
+  onDefaultCloudProviderChange,
   credentials,
   onCredentialsChange,
   availableModels,
@@ -135,6 +148,22 @@ export default function ModelProviderTab({
           );
         })}
       </div>
+
+      {activeProvider === "anthropic" && (
+        <div
+          style={{
+            marginTop: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            color: "var(--danger)",
+            fontSize: "var(--text-xs)",
+          }}
+        >
+          <IconAlert size={14} />
+          <span>Direct Anthropic not supported — use OpenRouter</span>
+        </div>
+      )}
 
       {activeProvider === "openrouter" && (
         <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -289,6 +318,24 @@ export default function ModelProviderTab({
                 <IconX size={12} /> Not reachable
               </span>
             )}
+          </div>
+          <div style={{ marginTop: 4 }}>
+            <label
+              htmlFor="fallback-provider"
+              className="eyebrow"
+              style={{ display: "block", marginBottom: 6 }}
+            >
+              Fallback provider
+            </label>
+            <select
+              id="fallback-provider"
+              className="input"
+              value={defaultCloudProvider}
+              onChange={(e) => onDefaultCloudProviderChange(e.target.value)}
+            >
+              <option value="openrouter">OpenRouter</option>
+              <option value="openai">OpenAI</option>
+            </select>
           </div>
         </div>
       )}

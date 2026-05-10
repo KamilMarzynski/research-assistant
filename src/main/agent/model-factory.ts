@@ -50,8 +50,11 @@ function resolveBaseConfig(provider: ModelProvider): Model<Api> {
       if (registered) return registered;
       return makeOpenAiModel(provider);
     }
-    default:
-      throw new Error(`Unsupported provider: ${(provider as { type: string }).type}`);
+    case "anthropic":
+      throw new Error(
+        "Direct Anthropic API is not OpenAI-compatible. " +
+          'Use OpenRouter with model slug "anthropic/claude-*" instead.',
+      );
   }
 }
 

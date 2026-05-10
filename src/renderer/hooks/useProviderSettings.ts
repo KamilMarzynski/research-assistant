@@ -5,12 +5,14 @@ import type { ProviderCredentials } from "../components/settings/ModelProviderTa
 
 export interface ProviderSettings {
   activeProvider: string;
+  defaultCloudProvider: string;
   credentials: ProviderCredentials;
   ollamaTestStatus: "idle" | "ok" | "error";
   availableModels: Array<{ id: string; name: string }>;
   modelsLoading: boolean;
   modelsError: string | null;
   setActiveProvider: (v: string) => void;
+  setDefaultCloudProvider: (v: string) => void;
   setCredentials: (
     v: ProviderCredentials | ((prev: ProviderCredentials) => ProviderCredentials),
   ) => void;
@@ -21,9 +23,11 @@ export interface ProviderSettings {
 
 export function useProviderSettings(enabled: boolean): ProviderSettings {
   const [activeProvider, setActiveProvider] = useState<string>("openrouter");
+  const [defaultCloudProvider, setDefaultCloudProvider] = useState<string>("openrouter");
   const [credentials, setCredentials] = useState<ProviderCredentials>({
     openrouter: { apiKey: "", defaultModel: DEFAULT_OPENROUTER_MODEL },
     openai: { apiKey: "", defaultModel: "gpt-4o" },
+    anthropic: { apiKey: "", defaultModel: "claude-3-5-sonnet-20241022" },
     ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
   });
   const [ollamaTestStatus, setOllamaTestStatus] = useState<"idle" | "ok" | "error">("idle");
@@ -65,6 +69,7 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
   const loadFromSettings = useCallback(async () => {
     const settings = await window.electronAPI.invoke(IPC.GET_SETTINGS);
     setActiveProvider(settings.activeProvider ?? "openrouter");
+    setDefaultCloudProvider(settings.defaultCloudProvider ?? "openrouter");
     setCredentials({
       openrouter: {
         apiKey: settings.providerCredentials.openrouter.apiKey ?? "",
@@ -74,6 +79,11 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
       openai: {
         apiKey: settings.providerCredentials.openai.apiKey ?? "",
         defaultModel: settings.providerCredentials.openai.defaultModel ?? "gpt-4o",
+      },
+      anthropic: {
+        apiKey: settings.providerCredentials.anthropic.apiKey ?? "",
+        defaultModel:
+          settings.providerCredentials.anthropic.defaultModel ?? "claude-3-5-sonnet-20241022",
       },
       ollama: {
         host: settings.providerCredentials.ollama.host ?? "http://localhost:11434",
@@ -112,12 +122,14 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
   return useMemo(
     () => ({
       activeProvider,
+      defaultCloudProvider,
       credentials,
       ollamaTestStatus,
       availableModels,
       modelsLoading,
       modelsError,
       setActiveProvider,
+      setDefaultCloudProvider,
       setCredentials,
       fetchModels,
       testOllama,
@@ -125,6 +137,7 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
     }),
     [
       activeProvider,
+      defaultCloudProvider,
       credentials,
       ollamaTestStatus,
       availableModels,
