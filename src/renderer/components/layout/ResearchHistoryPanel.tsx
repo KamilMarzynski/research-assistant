@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { IPC } from "../../../shared/ipc-channels";
+import { IPC } from "@shared/ipc-channels";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ResearchItem {
   id: string;
@@ -14,51 +14,64 @@ interface ResearchHistoryPanelProps {
 
 function formatDate(d: Date): string {
   const now = new Date();
-  const date = new Date(d);
-  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
+
+const statusConfig: Record<
+  ResearchItem["status"],
+  { dotClass: string; label: string; borderColor: string }
+> = {
+  pending: { dotClass: "dot--warn", label: "Pending", borderColor: "oklch(0.85 0.06 75)" },
+  in_progress: {
+    dotClass: "dot--accent dot--pulse",
+    label: "Running",
+    borderColor: "var(--accent-line)",
+  },
+  complete: { dotClass: "dot--success", label: "Done", borderColor: "oklch(0.82 0.05 145)" },
+  failed: { dotClass: "dot--danger", label: "Failed", borderColor: "oklch(0.82 0.07 25)" },
+};
 
 export default function ResearchHistoryPanel({ projectId }: ResearchHistoryPanelProps) {
   const [items, setItems] = useState<ResearchItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const generationRef = useRef(0);
 
   const load = useCallback(() => {
     if (!projectId) return;
-    let cancelled = false;
+    const gen = ++generationRef.current;
     setLoading(true);
     setError(null);
     window.electronAPI
       .invoke(IPC.GET_RESEARCHES, { projectId })
       .then((rows: unknown[]) => {
-        if (!cancelled) {
-          setItems(
-            rows.map((r) => ({
-              id: (r as { id: string }).id,
-              query: (r as { query: string }).query,
-              status: (r as { status: string }).status as ResearchItem["status"],
-              startedAt: new Date((r as { startedAt: string | Date }).startedAt),
-            })),
-          );
-        }
+        if (gen !== generationRef.current) return;
+        setItems(
+          rows.map((r) => ({
+            id: String((r as Record<string, unknown>).id ?? ""),
+            query: String((r as Record<string, unknown>).query ?? ""),
+            status: String(
+              (r as Record<string, unknown>).status ?? "pending",
+            ) as ResearchItem["status"],
+            startedAt: new Date(String((r as Record<string, unknown>).startedAt ?? Date.now())),
+          })),
+        );
       })
       .catch((err) => {
-        if (!cancelled) setError(String(err));
+        if (gen !== generationRef.current) return;
+        setError(String(err));
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (gen !== generationRef.current) return;
+        setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
   }, [projectId]);
 
   useEffect(() => {
-    const cleanup = load();
-    return cleanup;
+    load();
   }, [load]);
 
   useEffect(() => {
@@ -75,16 +88,6 @@ export default function ResearchHistoryPanel({ projectId }: ResearchHistoryPanel
       unsubComplete();
     };
   }, [projectId, load]);
-
-  const statusConfig: Record<
-    ResearchItem["status"],
-    { dotClass: string; label: string; borderColor: string }
-  > = {
-    pending: { dotClass: "dot--warn", label: "Pending", borderColor: "oklch(0.85 0.06 75)" },
-    in_progress: { dotClass: "dot--accent dot--pulse", label: "Running", borderColor: "var(--accent-line)" },
-    complete: { dotClass: "dot--success", label: "Done", borderColor: "oklch(0.82 0.05 145)" },
-    failed: { dotClass: "dot--danger", label: "Failed", borderColor: "oklch(0.82 0.07 25)" },
-  };
 
   return (
     <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -104,9 +107,13 @@ export default function ResearchHistoryPanel({ projectId }: ResearchHistoryPanel
         }}
       >
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 12, padding: 16 }}>Loading...</div>
+          <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 12, padding: 16 }}>
+            Loading...
+          </div>
         ) : error ? (
-          <div style={{ textAlign: "center", color: "var(--danger)", fontSize: 12, padding: 16 }}>{error}</div>
+          <div style={{ textAlign: "center", color: "var(--danger)", fontSize: 12, padding: 16 }}>
+            {error}
+          </div>
         ) : items.length === 0 ? (
           <div
             style={{
@@ -140,7 +147,9 @@ export default function ResearchHistoryPanel({ projectId }: ResearchHistoryPanel
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span className={`dot ${cfg.dotClass}`} style={{ width: 6, height: 6 }} />
                     <span style={{ fontSize: 11, fontWeight: 500 }}>{cfg.label}</span>
-                    <span style={{ flex: 1, textAlign: "right", fontSize: 10, color: "var(--ink-3)" }}>
+                    <span
+                      style={{ flex: 1, textAlign: "right", fontSize: 10, color: "var(--ink-3)" }}
+                    >
                       {formatDate(item.startedAt)}
                     </span>
                   </div>
