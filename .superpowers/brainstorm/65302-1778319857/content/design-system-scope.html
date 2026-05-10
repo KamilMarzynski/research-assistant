@@ -1,0 +1,114 @@
+
+<h2>Design System Overhaul — Scope Overview</h2>
+<p class="subtitle">Comparing current app styling vs the proposed "Scholar" design system</p>
+
+<div class="section">
+  <div class="split">
+    <div>
+      <div class="label">Current App</div>
+      <div class="mockup" style="background:#0D0F14; color:#E8EAED; padding:16px; font-family:Inter,sans-serif; font-size:13px;">
+        <div style="display:flex; gap:8px; margin-bottom:12px; align-items:center;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#5C6BC0;"></div>
+          <span style="font-weight:600;">Projects</span>
+        </div>
+        <div style="background:#13161E; border-radius:8px; padding:8px 12px; margin-bottom:8px; border:1px solid #1f2330;">
+          Q3 pricing analysis
+        </div>
+        <div style="background:#13161E; border-radius:8px; padding:8px 12px; margin-bottom:8px; border:1px solid #1f2330;">
+          Battery tech research
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button style="background:#5C6BC0; color:white; border:none; border-radius:8px; padding:6px 12px; font-size:12px;">Send</button>
+          <button style="background:#1f2330; color:#8A9BB0; border:none; border-radius:8px; padding:6px 12px; font-size:12px;">Cancel</button>
+        </div>
+      </div>
+      <ul style="font-size:13px; color:#666; margin-top:8px;">
+        <li>Dark mode only (MUI default)</li>
+        <li>Indigo + cyan accents</li>
+        <li>MUI Paper / Box / Typography</li>
+        <li>MUI icons (Material Icons)</li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="label">Proposed Design System</div>
+      <div class="mockup" style="background:oklch(0.985 0.008 70); color:oklch(0.22 0.012 60); padding:16px; font-family:Inter,sans-serif; font-size:13px; border:1px solid oklch(0.90 0.012 70);">
+        <div style="display:flex; gap:8px; margin-bottom:12px; align-items:center;">
+          <div style="width:10px;height:10px;border-radius:50%;background:oklch(0.62 0.13 45);"></div>
+          <span style="font-weight:600;">Projects</span>
+        </div>
+        <div style="background:oklch(0.97 0.010 70); border-radius:10px; padding:8px 12px; margin-bottom:8px; border:1px solid oklch(0.90 0.012 70);">
+          Q3 pricing analysis
+        </div>
+        <div style="background:oklch(0.97 0.010 70); border-radius:10px; padding:8px 12px; margin-bottom:8px; border:1px solid oklch(0.90 0.012 70);">
+          Battery tech research
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button style="background:oklch(0.62 0.13 45); color:oklch(0.99 0.005 70); border:none; border-radius:10px; padding:6px 12px; font-size:12px; font-weight:500;">Send</button>
+          <button style="background:transparent; color:oklch(0.45 0.012 60); border:1px solid oklch(0.85 0.014 70); border-radius:10px; padding:6px 12px; font-size:12px;">Cancel</button>
+        </div>
+      </div>
+      <ul style="font-size:13px; color:#666; margin-top:8px;">
+        <li>Warm light mode (dark variant exists)</li>
+        <li>Single terracotta accent</li>
+        <li>CSS custom properties + utility classes</li>
+        <li>Custom stroke SVG icons</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Key Decision: Component Strategy</h3>
+  <p class="subtitle">The design system ships with <code>tokens.css</code> + utility classes (<code>.btn</code>, <code>.input</code>, <code>.chip</code>, <code>.card</code>). How should we apply this?</p>
+
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="mui-theme" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h4>Map MUI Theme to Tokens</h4>
+        <p>Keep MUI components but override palette/typography/shape to match the design system. Dark mode via MUI's <code>createTheme({ palette: { mode: 'dark' } })</code>. Minimal code churn, but some MUI-specific styling may leak through.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="css-classes" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h4>CSS Utility Classes + Minimal MUI</h4>
+        <p>Import <code>tokens.css</code> and <code>tokens-dark.css</code> globally. Use custom CSS classes for most components (buttons, inputs, chips, cards). Keep MUI only for complex composite components (Dialog, Select, Tabs). Full visual fidelity, but more manual class management.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="mui-styled" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h4>MUI sx + CSS Variables</h4>
+        <p>Use CSS custom properties for colors/spacing, but apply them through MUI's <code>sx</code> prop everywhere. No external CSS files needed — all styling lives in TSX. Clean dependency story, but verbose and harder to maintain consistency.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Another Decision: Icon Strategy</h3>
+  <p class="subtitle">The design system includes a custom 16px stroke icon set. Current app uses MUI Material Icons.</p>
+
+  <div class="options">
+    <div class="option" data-choice="custom-icons" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h4>Adopt Custom SVG Icons</h4>
+        <p>Use the inline SVG icons from <code>design_system/icons.jsx</code>. They match the design system's lighter stroke weight and terracotta accent feel exactly.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="keep-mui-icons" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h4>Keep MUI Icons</h4>
+        <p>Map MUI icon colors to the new token palette. Faster to implement, but visual match won't be exact.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:24px; color:#666; font-size:13px;">
+  Open <a href="http://localhost:57285" target="_blank">http://localhost:57285</a> to see this. Click your preferred options above, then reply here with any additional thoughts.
+</p>
