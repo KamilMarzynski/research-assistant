@@ -33,7 +33,7 @@ export function registerSettingsHandlers(
     };
   });
 
-  ipcMain.handle(IPC.SAVE_SETTINGS, async (_event, payload: unknown) => {
+  ipcMain.handle(IPC.SAVE_SETTINGS, async (event, payload: unknown) => {
     const p = parseOrThrow(SaveSettingsSchema, payload, "SAVE_SETTINGS");
     await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
 
@@ -41,6 +41,21 @@ export function registerSettingsHandlers(
     if ("activeProvider" in p || "defaultCloudProvider" in p || "providerCredentials" in p) {
       sessionManager.clear();
     }
+
+    const updated = await settingsService.getSettings();
+    const activeCreds = updated.providerCredentials[updated.activeProvider];
+    const isOllama = updated.activeProvider === "ollama";
+    const activeApiKey = "apiKey" in activeCreds ? (activeCreds.apiKey ?? null) : null;
+
+    event.sender.send(IPC.SETTINGS_UPDATED, {
+      hasApiKey: isOllama || (activeApiKey !== null && activeApiKey !== ""),
+      activeProvider: updated.activeProvider,
+      defaultCloudProvider: updated.defaultCloudProvider,
+      providerCredentials: updated.providerCredentials,
+      langfuseEnabled: updated.langfuseEnabled,
+      webAccessEnabled: updated.webAccessEnabled,
+      theme: updated.theme,
+    });
   });
 
   ipcMain.handle(IPC.CHECK_OLLAMA, async (_event, payload: unknown) => {
