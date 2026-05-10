@@ -10,6 +10,7 @@ import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
+import { ArtifactService } from "./ArtifactService";
 import { CrystallizationService } from "./CrystallizationService";
 import { HomeService } from "./HomeService";
 import { SettingsService } from "./SettingsService";
@@ -32,7 +33,21 @@ export class ResearchService {
     @inject(HomeService) private readonly homeService: HomeService,
     @inject(AllowlistService) private readonly allowlistService: AllowlistService,
     @inject(CrystallizationService) private readonly crystallizationService: CrystallizationService,
+    @inject(ArtifactService) private readonly artifactService: ArtifactService,
   ) {}
+
+  private buildSaveArtifactFn(
+    projectId: string,
+  ): (path: string, title: string) => Promise<{ artifactId: string }> {
+    return async (path, title) => {
+      const artifact = await this.artifactService.saveArtifact({
+        projectId,
+        title,
+        filePath: path,
+      });
+      return { artifactId: artifact.id };
+    };
+  }
 
   async startResearch(
     projectId: string,
@@ -54,6 +69,7 @@ export class ResearchService {
       homePath: this.homeService.getHomePath(),
       remainingDepth: 0,
       allowlistService: this.allowlistService,
+      saveArtifactFn: this.buildSaveArtifactFn(projectId),
     }));
   }
 
@@ -81,6 +97,7 @@ export class ResearchService {
       homePath,
       remainingDepth: 3,
       allowlistService: this.allowlistService,
+      saveArtifactFn: this.buildSaveArtifactFn(projectId),
     }));
   }
 
@@ -149,7 +166,7 @@ export class ResearchService {
       }
     };
 
-    const provider = resolveProvider({ settings, forceCloud: true });
+    const provider = resolveProvider({ settings });
     if (provider.type !== "ollama" && !provider.apiKey) {
       throw new Error("No API key configured for the active provider");
     }
@@ -215,6 +232,7 @@ export class ResearchService {
               }
             }
 
+            let conventions: { default: string; code?: string; reports?: string } | null = null;
             if (agentsMdContent) {
               const jail = new PathJail(
                 config.projectId,
@@ -223,11 +241,21 @@ export class ResearchService {
                 this.allowlistService,
               );
               const router = new OutputRouter(jail);
-              const conventions = router.parseConventions(agentsMdContent);
-              if (conventions) {
-                const result = await router.moveFinals(workspacePath, conventions);
-                filePaths = result.moved.map((name) => join(conventions.default, name));
-              }
+              conventions = router.parseConventions(agentsMdContent);
+            }
+            if (!conventions && config.folderPath) {
+              conventions = { default: config.folderPath };
+            }
+            if (conventions) {
+              const jail = new PathJail(
+                config.projectId,
+                config.folderPath,
+                config.projectName,
+                this.allowlistService,
+              );
+              const router = new OutputRouter(jail);
+              const result = await router.moveFinals(workspacePath, conventions);
+              filePaths = result.moved.map((name) => join(conventions.default, name));
             }
           } catch (err) {
             console.error("[ResearchService] output routing failed:", err);

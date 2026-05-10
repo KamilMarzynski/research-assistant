@@ -53,10 +53,13 @@ export class SkillRouter {
 
   toXml(): string {
     if (this.index.skills.length === 0) return "";
-    const lines = ["<available_skills>"];
+    const lines = [
+      "<available_skills>",
+      "  To use a skill, read its SKILL.md file with the read_file tool at the path listed below.",
+    ];
     for (const skill of this.index.skills) {
       lines.push(
-        `  <skill name="${escapeXml(skill.name)}" description="${escapeXml(skill.description)}" />`,
+        `  <skill name="${escapeXml(skill.name)}" description="${escapeXml(skill.description)}" path="${escapeXml(skill.location)}" />`,
       );
     }
     lines.push("</available_skills>");

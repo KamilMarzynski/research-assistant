@@ -89,123 +89,125 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
             boxShadow: "var(--shadow-1)",
           }}
         >
-        <textarea
-          className="input"
-          rows={2}
-          placeholder="Ask, or hand off to background research..."
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          disabled={disabled}
-          data-testid="message-input"
-          style={{
-            resize: "none",
-            border: "none",
-            padding: "4px 6px",
-            background: "transparent",
-            fontSize: 13.5,
-            lineHeight: 1.5,
-            width: "100%",
-            maxHeight: "9em",
-          }}
-        />
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Select
-              size="small"
-              value={model}
-              disabled={modelsLoading || disabled}
-              onChange={(e) => handleModelChange(e.target.value)}
-              IconComponent={() => null}
-              renderValue={() => (
-                <span
-                  style={{
+          <textarea
+            className="input"
+            rows={2}
+            placeholder="Ask, or hand off to background research..."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            disabled={disabled}
+            data-testid="message-input"
+            style={{
+              resize: "none",
+              border: "none",
+              padding: "4px 6px",
+              background: "transparent",
+              fontSize: 13.5,
+              lineHeight: 1.5,
+              width: "100%",
+              maxHeight: "9em",
+            }}
+          />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Select
+                size="small"
+                value={model}
+                disabled={modelsLoading || disabled}
+                onChange={(e) => handleModelChange(e.target.value)}
+                IconComponent={() => null}
+                renderValue={() => (
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontSize: "var(--text-sm)",
+                      color: "var(--ink)",
+                    }}
+                  >
+                    <IconCpu size={13} />
+                    <span>{modelOptions.find((m) => m.id === model)?.name ?? model}</span>
+                    <IconChevD size={12} />
+                  </span>
+                )}
+                sx={{
+                  minWidth: 130,
+                  flexShrink: 0,
+                  fontSize: "var(--text-sm)",
+                  color: "var(--ink)",
+                  "& .MuiSelect-select": {
+                    py: 0.5,
+                    px: 1,
+                    fontSize: "var(--text-sm)",
                     display: "flex",
                     alignItems: "center",
-                    gap: 4,
-                    fontSize: "var(--text-sm)",
+                    gap: 0.5,
                     color: "var(--ink)",
-                  }}
-                >
-                  <IconCpu size={13} />
-                  <span>{modelOptions.find((m) => m.id === model)?.name ?? model}</span>
-                  <IconChevD size={12} />
-                </span>
-              )}
-              sx={{
-                minWidth: 130,
-                flexShrink: 0,
-                fontSize: "var(--text-sm)",
-                color: "var(--ink)",
-                "& .MuiSelect-select": {
-                  py: 0.5,
-                  px: 1,
-                  fontSize: "var(--text-sm)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  color: "var(--ink)",
-                },
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--line-strong)" },
-                "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--accent)" },
-                "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "var(--accent)" },
-              }}
-              MenuProps={{
-                slotProps: {
-                  paper: {
-                    sx: {
-                      background: "var(--surface)",
-                      border: "1px solid var(--line)",
-                      borderRadius: "var(--r-md)",
-                      boxShadow: "var(--shadow-2)",
-                      color: "var(--ink)",
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--line-strong)" },
+                  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--accent)" },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "var(--accent)",
+                  },
+                }}
+                MenuProps={{
+                  slotProps: {
+                    paper: {
+                      sx: {
+                        background: "var(--surface)",
+                        border: "1px solid var(--line)",
+                        borderRadius: "var(--r-md)",
+                        boxShadow: "var(--shadow-2)",
+                        color: "var(--ink)",
+                      },
                     },
                   },
-                },
-              }}
-            >
-              {modelOptions.map((m) => (
-                <MenuItem
-                  key={m.id}
-                  value={m.id}
-                  sx={{
-                    fontSize: "var(--text-sm)",
-                    color: "var(--ink)",
-                    background: "transparent",
-                    "&:hover": { background: "var(--surface-2)" },
-                    "&.Mui-selected": {
-                      background: "var(--accent-soft)",
-                      color: "oklch(0.42 0.12 45)",
-                    },
-                    "&.Mui-selected:hover": { background: "var(--accent-soft)" },
-                  }}
-                >
-                  {m.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="t-tertiary t-mono" style={{ fontSize: 10 }}>
-              Return send · Shift+Return newline
-            </span>
-            <button
-              type="button"
-              className="btn btn--primary btn--sm"
-              onClick={handleSend}
-              disabled={!content.trim() || disabled}
-              data-testid="send-btn"
-            >
-              <IconSend size={13} /> Send
-            </button>
+                }}
+              >
+                {modelOptions.map((m) => (
+                  <MenuItem
+                    key={m.id}
+                    value={m.id}
+                    sx={{
+                      fontSize: "var(--text-sm)",
+                      color: "var(--ink)",
+                      background: "transparent",
+                      "&:hover": { background: "var(--surface-2)" },
+                      "&.Mui-selected": {
+                        background: "var(--accent-soft)",
+                        color: "oklch(0.42 0.12 45)",
+                      },
+                      "&.Mui-selected:hover": { background: "var(--accent-soft)" },
+                    }}
+                  >
+                    {m.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="t-tertiary t-mono" style={{ fontSize: 10 }}>
+                Return send · Shift+Return newline
+              </span>
+              <button
+                type="button"
+                className="btn btn--primary btn--sm"
+                onClick={handleSend}
+                disabled={!content.trim() || disabled}
+                data-testid="send-btn"
+              >
+                <IconSend size={13} /> Send
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

@@ -63,7 +63,9 @@ export default function MessageList({ messages, streamingContent, processing }: 
               }}
             >
               {msg.role === "user" ? (
-                <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.content}</span>
+                <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                  {msg.content}
+                </span>
               ) : (
                 <MarkdownRenderer content={msg.content} />
               )}
@@ -153,7 +155,9 @@ export default function MessageList({ messages, streamingContent, processing }: 
                 lineHeight: 1.55,
               }}
             >
-              <p style={{ margin: "0 0 8px", color: "var(--ink-2)" }}>Welcome to your new project.</p>
+              <p style={{ margin: "0 0 8px", color: "var(--ink-2)" }}>
+                Welcome to your new project.
+              </p>
               <p style={{ margin: 0, color: "var(--ink-2)" }}>
                 Tell me about your project so I can help you best. Useful details:
               </p>
@@ -166,7 +170,8 @@ export default function MessageList({ messages, streamingContent, processing }: 
             </div>
           </div>
         )}
-      </div>  {/* close centered column */}
+      </div>{" "}
+      {/* close centered column */}
       <div ref={bottomRef} />
     </div>
   );

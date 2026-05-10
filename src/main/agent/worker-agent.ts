@@ -14,7 +14,6 @@ const ORCHESTRATOR_ONLY_TOOLS = new Set<AgentToolName>([
   "spawn_agent",
   "spawn_agents_parallel",
   "save_artifact",
-  "propose_tool",
 ]);
 
 export const ORCHESTRATOR_TOOL_NAMES: readonly AgentToolName[] = [
@@ -26,7 +25,6 @@ export const ORCHESTRATOR_TOOL_NAMES: readonly AgentToolName[] = [
   "spawn_agent",
   "spawn_agents_parallel",
   "save_artifact",
-  "propose_tool",
 ] as const;
 
 export interface WorkerAgentConfig {

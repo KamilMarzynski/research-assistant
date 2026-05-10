@@ -32,7 +32,6 @@ vi.mock("../../agent/worker-agent", () => {
       "spawn_agent",
       "spawn_agents_parallel",
       "save_artifact",
-      "propose_tool",
     ],
   };
 });
@@ -89,6 +88,10 @@ function makeCrystallizationService() {
   return { crystallizeAndSave: vi.fn().mockResolvedValue(undefined) };
 }
 
+function makeArtifactService() {
+  return { saveArtifact: vi.fn().mockResolvedValue({ id: "artifact-1" }) };
+}
+
 function makeHomeService() {
   return {
     getHomePath: vi.fn().mockReturnValue("/tmp/home"),
@@ -117,6 +120,7 @@ describe("ResearchService", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskId).toBeTruthy();
@@ -130,6 +134,7 @@ describe("ResearchService", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -143,6 +148,7 @@ describe("ResearchService", () => {
       home as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(home.saveTask).toHaveBeenCalledWith(
@@ -159,6 +165,7 @@ describe("ResearchService", () => {
       home as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -187,6 +194,7 @@ describe("ResearchService", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await expect(svc.startResearch("p1", "My Project", "research X", null)).rejects.toThrow(
       "No API key configured",
@@ -216,6 +224,7 @@ describe("ResearchService", () => {
       home as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -233,6 +242,7 @@ describe("ResearchService", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -257,6 +267,7 @@ describe("ResearchService", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -288,6 +299,7 @@ describe("ResearchService", () => {
       home as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await new Promise((r) => setTimeout(r, 200));
@@ -317,6 +329,7 @@ describe("ResearchService", () => {
       home as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await new Promise((r) => setTimeout(r, 200));
@@ -336,6 +349,7 @@ describe("ResearchService", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -359,6 +373,7 @@ describe("ResearchService", () => {
       home as never,
       new AllowlistService() as never,
       crystallization as never,
+      makeArtifactService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await getCaptured().current?.({ type: "agent_end" });
@@ -390,6 +405,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -410,12 +426,13 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 3 }));
   });
 
-  it("does not pass saveArtifactFn or proposeToolFn to createWorkerAgent", async () => {
+  it("passes saveArtifactFn but not proposeToolFn to createWorkerAgent", async () => {
     const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
       createWorkerAgent: MockFn;
     };
@@ -425,10 +442,11 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     const call = createWorkerAgent.mock.calls[0][0];
-    expect(call.saveArtifactFn).toBeUndefined();
+    expect(call.saveArtifactFn).toBeTypeOf("function");
     expect(call.proposeToolFn).toBeUndefined();
   });
 
@@ -440,6 +458,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       home as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -460,6 +479,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -473,6 +493,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       home as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -505,6 +526,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query A", null);
@@ -529,6 +551,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -555,6 +578,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
 
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
@@ -575,6 +599,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeHomeService() as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -596,6 +621,7 @@ describe("ResearchService – _runResearch internals", () => {
       home as never,
       new AllowlistService() as never,
       makeCrystallizationService() as never,
+      makeArtifactService() as never,
     );
     await svc.startResearch("p1", "My Project", "query", null);
     await new Promise((r) => setTimeout(r, 50));
