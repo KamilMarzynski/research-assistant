@@ -8,6 +8,7 @@ import { ProjectService } from "../ProjectService";
 vi.mock("node:fs/promises", () => ({
   access: vi.fn().mockResolvedValue(undefined),
   mkdir: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
 }));
 
 function makeProject(overrides: Partial<Project> = {}): Project {
@@ -39,9 +40,11 @@ describe("ProjectService", () => {
   let repo: IProjectRepository;
   let service: ProjectService;
 
+  const HOME = "/tmp/.research-assistant";
+
   beforeEach(() => {
     repo = makeMockRepo();
-    service = new ProjectService(repo);
+    service = new ProjectService(repo, HOME);
   });
 
   describe("createProject", () => {
@@ -110,6 +113,49 @@ describe("ProjectService", () => {
 
       await expect(service.deleteProject("ghost")).rejects.toThrow(NotFoundError);
       expect(repo.delete).not.toHaveBeenCalled();
+    });
+
+    it("cleans up workspace and home project dir after DB delete", async () => {
+      vi.mocked(repo.get).mockResolvedValue(makeProject({ id: "p1", name: "My Project" }));
+
+      await service.deleteProject("p1");
+
+      expect(repo.delete).toHaveBeenCalledWith("p1");
+      const { rm } = await import("node:fs/promises");
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.research-assistant/workspace/p1", {
+        recursive: true,
+        force: true,
+      });
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.research-assistant/projects/my-project", {
+        recursive: true,
+        force: true,
+      });
+    });
+
+    it("cleans up linked folder artifacts when folderPath is set", async () => {
+      vi.mocked(repo.get).mockResolvedValue(
+        makeProject({ id: "p1", name: "My Project", folderPath: "/user/project" }),
+      );
+
+      await service.deleteProject("p1");
+
+      const { rm } = await import("node:fs/promises");
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/user/project/.research-assistant", {
+        recursive: true,
+        force: true,
+      });
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/user/project/.agents", {
+        recursive: true,
+        force: true,
+      });
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/user/project/AGENTS.md", {
+        recursive: true,
+        force: true,
+      });
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/user/project/MEMORY.md", {
+        recursive: true,
+        force: true,
+      });
     });
   });
 

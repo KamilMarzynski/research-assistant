@@ -405,8 +405,11 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
         </DialogTitle>
         <DialogContent style={{ padding: "0 16px 16px" }}>
           <DialogContentText style={{ color: "var(--ink-2)", fontSize: 13 }}>
-            This will permanently delete this project and all its messages, artifacts, and research
-            tasks.
+            This removes all app data for this project (messages, artifacts, workspace files,
+            memories, skills, and AGENTS.md). Your project folder itself will not be touched.
+            <br />
+            <br />
+            <strong>Recreating this project later will not restore its configuration.</strong>
           </DialogContentText>
         </DialogContent>
         <DialogActions style={{ padding: "0 16px 16px", gap: 8 }}>
