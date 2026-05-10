@@ -36,6 +36,7 @@ export function registerProjectHandlers(
   ipcMain.handle(IPC.DELETE_PROJECT, async (_event, payload: unknown) => {
     const { id } = parseOrThrow(DeleteProjectSchema, payload, "DELETE_PROJECT");
     await projectService.deleteProject(id);
+    sessionManager.delete(id);
   });
 
   ipcMain.handle(IPC.LINK_FOLDER, async (_event, payload: unknown) => {
