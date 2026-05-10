@@ -53,7 +53,6 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
     setSaving(true);
     await window.electronAPI.invoke(IPC.SAVE_SETTINGS, {
       activeProvider: provider.activeProvider,
-      defaultCloudProvider: provider.defaultCloudProvider,
       providerCredentials: {
         openrouter: {
           apiKey: provider.credentials.openrouter.apiKey.trim() || null,
@@ -62,10 +61,6 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
         openai: {
           apiKey: provider.credentials.openai.apiKey.trim() || null,
           defaultModel: provider.credentials.openai.defaultModel,
-        },
-        anthropic: {
-          apiKey: provider.credentials.anthropic.apiKey.trim() || null,
-          defaultModel: provider.credentials.anthropic.defaultModel,
         },
         ollama: {
           host: provider.credentials.ollama.host,
@@ -160,8 +155,6 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
             <ModelProviderTab
               activeProvider={provider.activeProvider}
               onActiveProviderChange={provider.setActiveProvider}
-              defaultCloudProvider={provider.defaultCloudProvider}
-              onDefaultCloudProviderChange={provider.setDefaultCloudProvider}
               credentials={provider.credentials}
               onCredentialsChange={provider.setCredentials}
               availableModels={provider.availableModels}

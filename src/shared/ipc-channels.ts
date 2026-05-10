@@ -61,7 +61,6 @@ export const IPC = {
   // Model provider
   CHECK_OLLAMA: "CHECK_OLLAMA",
   GET_PROVIDER_MODELS: "GET_PROVIDER_MODELS",
-  MODEL_FALLBACK: "MODEL_FALLBACK",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

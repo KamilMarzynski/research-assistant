@@ -1,12 +1,10 @@
 import { z } from "zod/v4";
-import type { EventBus } from "../event-bus";
 import type { AppSettings } from "../services/SettingsService";
 
 export type ModelProvider =
   | { type: "openrouter"; apiKey: string; model: string }
   | { type: "ollama"; host: string; model: string }
-  | { type: "openai"; apiKey: string; model: string }
-  | { type: "anthropic"; apiKey: string; model: string };
+  | { type: "openai"; apiKey: string; model: string };
 
 export function isCloudProvider(
   provider: ModelProvider,
@@ -15,7 +13,7 @@ export function isCloudProvider(
 }
 
 export interface ResolveProviderOpts {
-  settings: AppSettings; // defined in SettingsService.ts (Task 2)
+  settings: AppSettings;
   projectModelOverride?: string | null;
   forceCloud?: boolean;
 }
@@ -63,27 +61,16 @@ function parseModelOverride(raw: string, settings: AppSettings): ModelProvider {
   if (providerType === "openai") {
     return { type: "openai", apiKey: settings.providerCredentials.openai.apiKey ?? "", model };
   }
-  if (providerType === "anthropic") {
-    return {
-      type: "anthropic",
-      apiKey: settings.providerCredentials.anthropic.apiKey ?? "",
-      model,
-    };
-  }
-  // Fallback to default cloud provider for unknown format
   return buildDefaultProvider(settings);
 }
 
 function buildDefaultProvider(settings: AppSettings): ModelProvider {
-  const creds = settings.providerCredentials[settings.defaultCloudProvider];
-  const cloudCreds = getCloudCreds(creds);
-  const providerType = settings.defaultCloudProvider;
-  const provider: ModelProvider = {
-    type: providerType,
-    apiKey: cloudCreds.apiKey,
-    model: cloudCreds.defaultModel,
+  const creds = settings.providerCredentials.openrouter;
+  return {
+    type: "openrouter",
+    apiKey: creds.apiKey ?? "",
+    model: creds.defaultModel,
   };
-  return provider;
 }
 
 export function resolveProvider(opts: ResolveProviderOpts): ModelProvider {
@@ -106,9 +93,6 @@ export function resolveProvider(opts: ResolveProviderOpts): ModelProvider {
       const cloudCreds = getCloudCreds(creds);
       return { type: "openai", apiKey: cloudCreds.apiKey, model: cloudCreds.defaultModel };
     }
-    case "anthropic":
-      // Direct Anthropic API is not supported — fall back to default cloud provider
-      return buildDefaultProvider(opts.settings);
     case "ollama":
       return {
         type: "ollama",
@@ -126,7 +110,6 @@ export async function checkOllamaAvailable(host: string): Promise<boolean> {
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       return false;
     }
-    // HTTP is acceptable for localhost; remote hosts should use HTTPS
     const res = await fetch(url.toString(), {
       signal: AbortSignal.timeout(5000),
     });
@@ -134,34 +117,4 @@ export async function checkOllamaAvailable(host: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-export async function resolveProviderWithFallback(
-  opts: ResolveProviderOpts,
-  eventBus?: EventBus,
-): Promise<ModelProvider> {
-  const primary = resolveProvider({ ...opts });
-
-  if (primary.type !== "ollama") {
-    return primary;
-  }
-
-  const available = await checkOllamaAvailable(primary.host);
-  if (available) return primary;
-
-  console.warn(
-    `[ModelFactory] Ollama unavailable at ${primary.host}, ` +
-      `falling back to ${opts.settings.defaultCloudProvider}`,
-  );
-
-  eventBus?.emit({
-    type: "model:fallback",
-    payload: {
-      reason: "ollama_unavailable",
-      requestedModel: primary.model,
-      fallbackProvider: opts.settings.defaultCloudProvider,
-    },
-  });
-
-  return buildDefaultProvider(opts.settings);
 }
