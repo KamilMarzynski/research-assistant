@@ -190,12 +190,15 @@ describe("ResearchHistoryPanel", () => {
     rerender(<ResearchHistoryPanel projectId="proj-2" />);
     await waitFor(() => expect(screen.getByText("Loading...")).toBeTruthy());
 
-    // Resolve the stale proj-1 fetch with data that should be ignored
-    resolveFirst([{ id: "old", query: "stale", status: "complete", startedAt: new Date() }]);
-    // Resolve the fresh proj-2 fetch
+    // Resolve the fresh proj-2 fetch first
     resolveSecond([{ id: "new", query: "fresh", status: "complete", startedAt: new Date() }]);
-
     await waitFor(() => expect(screen.getByText("fresh")).toBeTruthy());
+
+    // Now resolve the stale proj-1 fetch — it must be ignored
+    resolveFirst([{ id: "old", query: "stale", status: "complete", startedAt: new Date() }]);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
     expect(screen.queryByText("stale")).toBeNull();
+    expect(screen.getByText("fresh")).toBeTruthy();
   });
 });
