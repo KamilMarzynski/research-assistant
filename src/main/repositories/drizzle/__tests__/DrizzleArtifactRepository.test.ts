@@ -97,7 +97,7 @@ describe("DrizzleArtifactRepository", () => {
 
   describe("findUnacknowledged", () => {
     it("returns only unacknowledged artifacts", async () => {
-      const ack = await repo.create({
+      const _ack = await repo.create({
         projectId,
         title: "Acked",
         filePath: "/a.md",

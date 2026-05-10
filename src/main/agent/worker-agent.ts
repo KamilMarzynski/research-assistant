@@ -10,10 +10,7 @@ import { createAgentTools } from "./tools";
 export type { AgentType, SpawnResult };
 
 // Tools that require remainingDepth > 0 to be active
-const ORCHESTRATOR_ONLY_TOOLS = new Set<AgentToolName>([
-  "spawn_agent",
-  "spawn_agents_parallel",
-]);
+const ORCHESTRATOR_ONLY_TOOLS = new Set<AgentToolName>(["spawn_agent", "spawn_agents_parallel"]);
 
 export const ORCHESTRATOR_TOOL_NAMES: readonly AgentToolName[] = [
   "read_file",

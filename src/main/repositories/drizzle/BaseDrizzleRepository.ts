@@ -4,7 +4,7 @@ import type { DrizzleDB } from "../../db/client";
 import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
 import type { MonotonicClock } from "../../utils/time";
 
-export abstract class BaseDrizzleRepository<TSelect, TInsert, TEntity> {
+export abstract class BaseDrizzleRepository<TSelect, _TInsert, TEntity> {
   constructor(
     @inject(DB_TOKEN) protected readonly db: DrizzleDB,
     @inject(CLOCK_TOKEN) protected readonly clock: MonotonicClock,

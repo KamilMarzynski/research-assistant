@@ -92,15 +92,17 @@ export class OutputRouter {
 
       if (this.artifactService) {
         const fileName = entry;
-        await this.artifactService.saveArtifact({
-          projectId: this.jail.projectId,
-          title: fileName,
-          filePath: destPath,
-          relativePath: join(destDir, fileName).replace(`${conventions.default}/`, ""),
-          acknowledged: false,
-        }).catch((err) => {
-          console.error(`[OutputRouter] artifact record failed for ${destPath}:`, err);
-        });
+        await this.artifactService
+          .saveArtifact({
+            projectId: this.jail.projectId,
+            title: fileName,
+            filePath: destPath,
+            relativePath: join(destDir, fileName).replace(`${conventions.default}/`, ""),
+            acknowledged: false,
+          })
+          .catch((err) => {
+            console.error(`[OutputRouter] artifact record failed for ${destPath}:`, err);
+          });
       }
 
       moved.push(entry);

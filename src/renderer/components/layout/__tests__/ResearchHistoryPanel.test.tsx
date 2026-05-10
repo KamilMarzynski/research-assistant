@@ -171,7 +171,7 @@ describe("ResearchHistoryPanel", () => {
     });
 
     const invoke = vi.fn();
-    invoke.mockImplementation((channel: string, payload: { projectId: string }) => {
+    invoke.mockImplementation((_channel: string, payload: { projectId: string }) => {
       if (payload.projectId === "proj-1") return firstPromise;
       if (payload.projectId === "proj-2") return secondPromise;
       return Promise.resolve([]);
