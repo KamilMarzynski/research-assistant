@@ -1,25 +1,29 @@
 import { useProject } from "../../contexts/ProjectContext";
 import FileExplorer from "./FileExplorer";
 import RecentOutputsPanel from "./RecentOutputsPanel";
+import WindowDragBar from "./WindowDragBar";
 
 export default function DetailsPanel() {
   const { activeProjectId } = useProject();
 
   if (!activeProjectId) {
     return (
-      <div
-        style={{
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-          color: "var(--ink-3)",
-          fontSize: 12,
-          textAlign: "center",
-        }}
-      >
-        Details, artifacts and recent outputs appear here once a project is selected.
+      <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        <WindowDragBar />
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            color: "var(--ink-3)",
+            fontSize: 12,
+            textAlign: "center",
+          }}
+        >
+          Details, artifacts and recent outputs appear here once a project is selected.
+        </div>
       </div>
     );
   }
@@ -34,6 +38,7 @@ export default function DetailsPanel() {
         overflow: "hidden",
       }}
     >
+      <WindowDragBar />
       <RecentOutputsPanel projectId={activeProjectId} />
       <FileExplorer projectId={activeProjectId} />
     </div>

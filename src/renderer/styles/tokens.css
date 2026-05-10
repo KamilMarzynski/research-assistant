@@ -364,3 +364,10 @@ body {
 .tl-max {
   background: oklch(0.78 0.15 145);
 }
+.drag-region {
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}

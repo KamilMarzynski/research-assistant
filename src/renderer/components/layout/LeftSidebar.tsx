@@ -18,6 +18,7 @@ import {
   IconX,
 } from "../../components/shared/Icons";
 import { useProject } from "../../contexts/ProjectContext";
+import WindowDragBar from "./WindowDragBar";
 
 interface LeftSidebarProps {
   onOpenSettings: () => void;
@@ -119,13 +120,13 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
         flexDirection: "column",
       }}
     >
+      <WindowDragBar />
       <div
         style={{
-          padding: "38px 16px 14px",
+          padding: "12px 16px 14px",
           display: "flex",
           alignItems: "center",
           gap: 8,
-          borderBottom: "1px solid var(--line)",
         }}
       >
         <IconLogo size={18} />

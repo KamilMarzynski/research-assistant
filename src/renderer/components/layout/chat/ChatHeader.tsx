@@ -33,8 +33,7 @@ export default function ChatHeader() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "14px 24px",
-        borderBottom: "1px solid var(--line)",
+        padding: "12px 24px",
         background: "var(--bg)",
       }}
     >

@@ -5,6 +5,7 @@ import { useAuditLog } from "../../hooks/useAuditLog";
 import { useProviderSettings } from "../../hooks/useProviderSettings";
 import { useSkillManager } from "../../hooks/useSkillManager";
 import { useTheme } from "../../theme/ThemeContext";
+import WindowDragBar from "../layout/WindowDragBar";
 import { IconArrowL } from "../shared/Icons";
 import AuditTab from "./AuditTab";
 import GeneralTab from "./GeneralTab";
@@ -108,18 +109,18 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
           flexDirection: "column",
         }}
       >
+        <WindowDragBar />
         <div
           style={{
-            padding: "38px 16px 14px",
+            padding: "12px 16px 14px",
             display: "flex",
             alignItems: "center",
             gap: 8,
-            borderBottom: "1px solid var(--line)",
           }}
         >
           <button
             type="button"
-            className="btn btn--ghost btn--icon"
+            className="btn btn--ghost btn--icon no-drag"
             aria-label="Back"
             onClick={onBack}
           >
@@ -141,6 +142,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
           flexDirection: "column",
         }}
       >
+        <WindowDragBar />
         <div className="thin-scroll" style={{ flex: 1, overflow: "auto", padding: "22px 26px" }}>
           {tab === 0 && (
             <GeneralTab

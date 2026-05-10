@@ -48,7 +48,7 @@ export default function RecentOutputsPanel({ projectId }: RecentOutputsPanelProp
     >
       <div
         style={{
-          padding: "10px 16px",
+          padding: "12px 16px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -58,7 +58,11 @@ export default function RecentOutputsPanel({ projectId }: RecentOutputsPanelProp
           <span className="dot dot--accent" />
           <span className="eyebrow">Recent Outputs</span>
         </div>
-        <button type="button" className="btn btn--ghost btn--sm" onClick={handleAcknowledgeAll}>
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm no-drag"
+          onClick={handleAcknowledgeAll}
+        >
           <IconCheck size={12} />
           Acknowledge All
         </button>

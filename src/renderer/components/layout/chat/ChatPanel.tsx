@@ -3,6 +3,7 @@ import { IPC } from "../../../../shared/ipc-channels";
 import { decodeMessageChunk, decodeMessageDone } from "../../../../shared/ipc-guards";
 import type { Message } from "../../../../shared/types";
 import { useProject } from "../../../contexts/ProjectContext";
+import WindowDragBar from "../../layout/WindowDragBar";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
@@ -98,22 +99,26 @@ export default function ChatPanel() {
 
   if (!activeProjectId) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          color: "var(--ink-2)",
-        }}
-      >
-        Select a project to start chatting
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <WindowDragBar />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flex: 1,
+            color: "var(--ink-2)",
+          }}
+        >
+          Select a project to start chatting
+        </div>
       </div>
     );
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <WindowDragBar />
       <ChatHeader />
       <ResearchStatusBar />
       <PendingCommandBanner />

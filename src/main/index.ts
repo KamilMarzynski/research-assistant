@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { join } from "node:path";
 import { app, BrowserWindow } from "electron";
+import { DRAG_BAR_HEIGHT } from "../shared/constants";
 import { bootstrap } from "./bootstrap";
 import { registerIpcHandlers } from "./ipc-handlers";
 
@@ -12,7 +13,7 @@ function createWindow(): BrowserWindow {
     minHeight: 600,
     titleBarStyle: "hidden",
     trafficLightPosition: { x: 12, y: 12 },
-    titleBarOverlay: { color: "#00000000", height: 36 },
+    titleBarOverlay: { color: "#00000000", height: DRAG_BAR_HEIGHT },
     webPreferences: {
       preload: join(import.meta.dirname, "../preload/index.js"),
       contextIsolation: true,
