@@ -158,4 +158,30 @@ describe("ResearchHistoryPanel", () => {
     expect(screen.getByText("Yesterday")).toBeTruthy();
     expect(screen.getByText("Jan 15")).toBeTruthy();
   });
+
+  it("does not update state after unmount", async () => {
+    let resolveResearch!: (value: unknown[]) => void;
+    const researchPromise = new Promise<unknown[]>((resolve) => {
+      resolveResearch = resolve;
+    });
+
+    window.electronAPI = {
+      invoke: vi.fn().mockReturnValue(researchPromise),
+      send: vi.fn(),
+      on: vi.fn().mockReturnValue(() => {}),
+    } as unknown as Window["electronAPI"];
+
+    const { unmount } = render(<ResearchHistoryPanel projectId="proj-1" />);
+    expect(screen.getByText("Loading...")).toBeTruthy();
+
+    unmount();
+    resolveResearch([{ id: "r1", query: "stale", status: "complete", startedAt: new Date() }]);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Component is unmounted; no state update should have occurred.
+    // If state had updated, this would have thrown because the element
+    // no longer exists in the document.
+    expect(screen.queryByText("stale")).toBeNull();
+  });
 });

@@ -72,6 +72,9 @@ export default function ResearchHistoryPanel({ projectId }: ResearchHistoryPanel
 
   useEffect(() => {
     load();
+    return () => {
+      generationRef.current++;
+    };
   }, [load]);
 
   useEffect(() => {
