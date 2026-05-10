@@ -79,6 +79,10 @@ export class HomeService {
     return this.taskPersistence.getInProgressTasks();
   }
 
+  async getTasksByProject(projectId: string): Promise<ResearchTask[]> {
+    return this.taskPersistence.getTasksByProject(projectId);
+  }
+
   async updateTaskStatus(
     taskId: string,
     status: "pending" | "in_progress" | "complete" | "failed",

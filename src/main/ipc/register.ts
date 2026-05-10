@@ -39,7 +39,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const allowlistService = container.resolve(AllowlistService);
 
   registerProjectHandlers(win, { projectService, sessionManager });
-  registerSettingsHandlers(win, { settingsService, sessionManager });
+  registerSettingsHandlers(win, { settingsService, sessionManager, projectService });
   registerArtifactHandlers(win, { projectService, artifactService, allowlistService });
   registerChatHandler(win, {
     sessionManager,
@@ -55,7 +55,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     allowlistService,
   });
   registerAdminHandlers(win, { homeService });
-  registerResearchHandlers(win, { projectService, researchService });
+  registerResearchHandlers(win, { projectService, researchService, homeService });
   registerCommandHandlers(win, allowlistService);
   registerEventForwarders(win, { eventBus, sessionManager });
   registerStartupTasks({ homeService, researchService, eventBus });
