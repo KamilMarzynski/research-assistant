@@ -56,6 +56,11 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   useEffect(() => {
     window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
     window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => setSettings(s));
+
+    const unsub = window.electronAPI.on(IPC.SETTINGS_UPDATED, (data) => {
+      setSettings(data as SettingsResponse);
+    });
+    return unsub;
   }, []);
 
   const handleBrowseFolder = async () => {
