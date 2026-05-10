@@ -13,7 +13,6 @@ export type { AgentType, SpawnResult };
 const ORCHESTRATOR_ONLY_TOOLS = new Set<AgentToolName>([
   "spawn_agent",
   "spawn_agents_parallel",
-  "save_artifact",
 ]);
 
 export const ORCHESTRATOR_TOOL_NAMES: readonly AgentToolName[] = [
@@ -24,7 +23,6 @@ export const ORCHESTRATOR_TOOL_NAMES: readonly AgentToolName[] = [
   "run_in_docker",
   "spawn_agent",
   "spawn_agents_parallel",
-  "save_artifact",
 ] as const;
 
 export interface WorkerAgentConfig {
@@ -37,7 +35,6 @@ export interface WorkerAgentConfig {
   homePath: string;
   provider: ModelProvider;
   remainingDepth?: number; // defaults to 0 (leaf)
-  saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
   agentLabel?: string;
   onProgress?: (label: string, delta: string) => void;
@@ -191,7 +188,6 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     homePath,
     provider,
     remainingDepth = 0,
-    saveArtifactFn,
     proposeToolFn,
     onProgress,
     webAccessEnabled,
@@ -219,7 +215,6 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       folderPath,
       homePath,
       provider,
-      saveArtifactFn,
       proposeToolFn,
       onProgress,
       webAccessEnabled,
@@ -280,7 +275,6 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       webAccessEnabled,
       allowlistService,
     }),
-    saveArtifactFn,
     proposeToolFn,
     spawnAgentFn,
     spawnAgentsParallelFn,

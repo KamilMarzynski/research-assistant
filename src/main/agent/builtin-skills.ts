@@ -106,7 +106,6 @@ You are a top-level research orchestrator. Plan and execute a thorough research 
 Write intermediate results to subdirectories within your workspace root.
 Create final output files in the project folder using write_file, not in the workspace.
 Name files meaningfully (no task IDs in filenames).
-Use save_artifact to persist valuable outputs — both intermediate and final.
 `,
   "shallow.md": `# Shallow Research
 

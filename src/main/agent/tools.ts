@@ -4,7 +4,6 @@ import type { AgentTool } from "@mariozechner/pi-agent-core";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { CompressionService } from "./CompressionService";
 import { PathJail } from "./path-jail";
-import { createSaveArtifactTool } from "./tools/artifact-tools";
 import { createCompressTool } from "./tools/compress-tool";
 import { createDockerTool } from "./tools/docker-tool";
 import { createRequestEvaluationTool } from "./tools/eval-tools";
@@ -29,7 +28,6 @@ export type AgentToolName =
   | "run_in_docker"
   | "spawn_agent"
   | "spawn_agents_parallel"
-  | "save_artifact"
   | "propose_tool"
   | "save_memory"
   | "read_memory"
@@ -57,7 +55,6 @@ export interface AgentToolsOptions {
   spawnAgentsParallelFn?: (
     agents: Array<{ type: AgentType; query: string; outputPath: string }>,
   ) => Promise<SpawnResult[]>;
-  saveArtifactFn?: (path: string, title: string) => Promise<{ artifactId: string }>;
   proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
   saveMemoryFn?: (
     category: string,
@@ -147,10 +144,6 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
 
   if (opts.spawnAgentsParallelFn) {
     tools.push(createSpawnAgentsParallelTool(jail, opts.spawnAgentsParallelFn));
-  }
-
-  if (opts.saveArtifactFn) {
-    tools.push(createSaveArtifactTool(jail, opts.saveArtifactFn));
   }
 
   if (opts.proposeToolFn) {
