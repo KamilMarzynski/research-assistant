@@ -1,6 +1,6 @@
 import { useProject } from "../../contexts/ProjectContext";
-import FileExplorer from "./FileExplorer";
-import RecentOutputsPanel from "./RecentOutputsPanel";
+import ProjectArtifactsPanel from "./ProjectArtifactsPanel";
+import ResearchHistoryPanel from "./ResearchHistoryPanel";
 import WindowDragBar from "./WindowDragBar";
 
 export default function DetailsPanel() {
@@ -22,7 +22,7 @@ export default function DetailsPanel() {
             textAlign: "center",
           }}
         >
-          Details, artifacts and recent outputs appear here once a project is selected.
+          Select a project to view artifacts and research history.
         </div>
       </div>
     );
@@ -36,11 +36,13 @@ export default function DetailsPanel() {
         flexDirection: "column",
         background: "var(--surface)",
         overflow: "hidden",
+        gap: 12,
+        padding: 12,
       }}
     >
       <WindowDragBar />
-      <RecentOutputsPanel projectId={activeProjectId} />
-      <FileExplorer projectId={activeProjectId} />
+      <ProjectArtifactsPanel projectId={activeProjectId} />
+      <ResearchHistoryPanel projectId={activeProjectId} />
     </div>
   );
 }
