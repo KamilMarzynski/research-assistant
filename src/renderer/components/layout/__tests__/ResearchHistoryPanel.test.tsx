@@ -159,29 +159,43 @@ describe("ResearchHistoryPanel", () => {
     expect(screen.getByText("Jan 15")).toBeTruthy();
   });
 
-  it("does not update state after unmount", async () => {
-    let resolveResearch!: (value: unknown[]) => void;
-    const researchPromise = new Promise<unknown[]>((resolve) => {
-      resolveResearch = resolve;
+  it("cancels stale fetch when projectId changes", async () => {
+    let resolveFirst!: (value: unknown[]) => void;
+    const firstPromise = new Promise<unknown[]>((resolve) => {
+      resolveFirst = resolve;
+    });
+
+    let resolveSecond!: (value: unknown[]) => void;
+    const secondPromise = new Promise<unknown[]>((resolve) => {
+      resolveSecond = resolve;
+    });
+
+    const invoke = vi.fn();
+    invoke.mockImplementation((channel: string, payload: { projectId: string }) => {
+      if (payload.projectId === "proj-1") return firstPromise;
+      if (payload.projectId === "proj-2") return secondPromise;
+      return Promise.resolve([]);
     });
 
     window.electronAPI = {
-      invoke: vi.fn().mockReturnValue(researchPromise),
+      invoke,
       send: vi.fn(),
       on: vi.fn().mockReturnValue(() => {}),
     } as unknown as Window["electronAPI"];
 
-    const { unmount } = render(<ResearchHistoryPanel projectId="proj-1" />);
-    expect(screen.getByText("Loading...")).toBeTruthy();
+    const { rerender } = render(<ResearchHistoryPanel projectId="proj-1" />);
+    await waitFor(() => expect(screen.getByText("Loading...")).toBeTruthy());
 
-    unmount();
-    resolveResearch([{ id: "r1", query: "stale", status: "complete", startedAt: new Date() }]);
+    // Switch to proj-2 before proj-1 resolves
+    rerender(<ResearchHistoryPanel projectId="proj-2" />);
+    await waitFor(() => expect(screen.getByText("Loading...")).toBeTruthy());
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Resolve the stale proj-1 fetch with data that should be ignored
+    resolveFirst([{ id: "old", query: "stale", status: "complete", startedAt: new Date() }]);
+    // Resolve the fresh proj-2 fetch
+    resolveSecond([{ id: "new", query: "fresh", status: "complete", startedAt: new Date() }]);
 
-    // Component is unmounted; no state update should have occurred.
-    // If state had updated, this would have thrown because the element
-    // no longer exists in the document.
+    await waitFor(() => expect(screen.getByText("fresh")).toBeTruthy());
     expect(screen.queryByText("stale")).toBeNull();
   });
 });
