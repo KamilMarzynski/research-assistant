@@ -103,20 +103,6 @@ describe("createAgentTools – spawn + orchestrator tools", () => {
     expect(tools.map((t) => t.name)).toContain("spawn_agents_parallel");
   });
 
-  it("excludes save_artifact when saveArtifactFn not provided", () => {
-    const tools = createAgentTools({ ...BASE, toolNames: ["save_artifact"] });
-    expect(tools.map((t) => t.name)).not.toContain("save_artifact");
-  });
-
-  it("includes save_artifact when saveArtifactFn provided", () => {
-    const tools = createAgentTools({
-      ...BASE,
-      toolNames: ["save_artifact"],
-      saveArtifactFn: vi.fn().mockResolvedValue({ artifactId: "art-1" }),
-    });
-    expect(tools.map((t) => t.name)).toContain("save_artifact");
-  });
-
   it("excludes propose_tool when proposeToolFn not provided", () => {
     const tools = createAgentTools({ ...BASE, toolNames: ["propose_tool"] });
     expect(tools.map((t) => t.name)).not.toContain("propose_tool");

@@ -125,7 +125,7 @@ describe("createWorkerAgent – depth limit", () => {
     const { createAgentTools } = await import("./tools");
     await createWorkerAgent({
       ...BASE_CONFIG,
-      toolNames: ["read_file", "spawn_agent", "save_artifact"] as const,
+      toolNames: ["read_file", "spawn_agent"] as const,
     });
     expect(createAgentTools).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -138,12 +138,12 @@ describe("createWorkerAgent – depth limit", () => {
     const { createAgentTools } = await import("./tools");
     await createWorkerAgent({
       ...BASE_CONFIG,
-      toolNames: ["read_file", "spawn_agent", "save_artifact"] as const,
+      toolNames: ["read_file", "spawn_agent"] as const,
       remainingDepth: 2,
     });
     expect(createAgentTools).toHaveBeenCalledWith(
       expect.objectContaining({
-        toolNames: ["read_file", "spawn_agent", "save_artifact"],
+        toolNames: ["read_file", "spawn_agent"],
       }),
     );
   });

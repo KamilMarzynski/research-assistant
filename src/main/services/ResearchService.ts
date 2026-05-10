@@ -10,9 +10,9 @@ import type { WorkerAgentConfig } from "../agent/worker-agent";
 import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
-import { ArtifactService } from "./ArtifactService";
 import { CrystallizationService } from "./CrystallizationService";
 import { HomeService } from "./HomeService";
+import { ProjectService } from "./ProjectService";
 import { SettingsService } from "./SettingsService";
 
 interface RunResearchConfig {
@@ -33,21 +33,8 @@ export class ResearchService {
     @inject(HomeService) private readonly homeService: HomeService,
     @inject(AllowlistService) private readonly allowlistService: AllowlistService,
     @inject(CrystallizationService) private readonly crystallizationService: CrystallizationService,
-    @inject(ArtifactService) private readonly artifactService: ArtifactService,
+    @inject(ProjectService) private readonly projectService: ProjectService,
   ) {}
-
-  private buildSaveArtifactFn(
-    projectId: string,
-  ): (path: string, title: string) => Promise<{ artifactId: string }> {
-    return async (path, title) => {
-      const artifact = await this.artifactService.saveArtifact({
-        projectId,
-        title,
-        filePath: path,
-      });
-      return { artifactId: artifact.id };
-    };
-  }
 
   async startResearch(
     projectId: string,
@@ -69,7 +56,6 @@ export class ResearchService {
       homePath: this.homeService.getHomePath(),
       remainingDepth: 0,
       allowlistService: this.allowlistService,
-      saveArtifactFn: this.buildSaveArtifactFn(projectId),
     }));
   }
 
@@ -89,7 +75,6 @@ export class ResearchService {
         "Write intermediate results to subdirectories within your workspace root.",
         "Create final output files in the project folder using write_file, not in the workspace.",
         "Name files meaningfully (no task IDs in filenames).",
-        "Use save_artifact to persist valuable outputs — both intermediate and final.",
       ].join("\n"),
       projectId,
       projectName,
@@ -97,7 +82,6 @@ export class ResearchService {
       homePath,
       remainingDepth: 3,
       allowlistService: this.allowlistService,
-      saveArtifactFn: this.buildSaveArtifactFn(projectId),
     }));
   }
 
@@ -166,7 +150,8 @@ export class ResearchService {
       }
     };
 
-    const provider = resolveProvider({ settings });
+    const project = await this.projectService.getProject(config.projectId);
+    const provider = resolveProvider({ settings, projectModelOverride: project.modelOverride });
     if (provider.type !== "ollama" && !provider.apiKey) {
       throw new Error("No API key configured for the active provider");
     }
