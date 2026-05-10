@@ -35,30 +35,31 @@ export default function SettingsTabs({
       {tabs.map((t, i) => {
         const Icon = t.icon;
         const isActive = i === active;
+        const btnStyle: React.CSSProperties = {
+          padding: isVertical ? "7px 10px" : "10px 12px",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: 13,
+          fontWeight: isActive ? 500 : 400,
+          color: isActive ? "oklch(0.42 0.12 45)" : "var(--ink-2)",
+          cursor: "pointer",
+          background: isActive ? "var(--accent-soft)" : "transparent",
+          border: "none",
+          borderRadius: isVertical ? 8 : 0,
+          marginBottom: isVertical ? 0 : -1,
+          width: isVertical ? "100%" : undefined,
+          textAlign: "left",
+        };
+        if (!isVertical) {
+          btnStyle.borderBottom = `2px solid ${isActive ? "var(--accent)" : "transparent"}`;
+        }
         return (
           <button
             key={t.label}
             type="button"
             onClick={() => onChange(i)}
-            style={{
-              padding: isVertical ? "7px 10px" : "10px 12px",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 13,
-              fontWeight: isActive ? 500 : 400,
-              color: isActive ? "oklch(0.42 0.12 45)" : "var(--ink-2)",
-              cursor: "pointer",
-              background: isActive ? "var(--accent-soft)" : "transparent",
-              border: "none",
-              borderRadius: isVertical ? 8 : 0,
-              borderBottom: isVertical
-                ? undefined
-                : `2px solid ${isActive ? "var(--accent)" : "transparent"}`,
-              marginBottom: isVertical ? undefined : -1,
-              width: isVertical ? "100%" : undefined,
-              textAlign: "left",
-            }}
+            style={btnStyle}
           >
             <Icon size={13} />
             {t.label}
