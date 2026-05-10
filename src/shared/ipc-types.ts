@@ -4,12 +4,10 @@ import type { Artifact, Message, Project } from "./types";
 /** Response from GET_SETTINGS */
 export interface SettingsResponse {
   hasApiKey: boolean;
-  activeProvider: "openrouter" | "openai" | "anthropic" | "ollama";
-  defaultCloudProvider: "openrouter" | "openai" | "anthropic";
+  activeProvider: "openrouter" | "openai" | "ollama";
   providerCredentials: {
     openrouter: { apiKey: string | null; defaultModel: string };
     openai: { apiKey: string | null; defaultModel: string };
-    anthropic: { apiKey: string | null; defaultModel: string };
     ollama: { host: string; defaultModel: string };
   };
   langfuseEnabled: boolean;
@@ -72,13 +70,6 @@ export interface PathApprovalPayload {
   path: string;
   mode: "read" | "write";
   projectId: string;
-}
-
-/** Payload for MODEL_FALLBACK push event */
-export interface ModelFallbackPayload {
-  reason: string;
-  requestedModel: string;
-  fallbackProvider: string;
 }
 
 /** Payload for RESEARCH_COMPLETE push event */

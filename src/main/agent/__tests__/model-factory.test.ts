@@ -101,15 +101,4 @@ describe("createModel", () => {
     expect(model.baseUrl).toBe("https://api.openai.com/v1");
     expect(model.id).toBe("gpt-4o");
   });
-
-  it("throws for anthropic provider", () => {
-    const anthropicProvider = {
-      type: "anthropic" as const,
-      apiKey: "sk-anthropic",
-      model: "claude-3-5-sonnet",
-    };
-    expect(() => createModel({ provider: anthropicProvider, langfuseEnabled: false })).toThrow(
-      "Direct Anthropic API",
-    );
-  });
 });

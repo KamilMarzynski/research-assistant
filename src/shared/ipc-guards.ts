@@ -1,18 +1,11 @@
 import { z } from "zod/v4";
 import type {
   BlockedCommandPayload,
-  ModelFallbackPayload,
   PathApprovalPayload,
   PendingTool,
   ResearchCompletePayload,
   ResearchStatusUpdatePayload,
 } from "./ipc-types";
-
-const ModelFallbackPayloadSchema = z.object({
-  reason: z.string(),
-  requestedModel: z.string(),
-  fallbackProvider: z.string(),
-});
 
 const PathApprovalPayloadSchema = z.object({
   path: z.string(),
@@ -71,10 +64,6 @@ function tryDecode<T>(schema: z.ZodType<T>, data: unknown, label: string): T | n
   if (result.success) return result.data;
   console.warn(`[ipc-guard] Invalid ${label} payload:`, result.error.flatten());
   return null;
-}
-
-export function decodeModelFallbackPayload(data: unknown): ModelFallbackPayload | null {
-  return tryDecode(ModelFallbackPayloadSchema, data, "MODEL_FALLBACK");
 }
 
 export function decodePathApprovalPayload(data: unknown): PathApprovalPayload | null {

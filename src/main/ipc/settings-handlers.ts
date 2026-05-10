@@ -25,7 +25,6 @@ export function registerSettingsHandlers(
     return {
       hasApiKey: isOllama || (activeApiKey !== null && activeApiKey !== ""),
       activeProvider: settings.activeProvider,
-      defaultCloudProvider: settings.defaultCloudProvider,
       providerCredentials: settings.providerCredentials,
       langfuseEnabled: settings.langfuseEnabled,
       webAccessEnabled: settings.webAccessEnabled,
@@ -38,7 +37,7 @@ export function registerSettingsHandlers(
     await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
 
     // Clear sessions if model-related or provider settings change (not tracing flags)
-    if ("activeProvider" in p || "defaultCloudProvider" in p || "providerCredentials" in p) {
+    if ("activeProvider" in p || "providerCredentials" in p) {
       sessionManager.clear();
     }
 
@@ -50,7 +49,6 @@ export function registerSettingsHandlers(
     event.sender.send(IPC.SETTINGS_UPDATED, {
       hasApiKey: isOllama || (activeApiKey !== null && activeApiKey !== ""),
       activeProvider: updated.activeProvider,
-      defaultCloudProvider: updated.defaultCloudProvider,
       providerCredentials: updated.providerCredentials,
       langfuseEnabled: updated.langfuseEnabled,
       webAccessEnabled: updated.webAccessEnabled,
