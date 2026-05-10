@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
+import type { SettingsResponse } from "../../../shared/ipc-types";
 import type { Project } from "../../../shared/types";
 import {
   IconEdit,
@@ -24,9 +25,25 @@ interface LeftSidebarProps {
   onOpenSettings: () => void;
 }
 
+function providerLabel(provider: string): string {
+  switch (provider) {
+    case "openrouter":
+      return "OpenRouter";
+    case "openai":
+      return "OpenAI";
+    case "anthropic":
+      return "Anthropic";
+    case "ollama":
+      return "Ollama";
+    default:
+      return provider;
+  }
+}
+
 export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const { activeProjectId, setActiveProjectId } = useProject();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [creating, setCreating] = useState(false);
   const [newFolderPath, setNewFolderPath] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -39,6 +56,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
 
   useEffect(() => {
     window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
+    window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => setSettings(s));
   }, []);
 
   const handleBrowseFolder = async () => {
@@ -352,29 +370,15 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: "50%",
-              background: "var(--accent-soft)",
-              color: "oklch(0.42 0.12 45)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              fontWeight: 600,
-            }}
-          >
-            U
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
-            <span style={{ fontSize: 12, fontWeight: 500 }}>User</span>
-            <span className="t-tertiary t-mono" style={{ fontSize: 10 }}>
-              local
-            </span>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
+          <span style={{ fontSize: 12, fontWeight: 500 }}>
+            {settings ? providerLabel(settings.activeProvider) : "…"}
+          </span>
+          <span className="t-tertiary t-mono" style={{ fontSize: 10 }}>
+            {settings
+              ? (settings.providerCredentials[settings.activeProvider]?.defaultModel ?? "")
+              : ""}
+          </span>
         </div>
         <button
           type="button"

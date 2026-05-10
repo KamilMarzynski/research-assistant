@@ -55,12 +55,7 @@ export default function SettingsTabs({
           btnStyle.borderBottom = `2px solid ${isActive ? "var(--accent)" : "transparent"}`;
         }
         return (
-          <button
-            key={t.label}
-            type="button"
-            onClick={() => onChange(i)}
-            style={btnStyle}
-          >
+          <button key={t.label} type="button" onClick={() => onChange(i)} style={btnStyle}>
             <Icon size={13} />
             {t.label}
           </button>
