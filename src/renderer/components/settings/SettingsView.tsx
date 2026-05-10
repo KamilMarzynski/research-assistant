@@ -5,7 +5,7 @@ import { useAuditLog } from "../../hooks/useAuditLog";
 import { useProviderSettings } from "../../hooks/useProviderSettings";
 import { useSkillManager } from "../../hooks/useSkillManager";
 import { useTheme } from "../../theme/ThemeContext";
-import { IconX } from "../shared/Icons";
+import { IconArrowL } from "../shared/Icons";
 import AuditTab from "./AuditTab";
 import GeneralTab from "./GeneralTab";
 import ModelProviderTab from "./ModelProviderTab";
@@ -20,12 +20,11 @@ const paperSx = {
   boxShadow: "var(--shadow-3)",
 } as const;
 
-interface SettingsModalProps {
-  open: boolean;
-  onClose: () => void;
+interface SettingsViewProps {
+  onBack: () => void;
 }
 
-export default function SettingsModal({ open, onClose }: SettingsModalProps) {
+export default function SettingsView({ onBack }: SettingsViewProps) {
   const [tab, setTab] = useState(0);
   const [saving, setSaving] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -36,12 +35,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [themeSetting, setThemeSetting] = useState<"light" | "dark" | "system">("system");
 
   const { setTheme } = useTheme();
-  const provider = useProviderSettings(open);
-  const audit = useAuditLog(open && tab === 2);
-  const skills = useSkillManager(open && tab === 3);
+  const provider = useProviderSettings(true);
+  const audit = useAuditLog(tab === 2);
+  const skills = useSkillManager(tab === 3);
 
   useEffect(() => {
-    if (!open) return;
     void provider.loadFromSettings().then(() => {
       window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
         setLangfuseEnabled(settings.langfuseEnabled ?? false);
@@ -49,7 +47,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         setThemeSetting(settings.theme ?? "system");
       });
     });
-  }, [open, provider.loadFromSettings]);
+  }, [provider.loadFromSettings]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -79,7 +77,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       theme: themeSetting,
     });
     setSaving(false);
-    onClose();
+    onBack();
   };
 
   const handleClearAuditLog = useCallback(async () => {
@@ -95,42 +93,54 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     [skills],
   );
 
+  const showFooter = tab === 0 || tab === 1 || tab === 3;
+
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      slotProps={{ paper: { sx: paperSx } }}
-    >
-      <div
+    <div style={{ display: "flex", flexDirection: "row", height: "100vh", overflow: "hidden" }}>
+      <aside
         style={{
-          overflow: "hidden",
+          width: 248,
+          flexShrink: 0,
+          height: "100%",
+          background: "var(--surface)",
+          borderRight: "1px solid var(--line)",
           display: "flex",
           flexDirection: "column",
-          height: "100%",
-          maxHeight: 720,
         }}
       >
         <div
           style={{
-            padding: "18px 22px 0",
+            padding: "38px 16px 14px",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            gap: 8,
+            borderBottom: "1px solid var(--line)",
           }}
         >
-          <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.005em" }}>Settings</div>
           <button
             type="button"
             className="btn btn--ghost btn--icon"
-            aria-label="Close settings"
-            onClick={onClose}
+            aria-label="Back"
+            onClick={onBack}
           >
-            <IconX size={14} />
+            <IconArrowL size={16} />
           </button>
+          <span style={{ fontWeight: 600, fontSize: 14, letterSpacing: "-0.005em" }}>Settings</span>
         </div>
-        <SettingsTabs active={tab} onChange={setTab} />
+
+        <SettingsTabs active={tab} onChange={setTab} layout="vertical" />
+      </aside>
+
+      <div
+        style={{
+          flex: 1,
+          overflow: "hidden",
+          height: "100%",
+          background: "var(--bg)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <div className="thin-scroll" style={{ flex: 1, overflow: "auto", padding: "22px 26px" }}>
           {tab === 0 && (
             <GeneralTab
@@ -200,7 +210,8 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
             />
           )}
         </div>
-        {(tab === 0 || tab === 1 || tab === 3) && (
+
+        {showFooter && (
           <div
             style={{
               display: "flex",
@@ -211,7 +222,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
               background: "var(--surface)",
             }}
           >
-            <button type="button" className="btn btn--ghost" onClick={onClose}>
+            <button type="button" className="btn btn--ghost" onClick={onBack}>
               Cancel
             </button>
             <button
@@ -276,6 +287,6 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           </div>
         </div>
       </Dialog>
-    </Dialog>
+    </div>
   );
 }

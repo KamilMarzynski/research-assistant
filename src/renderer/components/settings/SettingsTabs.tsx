@@ -10,16 +10,26 @@ const tabs = [
 interface SettingsTabsProps {
   active: number;
   onChange: (idx: number) => void;
+  layout?: "horizontal" | "vertical";
 }
 
-export default function SettingsTabs({ active, onChange }: SettingsTabsProps) {
+export default function SettingsTabs({
+  active,
+  onChange,
+  layout = "horizontal",
+}: SettingsTabsProps) {
+  const isVertical = layout === "vertical";
+
   return (
     <div
       style={{
         display: "flex",
-        gap: 4,
-        padding: "14px 22px 0",
-        borderBottom: "1px solid var(--line)",
+        flexDirection: isVertical ? "column" : "row",
+        gap: isVertical ? 2 : 4,
+        padding: isVertical ? "8px" : "14px 22px 0",
+        borderBottom: isVertical ? undefined : "1px solid var(--line)",
+        flex: isVertical ? 1 : undefined,
+        overflow: isVertical ? "auto" : undefined,
       }}
     >
       {tabs.map((t, i) => {
@@ -31,7 +41,7 @@ export default function SettingsTabs({ active, onChange }: SettingsTabsProps) {
             type="button"
             onClick={() => onChange(i)}
             style={{
-              padding: "10px 12px",
+              padding: isVertical ? "7px 10px" : "10px 12px",
               display: "flex",
               alignItems: "center",
               gap: 6,
@@ -39,11 +49,15 @@ export default function SettingsTabs({ active, onChange }: SettingsTabsProps) {
               fontWeight: isActive ? 600 : 500,
               color: isActive ? "var(--ink)" : "var(--ink-2)",
               cursor: "pointer",
-              background: "transparent",
+              background: isActive ? "var(--accent-soft)" : "transparent",
               border: "none",
-              borderRadius: 0,
-              borderBottom: `2px solid ${isActive ? "var(--accent)" : "transparent"}`,
-              marginBottom: -1,
+              borderRadius: isVertical ? 8 : 0,
+              borderBottom: isVertical
+                ? undefined
+                : `2px solid ${isActive ? "var(--accent)" : "transparent"}`,
+              marginBottom: isVertical ? undefined : -1,
+              width: isVertical ? "100%" : undefined,
+              textAlign: "left",
             }}
           >
             <Icon size={13} />

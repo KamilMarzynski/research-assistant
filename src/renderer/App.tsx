@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 import { IPC } from "../shared/ipc-channels";
 import { decodeModelFallbackPayload } from "../shared/ipc-guards";
 import AppShell from "./components/layout/AppShell";
-import SettingsModal from "./components/settings/SettingsModal";
+import SettingsView from "./components/settings/SettingsView";
 import { ProjectProvider } from "./contexts/ProjectContext";
 import { ThemeProvider } from "./theme/ThemeContext";
 
 export default function App() {
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [view, setView] = useState<"main" | "settings">("main");
   const [fallbackAlert, setFallbackAlert] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,8 +27,11 @@ export default function App() {
   return (
     <ThemeProvider>
       <ProjectProvider>
-        <AppShell onOpenSettings={() => setSettingsOpen(true)} />
-        <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        {view === "main" ? (
+          <AppShell onOpenSettings={() => setView("settings")} />
+        ) : (
+          <SettingsView onBack={() => setView("main")} />
+        )}
       </ProjectProvider>
       <Snackbar
         open={!!fallbackAlert}
