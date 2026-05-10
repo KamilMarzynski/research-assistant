@@ -1,5 +1,5 @@
 import type { SkillInfo } from "./ipc-channels";
-import type { Artifact, Message, Project } from "./types";
+import type { Artifact, Message, Project, ResearchTask } from "./types";
 
 /** Response from GET_SETTINGS */
 export interface SettingsResponse {
@@ -101,6 +101,8 @@ export interface IpcResponseMap {
   RENAME_PROJECT: undefined;
   DELETE_PROJECT: undefined;
   GET_ARTIFACTS: Artifact[];
+  GET_PROJECT_ARTIFACTS: Artifact[];
+  GET_RESEARCHES: ResearchTask[];
   GET_MESSAGES: Message[];
   GET_SETTINGS: SettingsResponse;
   SAVE_SETTINGS: undefined;
@@ -110,9 +112,6 @@ export interface IpcResponseMap {
   RETRY_RESEARCH: { taskId: string };
   READ_ARTIFACT_FILE: string;
   GET_FILE_TREE: FileNode;
-  GET_RECENT_OUTPUTS: Artifact[];
-  ACKNOWLEDGE_OUTPUT: undefined;
-  ACKNOWLEDGE_ALL_OUTPUTS: undefined;
   REVEAL_IN_FOLDER: undefined;
   GET_PENDING_TOOLS: PendingTool[];
   APPROVE_TOOL: undefined;

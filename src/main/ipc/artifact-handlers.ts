@@ -193,23 +193,9 @@ export function registerArtifactHandlers(
     return content;
   });
 
-  ipcMain.handle(IPC.GET_RECENT_OUTPUTS, async (_event, payload: unknown) => {
-    const p = parseOrThrow(ProjectIdSchema, payload, "GET_RECENT_OUTPUTS");
-    return artifactService.listUnacknowledged(p.projectId);
-  });
-
-  ipcMain.handle(IPC.ACKNOWLEDGE_OUTPUT, async (_event, payload: unknown) => {
-    const { projectId, artifactId } = parseOrThrow(
-      z.object({ projectId: z.string(), artifactId: z.string() }),
-      payload,
-      "ACKNOWLEDGE_OUTPUT",
-    );
-    await artifactService.acknowledge(projectId, artifactId);
-  });
-
-  ipcMain.handle(IPC.ACKNOWLEDGE_ALL_OUTPUTS, async (_event, payload: unknown) => {
-    const p = parseOrThrow(ProjectIdSchema, payload, "ACKNOWLEDGE_ALL_OUTPUTS");
-    await artifactService.acknowledgeAll(p.projectId);
+  ipcMain.handle(IPC.GET_PROJECT_ARTIFACTS, async (_event, payload: unknown) => {
+    const p = parseOrThrow(ProjectIdSchema, payload, "GET_PROJECT_ARTIFACTS");
+    return artifactService.listArtifacts(p.projectId);
   });
 
   ipcMain.handle(IPC.REVEAL_IN_FOLDER, async (_event, payload: unknown) => {
