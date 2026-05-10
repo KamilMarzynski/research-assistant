@@ -9,10 +9,28 @@ interface ProjectArtifactsPanelProps {
 
 export default function ProjectArtifactsPanel({ projectId }: ProjectArtifactsPanelProps) {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectId) return;
-    window.electronAPI.invoke(IPC.GET_PROJECT_ARTIFACTS, { projectId }).then(setArtifacts);
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    window.electronAPI
+      .invoke(IPC.GET_PROJECT_ARTIFACTS, { projectId })
+      .then((data) => {
+        if (!cancelled) setArtifacts(data as Artifact[]);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   return (
@@ -32,7 +50,33 @@ export default function ProjectArtifactsPanel({ projectId }: ProjectArtifactsPan
           padding: 10,
         }}
       >
-        {artifacts.length === 0 ? (
+        {loading ? (
+          <div
+            style={{
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--ink-3)",
+              fontSize: 12,
+            }}
+          >
+            Loading...
+          </div>
+        ) : error ? (
+          <div
+            style={{
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--error)",
+              fontSize: 12,
+            }}
+          >
+            {error}
+          </div>
+        ) : artifacts.length === 0 ? (
           <div
             style={{
               height: "100%",
