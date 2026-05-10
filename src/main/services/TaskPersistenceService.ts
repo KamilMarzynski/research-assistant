@@ -1,6 +1,6 @@
 import { readdir, readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
 import { z } from "zod/v4";
 import type { DrizzleDB } from "../db/client";
@@ -54,6 +54,22 @@ export class TaskPersistenceService {
 
   async getInProgressTasks(): Promise<ResearchTask[]> {
     const rows = await this.db.select().from(tasks).where(eq(tasks.status, "in_progress"));
+    return rows.map((r) => ({
+      taskId: r.id,
+      projectId: r.projectId,
+      projectName: r.projectName,
+      query: r.query,
+      folderPath: r.folderPath,
+      startedAt: new Date(r.createdAt).toISOString(),
+    }));
+  }
+
+  async getTasksByProject(projectId: string): Promise<ResearchTask[]> {
+    const rows = await this.db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.projectId, projectId))
+      .orderBy(desc(tasks.createdAt));
     return rows.map((r) => ({
       taskId: r.id,
       projectId: r.projectId,

@@ -1,7 +1,14 @@
 import "reflect-metadata";
 import { join } from "node:path";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { runMigrations } from "../../db/migrate";
+import * as schema from "../../db/schema";
+import { projects } from "../../db/schema";
 import { AllowlistService } from "../AllowlistService";
+
+const { TaskPersistenceService } = await import("../TaskPersistenceService");
 
 vi.mock("electron", () => ({
   safeStorage: {
@@ -630,5 +637,65 @@ describe("ResearchService – _runResearch internals", () => {
       expect.any(Error),
     );
     consoleSpy.mockRestore();
+  });
+});
+
+async function createTestDb() {
+  const client = createClient({ url: "file::memory:" });
+  const db = drizzle(client, { schema });
+  await runMigrations(db);
+  return db;
+}
+
+describe("TaskPersistenceService", () => {
+  it("getTasksByProject returns tasks sorted by createdAt desc", async () => {
+    const db = await createTestDb();
+    const taskPersistence = new TaskPersistenceService(db, "/tmp/home");
+
+    // Seed projects (tasks FK references projects.id)
+    await db.insert(projects).values([
+      {
+        id: "proj-a",
+        name: "A",
+        createdAt: new Date("2026-05-01"),
+        updatedAt: new Date("2026-05-01"),
+      },
+      {
+        id: "proj-b",
+        name: "B",
+        createdAt: new Date("2026-05-01"),
+        updatedAt: new Date("2026-05-01"),
+      },
+    ]);
+
+    await taskPersistence.saveTask({
+      taskId: "t1",
+      projectId: "proj-a",
+      projectName: "A",
+      query: "q1",
+      folderPath: null,
+      startedAt: new Date("2026-05-01").toISOString(),
+    });
+    await taskPersistence.saveTask({
+      taskId: "t2",
+      projectId: "proj-a",
+      projectName: "A",
+      query: "q2",
+      folderPath: null,
+      startedAt: new Date("2026-05-05").toISOString(),
+    });
+    await taskPersistence.saveTask({
+      taskId: "t3",
+      projectId: "proj-b",
+      projectName: "B",
+      query: "q3",
+      folderPath: null,
+      startedAt: new Date("2026-05-03").toISOString(),
+    });
+
+    const result = await taskPersistence.getTasksByProject("proj-a");
+    expect(result).toHaveLength(2);
+    expect(result[0].taskId).toBe("t2");
+    expect(result[1].taskId).toBe("t1");
   });
 });
