@@ -1,6 +1,7 @@
-import { homedir } from "node:os";
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AllowlistService, ApprovalRequiredError } from "../services/AllowlistService";
 import { PathJail } from "./path-jail";
 
@@ -94,6 +95,44 @@ describe("PathJail", () => {
 
     it("resolves and returns the path", () => {
       const p = join(HOME, "workspace", PROJECT_ID, "output.md");
+      const result = jail.validate(p, "read");
+      expect(result).toBe(p);
+    });
+  });
+
+  describe("symlink handling", () => {
+    let tempDir: string;
+    let realZone: string;
+    let symlinkZone: string;
+    let jail: PathJail;
+
+    beforeAll(() => {
+      tempDir = mkdtempSync(join(tmpdir(), "path-jail-test-"));
+      realZone = join(tempDir, "real_zone");
+      symlinkZone = join(tempDir, "symlink_zone");
+
+      mkdirSync(join(realZone, "subdir"), { recursive: true });
+      symlinkSync(realZone, symlinkZone);
+
+      jail = new PathJail(PROJECT_ID, symlinkZone, PROJECT_NAME, allowlistService);
+    });
+
+    afterAll(() => {
+      rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it("allows read through a symlinked zone path", () => {
+      const p = join(symlinkZone, "subdir", "file.md");
+      expect(() => jail.validate(p, "read")).not.toThrow();
+    });
+
+    it("allows write through a symlinked zone path", () => {
+      const p = join(symlinkZone, "subdir", "file.md");
+      expect(() => jail.validate(p, "write")).not.toThrow();
+    });
+
+    it("returns the resolved path for symlinked zones", () => {
+      const p = join(symlinkZone, "subdir", "file.md");
       const result = jail.validate(p, "read");
       expect(result).toBe(p);
     });
