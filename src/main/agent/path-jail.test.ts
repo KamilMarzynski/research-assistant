@@ -131,10 +131,54 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "write")).not.toThrow();
     });
 
-    it("returns the resolved path for symlinked zones", () => {
+    it("returns the normalized path for symlinked zones", () => {
       const p = join(symlinkZone, "subdir", "file.md");
       const result = jail.validate(p, "read");
       expect(result).toBe(p);
+    });
+  });
+
+  describe("symlink escape prevention", () => {
+    let tempDir: string;
+    let realZone: string;
+    let outsideDir: string;
+    let jail: PathJail;
+
+    beforeAll(() => {
+      tempDir = mkdtempSync(join(tmpdir(), "path-jail-test-"));
+      realZone = join(tempDir, "real_zone");
+      outsideDir = join(tempDir, "outside_zone");
+
+      mkdirSync(join(realZone, "subdir"), { recursive: true });
+      mkdirSync(outsideDir, { recursive: true });
+      symlinkSync(outsideDir, join(realZone, "escape_link"));
+      symlinkSync(join(realZone, "subdir"), join(realZone, "internal_link"));
+
+      jail = new PathJail(PROJECT_ID, realZone, PROJECT_NAME, allowlistService);
+    });
+
+    afterAll(() => {
+      rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it("blocks read through a symlink pointing outside the zone", () => {
+      const p = join(realZone, "escape_link", "secret.txt");
+      expect(() => jail.validate(p, "read")).toThrow(/outside allowed zones/);
+    });
+
+    it("blocks write through a symlink pointing outside the zone", () => {
+      const p = join(realZone, "escape_link", "secret.txt");
+      expect(() => jail.validate(p, "write")).toThrow(/outside allowed zones/);
+    });
+
+    it("allows read through a symlink pointing inside the zone", () => {
+      const p = join(realZone, "internal_link", "file.txt");
+      expect(() => jail.validate(p, "read")).not.toThrow();
+    });
+
+    it("allows write through a symlink pointing inside the zone", () => {
+      const p = join(realZone, "internal_link", "file.txt");
+      expect(() => jail.validate(p, "write")).not.toThrow();
     });
   });
 });
