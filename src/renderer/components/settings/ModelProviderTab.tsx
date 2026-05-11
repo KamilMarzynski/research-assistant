@@ -1,9 +1,8 @@
 import {
-  IconAlert,
-  IconBolt,
   IconCheck,
-  IconCpu,
-  IconGlobe,
+  IconOllama,
+  IconOpenAI,
+  IconOpenRouter,
   IconRefresh,
   IconX,
 } from "../../components/shared/Icons";
@@ -38,19 +37,10 @@ const PROVIDERS: Array<{
   id: string;
   name: string;
   icon: React.ComponentType<{ size?: number }>;
-  disabled?: boolean;
-  note?: string;
 }> = [
-  { id: "openrouter", name: "OpenRouter", icon: IconGlobe },
-  { id: "ollama", name: "Ollama", icon: IconCpu },
-  { id: "openai", name: "OpenAI", icon: IconBolt },
-  {
-    id: "anthropic",
-    name: "Anthropic",
-    icon: IconAlert,
-    disabled: true,
-    note: "not supported — use OpenRouter",
-  },
+  { id: "openrouter", name: "OpenRouter", icon: IconOpenRouter },
+  { id: "ollama", name: "Ollama", icon: IconOllama },
+  { id: "openai", name: "OpenAI", icon: IconOpenAI },
 ];
 
 export default function ModelProviderTab({
@@ -83,8 +73,7 @@ export default function ModelProviderTab({
                 background: isActive ? "var(--accent-soft)" : "var(--surface)",
                 borderRadius: "var(--r-md)",
                 padding: "12px 16px",
-                cursor: provider.disabled ? "not-allowed" : "pointer",
-                opacity: provider.disabled ? 0.55 : 1,
+                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
@@ -96,9 +85,8 @@ export default function ModelProviderTab({
                 name="active-provider"
                 value={provider.id}
                 checked={isActive}
-                disabled={provider.disabled}
                 onChange={() => {
-                  if (!provider.disabled) onActiveProviderChange(provider.id);
+                  onActiveProviderChange(provider.id);
                 }}
                 style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
               />
@@ -126,17 +114,7 @@ export default function ModelProviderTab({
                   />
                 )}
               </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 500, fontSize: "var(--text-sm)" }}>{provider.name}</div>
-                {provider.note && (
-                  <span
-                    className="t-tertiary"
-                    style={{ fontSize: "var(--text-xs)", display: "block" }}
-                  >
-                    {provider.note}
-                  </span>
-                )}
-              </div>
+              <div style={{ fontWeight: 500, fontSize: "var(--text-sm)" }}>{provider.name}</div>
               <div style={{ marginLeft: "auto", flexShrink: 0, color: "var(--ink-3)" }}>
                 <Icon size={14} />
               </div>
@@ -144,22 +122,6 @@ export default function ModelProviderTab({
           );
         })}
       </div>
-
-      {activeProvider === "anthropic" && (
-        <div
-          style={{
-            marginTop: 12,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            color: "var(--danger)",
-            fontSize: "var(--text-xs)",
-          }}
-        >
-          <IconAlert size={14} />
-          <span>Direct Anthropic not supported — use OpenRouter</span>
-        </div>
-      )}
 
       {activeProvider === "openrouter" && (
         <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
