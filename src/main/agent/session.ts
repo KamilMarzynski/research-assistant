@@ -95,7 +95,6 @@ export class AgentSession {
   private readonly memoryManager: IMemoryManager;
   private readonly projectId: string;
   private readonly projectName: string;
-  private readonly folderPath: string | null;
   private assistantContent = "";
   private currentTurnId = 0;
   private savedForTurn = 0;
@@ -130,7 +129,6 @@ export class AgentSession {
     this.memoryManager = memoryManager;
     this.projectId = projectId;
     this.projectName = projectName;
-    this.folderPath = folderPath;
 
     this.skillRouter = createDefaultSkillRouter(projectName, (skillName, summary) => {
       this.pendingSkillDeltas.push({ skillName, summary });

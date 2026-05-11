@@ -796,7 +796,8 @@ describe("AgentSession", () => {
         { role: "assistant" as const, content: "middle" },
         { role: "user" as const, content: "latest" },
       ];
-      const result = await transformContext!(messages);
+      if (!transformContext) throw new Error("transformContext expected");
+      const result = await transformContext(messages);
       // The oldest oversized message is pruned; the two newest are kept
       expect(result).toHaveLength(2);
       expect(result[0].content).toBe("middle");
