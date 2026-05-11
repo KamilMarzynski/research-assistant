@@ -1,14 +1,20 @@
 export type BuiltinSkill = Record<string, string>;
 
 export const FIRST_RUN_SKILL = `You are setting up for first use. Ask the user these questions one at a time. Do not ask all at once.
-1. How do you organise your projects? (e.g. folder per project, by topic, other)
-2. Do you use a note-taking app or work with plain folders?
-3. What file types do you mainly work with?
-4. Any naming conventions or folder structures you always follow?
+1. What is this project about? (for GOAL.md)
+2. How do you organise your projects? (e.g. folder per project, by topic, other)
+3. Do you use a note-taking app or work with plain folders?
+4. What file types do you mainly work with?
+5. Any naming conventions or folder structures you always follow?
 
 If the user's setup is complex (e.g. cloud sync, LaTeX pipelines, custom tooling, multiple workspaces), start a research task with start_research to understand their full workflow before writing config.md. Do not guess — research it.
 
-After receiving all answers (or after the research completes), write a concise summary to ~/.research-assistant/config.md (plain Markdown, human-editable). Then confirm setup is complete.`;
+After receiving all answers (or after the research completes), write:
+- GOAL.md to ~/.scholar/projects/<slug>/GOAL.md (what the project is about)
+- FILES.md to ~/.scholar/projects/<slug>/FILES.md (file organization, naming, output locations)
+- config.md to ~/.scholar/config.md (plain Markdown, human-editable)
+
+Then confirm setup is complete.`;
 
 export const EVALUATE_RESEARCH_SKILL: BuiltinSkill = {
   "SKILL.md": `---
