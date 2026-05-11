@@ -32,7 +32,7 @@ const ENTRY_FILES: Record<DockerSandboxInput["language"], string> = {
 };
 
 // Redirect stdout+stderr to /workspace/.stdout so we can read it from the host mount.
-// sh is available in all three base images.
+// sh is available in all four base images.
 const COMMANDS: Record<DockerSandboxInput["language"], string[]> = {
   python: ["sh", "-c", "python /workspace/main.py > /workspace/.stdout 2>&1"],
   bash: ["sh", "-c", "bash /workspace/main.sh > /workspace/.stdout 2>&1"],
