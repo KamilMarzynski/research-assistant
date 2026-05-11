@@ -1,4 +1,4 @@
-import { access, mkdir, rm } from "node:fs/promises";
+import { access, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import type { Project } from "../../shared/types";
@@ -28,9 +28,6 @@ export class ProjectService {
       modelOverride,
     });
 
-    if (folderPath) {
-      await mkdir(join(folderPath, ".research-assistant"), { recursive: true });
-    }
     return project;
   }
 
@@ -54,12 +51,6 @@ export class ProjectService {
     await this.safeRm(join(this.homePath, "workspace", id));
     await this.safeRm(join(this.homePath, "projects", slug));
 
-    if (project.folderPath) {
-      await this.safeRm(join(project.folderPath, "AGENTS.md"));
-      await this.safeRm(join(project.folderPath, "MEMORY.md"));
-      await this.safeRm(join(project.folderPath, ".research-assistant"));
-      await this.safeRm(join(project.folderPath, ".agents"));
-    }
   }
 
   private async safeRm(path: string): Promise<void> {
@@ -78,7 +69,6 @@ export class ProjectService {
       throw new Error(`Folder not found: ${folderPath}`);
     }
     await this.repo.linkFolder(id, folderPath);
-    await mkdir(join(folderPath, ".research-assistant"), { recursive: true });
   }
 
   async renameProject(id: string, name: string): Promise<void> {

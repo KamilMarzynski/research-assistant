@@ -1,4 +1,4 @@
-import { access, mkdir } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "../../../shared/types";
 import type { IProjectRepository } from "../../repositories/IProjectRepository";
@@ -7,7 +7,6 @@ import { ProjectService } from "../ProjectService";
 
 vi.mock("node:fs/promises", () => ({
   access: vi.fn().mockResolvedValue(undefined),
-  mkdir: vi.fn().mockResolvedValue(undefined),
   rm: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -78,14 +77,6 @@ describe("ProjectService", () => {
       expect(result).toEqual(project);
     });
 
-    it("creates .research-assistant inside folderPath when provided", async () => {
-      const project = makeProject({ name: "New", folderPath: "/my/project" });
-      vi.mocked(repo.create).mockResolvedValue(project);
-
-      await service.createProject("New", "/my/project");
-
-      expect(mkdir).toHaveBeenCalledWith("/my/project/.research-assistant", { recursive: true });
-    });
   });
 
   describe("listProjects", () => {
@@ -152,31 +143,6 @@ describe("ProjectService", () => {
       });
     });
 
-    it("cleans up linked folder artifacts when folderPath is set", async () => {
-      vi.mocked(repo.get).mockResolvedValue(
-        makeProject({ id: "p1", name: "My Project", folderPath: "/user/project" }),
-      );
-
-      await service.deleteProject("p1");
-
-      const { rm } = await import("node:fs/promises");
-      expect(vi.mocked(rm)).toHaveBeenCalledWith("/user/project/.research-assistant", {
-        recursive: true,
-        force: true,
-      });
-      expect(vi.mocked(rm)).toHaveBeenCalledWith("/user/project/.agents", {
-        recursive: true,
-        force: true,
-      });
-      expect(vi.mocked(rm)).toHaveBeenCalledWith("/user/project/AGENTS.md", {
-        recursive: true,
-        force: true,
-      });
-      expect(vi.mocked(rm)).toHaveBeenCalledWith("/user/project/MEMORY.md", {
-        recursive: true,
-        force: true,
-      });
-    });
   });
 
   describe("linkFolder", () => {
@@ -187,7 +153,6 @@ describe("ProjectService", () => {
 
       expect(access).toHaveBeenCalledWith("/some/path");
       expect(repo.linkFolder).toHaveBeenCalledWith("proj-1", "/some/path");
-      expect(mkdir).toHaveBeenCalledWith("/some/path/.research-assistant", { recursive: true });
     });
 
     it("throws NotFoundError when project does not exist", async () => {
