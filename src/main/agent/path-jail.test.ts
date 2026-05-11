@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AllowlistService, ApprovalRequiredError } from "../services/AllowlistService";
 import { PathJail } from "./path-jail";
 
-const HOME = join(homedir(), ".research-assistant");
+const HOME = join(homedir(), ".scholar");
 const PROJECT_ID = "proj-123";
 const PROJECT_NAME = "Test Project";
 const FOLDER_PATH = "/Users/test/myproject";
@@ -35,32 +35,22 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "write")).not.toThrow();
     });
 
-    it("allows read inside ~/.research-assistant/skills", () => {
+    it("allows read inside ~/.scholar/skills", () => {
       const p = join(HOME, "skills", "start_research", "SKILL.md");
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("blocks write to ~/.research-assistant/skills", () => {
+    it("blocks write to ~/.scholar/skills", () => {
       const p = join(HOME, "skills", "start_research", "SKILL.md");
       expect(() => jail.validate(p, "write")).toThrow(/read-only/);
     });
 
-    it("allows read inside ~/.agents/skills", () => {
-      const p = join(homedir(), ".agents", "skills", "myplugin", "SKILL.md");
-      expect(() => jail.validate(p, "read")).not.toThrow();
-    });
-
-    it("blocks write to ~/.agents/skills", () => {
-      const p = join(homedir(), ".agents", "skills", "myplugin", "SKILL.md");
-      expect(() => jail.validate(p, "write")).toThrow(/read-only/);
-    });
-
-    it("allows write inside ~/.research-assistant/projects/<slug>", () => {
+    it("allows write inside ~/.scholar/projects/<slug>", () => {
       const p = join(HOME, "projects", "test-project", "AGENTS.md");
       expect(() => jail.validate(p, "write")).not.toThrow();
     });
 
-    it("allows read inside ~/.research-assistant/projects/<slug>", () => {
+    it("allows read inside ~/.scholar/projects/<slug>", () => {
       const p = join(HOME, "projects", "test-project", "MEMORY.md");
       expect(() => jail.validate(p, "read")).not.toThrow();
     });

@@ -16,7 +16,7 @@ import {
   USER_DATA_PATH_TOKEN,
 } from "./di/tokens";
 import { EventBus } from "./event-bus";
-import { getAgentsHome, getHomePath } from "./paths";
+import { getHomePath } from "./paths";
 import { DrizzleArtifactRepository } from "./repositories/drizzle/DrizzleArtifactRepository";
 import { DrizzleMessageRepository } from "./repositories/drizzle/DrizzleMessageRepository";
 import { DrizzleProjectRepository } from "./repositories/drizzle/DrizzleProjectRepository";
@@ -40,7 +40,7 @@ import { MonotonicClock } from "./utils/time";
 
 export async function bootstrap(): Promise<DependencyContainer> {
   const userDataPath = app.getPath("userData");
-  const dbPath = join(userDataPath, "research-assistant.db");
+  const dbPath = join(userDataPath, "scholar.db");
   const db = await createDatabase(dbPath);
   await runMigrations(db);
 
@@ -82,7 +82,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   const homeService = appContainer.resolve(HomeService);
   await homeService.ensureDirectories();
 
-  const skillDirs = [join(homePath, "skills"), join(getAgentsHome(), "skills")];
+  const skillDirs = [join(homePath, "skills")];
   const eventBus = appContainer.resolve(EventBus);
   const skillWatcher = new SkillWatcherService({
     skillDirs,

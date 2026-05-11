@@ -1,16 +1,14 @@
 import { realpathSync } from "node:fs";
 import { join, normalize, relative, resolve } from "node:path";
-import { getAgentsHome, getResearchAssistantHome } from "../paths";
+import { getScholarHome } from "../paths";
 import { type AllowlistService, ApprovalRequiredError } from "../services/AllowlistService";
 import { toSlug } from "./context";
 
 export class PathJail {
   private readonly workspace: string;
   private readonly home: string;
-  private readonly agentsSkills: string;
   private readonly homeSkills: string;
   private readonly projectFolder: string | null;
-  private readonly projectAgentsSkills: string | null;
   private readonly projectHomeSkills: string | null;
   private readonly projectsDir: string;
   private readonly readWriteZones: string[];
@@ -23,16 +21,12 @@ export class PathJail {
     projectName: string,
     private readonly allowlistService: AllowlistService,
   ) {
-    this.home = getResearchAssistantHome();
+    this.home = getScholarHome();
     this.workspace = join(this.home, "workspace", projectId);
     this.homeSkills = join(this.home, "skills");
-    this.agentsSkills = join(getAgentsHome(), "skills");
     this.projectFolder = folderPath ? resolve(normalize(folderPath)) : null;
-    this.projectAgentsSkills = this.projectFolder
-      ? join(this.projectFolder, ".agents", "skills")
-      : null;
     this.projectHomeSkills = this.projectFolder
-      ? join(this.projectFolder, ".research-assistant", "skills")
+      ? join(this.projectFolder, ".scholar", "skills")
       : null;
     this.projectsDir = join(this.home, "projects", toSlug(projectName));
 
@@ -44,8 +38,6 @@ export class PathJail {
 
     this.readOnlyZones = [
       this.homeSkills,
-      this.agentsSkills,
-      ...(this.projectAgentsSkills ? [this.projectAgentsSkills] : []),
       ...(this.projectHomeSkills ? [this.projectHomeSkills] : []),
     ];
 

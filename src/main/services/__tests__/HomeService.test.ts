@@ -32,15 +32,15 @@ function mockDb() {
 }
 
 function makeTaskPersistence(db?: ReturnType<typeof mockDb>) {
-  return new TaskPersistenceService(db ?? mockDb(), join(tmpHome, ".research-assistant"));
+  return new TaskPersistenceService(db ?? mockDb(), join(tmpHome, ".scholar"));
 }
 
 function makeSkillManagement() {
-  return new SkillManagementService(join(tmpHome, ".research-assistant"));
+  return new SkillManagementService(join(tmpHome, ".scholar"));
 }
 
 function makeToolApproval() {
-  return new ToolApprovalService(join(tmpHome, ".research-assistant"));
+  return new ToolApprovalService(join(tmpHome, ".scholar"));
 }
 
 const { HomeService } = await import("../HomeService");
@@ -62,13 +62,13 @@ describe("HomeService", () => {
     await svc.ensureDirectories();
 
     const { access } = await import("node:fs/promises");
-    await expect(access(join(tmpHome, ".research-assistant"))).resolves.toBeUndefined();
-    await expect(access(join(tmpHome, ".research-assistant", "skills"))).resolves.toBeUndefined();
+    await expect(access(join(tmpHome, ".scholar"))).resolves.toBeUndefined();
+    await expect(access(join(tmpHome, ".scholar", "skills"))).resolves.toBeUndefined();
     await expect(
-      access(join(tmpHome, ".research-assistant", "workspace")),
+      access(join(tmpHome, ".scholar", "workspace")),
     ).resolves.toBeUndefined();
-    await expect(access(join(tmpHome, ".research-assistant", "projects"))).resolves.toBeUndefined();
-    await expect(access(join(tmpHome, ".agents", "skills"))).resolves.toBeUndefined();
+    await expect(access(join(tmpHome, ".scholar", "projects"))).resolves.toBeUndefined();
+    await expect(access(join(tmpHome, ".scholar", "tasks"))).resolves.toBeUndefined();
   });
 
   it("isFirstRun returns true when config.md missing", async () => {
@@ -80,7 +80,7 @@ describe("HomeService", () => {
   it("isFirstRun returns false after config.md is written", async () => {
     const svc = new HomeService(makeTaskPersistence(), makeSkillManagement(), makeToolApproval());
     await svc.ensureDirectories();
-    await writeFile(join(tmpHome, ".research-assistant", "config.md"), "# Config");
+    await writeFile(join(tmpHome, ".scholar", "config.md"), "# Config");
     expect(await svc.isFirstRun()).toBe(false);
   });
 
@@ -96,12 +96,12 @@ describe("HomeService", () => {
   it("ensureDirectories copies builtin skills when skills dir is empty", async () => {
     const svc = new HomeService(makeTaskPersistence(), makeSkillManagement(), makeToolApproval());
     await svc.ensureDirectories();
-    const entries = await readdir(join(tmpHome, ".research-assistant", "skills"));
+    const entries = await readdir(join(tmpHome, ".scholar", "skills"));
     expect(entries).toContain("evaluate-research");
   });
 
   it("does NOT overwrite existing builtin skill SKILL.md", async () => {
-    const skillsDir = join(tmpHome, ".research-assistant", "skills");
+    const skillsDir = join(tmpHome, ".scholar", "skills");
     const evalSkillDir = join(skillsDir, "evaluate-research");
     await mkdir(evalSkillDir, { recursive: true });
     await writeFile(join(evalSkillDir, "SKILL.md"), "# Custom overridden");
@@ -179,7 +179,7 @@ describe("task persistence", () => {
     const insertFn = db.insert as ReturnType<typeof vi.fn>;
     const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement(), makeToolApproval());
     await svc.ensureDirectories();
-    const tasksDir = join(tmpHome, ".research-assistant", "tasks");
+    const tasksDir = join(tmpHome, ".scholar", "tasks");
     await mkdir(tasksDir, { recursive: true });
     await writeFile(
       join(tasksDir, "t1.json"),
@@ -209,7 +209,7 @@ describe("task persistence", () => {
     const insertFn = db.insert as ReturnType<typeof vi.fn>;
     const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement(), makeToolApproval());
     await svc.ensureDirectories();
-    const tasksDir = join(tmpHome, ".research-assistant", "tasks");
+    const tasksDir = join(tmpHome, ".scholar", "tasks");
     await writeFile(join(tasksDir, "bad.json"), "not json");
     await svc.migrateTasksFromJson();
     expect(insertFn).not.toHaveBeenCalled();
@@ -230,7 +230,7 @@ describe("pending tools", () => {
     await svc.ensureDirectories();
     const { access } = await import("node:fs/promises");
     await expect(
-      access(join(tmpHome, ".research-assistant", "pending-tools")),
+      access(join(tmpHome, ".scholar", "pending-tools")),
     ).resolves.toBeUndefined();
   });
 
@@ -240,7 +240,7 @@ describe("pending tools", () => {
     await svc.savePendingTool("fetch-arxiv", "# fetch-arxiv\n\nFetches papers.");
     const { readFile } = await import("node:fs/promises");
     const content = await readFile(
-      join(tmpHome, ".research-assistant", "pending-tools", "fetch-arxiv", "SKILL.md"),
+      join(tmpHome, ".scholar", "pending-tools", "fetch-arxiv", "SKILL.md"),
       "utf-8",
     );
     expect(content).toBe("# fetch-arxiv\n\nFetches papers.");
@@ -252,7 +252,7 @@ describe("pending tools", () => {
     await svc.savePendingTool("run-analysis", "# run-analysis", "import pandas as pd\nprint('hi')");
     const { readFile } = await import("node:fs/promises");
     const content = await readFile(
-      join(tmpHome, ".research-assistant", "pending-tools", "run-analysis", "script.py"),
+      join(tmpHome, ".scholar", "pending-tools", "run-analysis", "script.py"),
       "utf-8",
     );
     expect(content).toContain("import pandas");
@@ -264,7 +264,7 @@ describe("pending tools", () => {
     await svc.savePendingTool("run-bash", "# run-bash", "#!/bin/bash\necho hello");
     const { readFile } = await import("node:fs/promises");
     const content = await readFile(
-      join(tmpHome, ".research-assistant", "pending-tools", "run-bash", "script.sh"),
+      join(tmpHome, ".scholar", "pending-tools", "run-bash", "script.sh"),
       "utf-8",
     );
     expect(content).toContain("echo hello");
@@ -279,7 +279,7 @@ describe("pending tools", () => {
   it("getPendingTools returns empty array when pending-tools dir does not exist", async () => {
     const svc = new HomeService(makeTaskPersistence(), makeSkillManagement(), makeToolApproval());
     await svc.ensureDirectories();
-    const pendingDir = join(tmpHome, ".research-assistant", "pending-tools");
+    const pendingDir = join(tmpHome, ".scholar", "pending-tools");
     await rm(pendingDir, { recursive: true, force: true });
     expect(await svc.getPendingTools()).toEqual([]);
   });
@@ -288,7 +288,7 @@ describe("pending tools", () => {
     const svc = new HomeService(makeTaskPersistence(), makeSkillManagement(), makeToolApproval());
     await svc.ensureDirectories();
     await svc.savePendingTool("good-tool", "# good");
-    const pendingDir = join(tmpHome, ".research-assistant", "pending-tools");
+    const pendingDir = join(tmpHome, ".scholar", "pending-tools");
     // Create a directory instead of a file to make readFile throw
     await mkdir(join(pendingDir, "bad-tool", "SKILL.md"), { recursive: true });
     const tools = await svc.getPendingTools();
@@ -313,10 +313,10 @@ describe("pending tools", () => {
     await svc.approvePendingTool("my-tool");
     const { access } = await import("node:fs/promises");
     await expect(
-      access(join(tmpHome, ".research-assistant", "skills", "my-tool", "SKILL.md")),
+      access(join(tmpHome, ".scholar", "skills", "my-tool", "SKILL.md")),
     ).resolves.toBeUndefined();
     await expect(
-      access(join(tmpHome, ".research-assistant", "pending-tools", "my-tool")),
+      access(join(tmpHome, ".scholar", "pending-tools", "my-tool")),
     ).rejects.toThrow();
   });
 
@@ -327,7 +327,7 @@ describe("pending tools", () => {
     await svc.rejectPendingTool("bad-tool");
     const { access } = await import("node:fs/promises");
     await expect(
-      access(join(tmpHome, ".research-assistant", "pending-tools", "bad-tool")),
+      access(join(tmpHome, ".scholar", "pending-tools", "bad-tool")),
     ).rejects.toThrow();
   });
 });
@@ -346,7 +346,7 @@ describe("builtin skills", () => {
     await svc.ensureDirectories();
     const { readFile } = await import("node:fs/promises");
     const content = await readFile(
-      join(tmpHome, ".research-assistant", "skills", "evaluate-research", "SKILL.md"),
+      join(tmpHome, ".scholar", "skills", "evaluate-research", "SKILL.md"),
       "utf-8",
     );
     expect(content).toContain("evaluate-research");
@@ -357,7 +357,7 @@ describe("builtin skills", () => {
     await svc.ensureDirectories();
     const { access } = await import("node:fs/promises");
     await expect(
-      access(join(tmpHome, ".research-assistant", "skills", "evaluate-research", ".protected")),
+      access(join(tmpHome, ".scholar", "skills", "evaluate-research", ".protected")),
     ).resolves.toBeUndefined();
   });
 });
@@ -384,7 +384,7 @@ describe("skill management", () => {
     const db = mockDb();
     const svc = new HomeService(makeTaskPersistence(db), makeSkillManagement(), makeToolApproval());
     await svc.ensureDirectories();
-    const skillsDir = join(tmpHome, ".research-assistant", "skills");
+    const skillsDir = join(tmpHome, ".scholar", "skills");
     await rm(skillsDir, { recursive: true, force: true });
     expect(await svc.getSkills()).toEqual([]);
   });

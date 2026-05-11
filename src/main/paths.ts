@@ -6,30 +6,22 @@ function resolveHome(): string {
   return homedir();
 }
 
-export function getResearchAssistantHome(): string {
-  return join(resolveHome(), ".research-assistant");
-}
-
-export function getAgentsHome(): string {
-  return join(resolveHome(), ".agents");
+export function getScholarHome(): string {
+  return join(resolveHome(), ".scholar");
 }
 
 export function getHomePath(): string {
-  return getResearchAssistantHome();
-}
-
-export function getAgentsPath(): string {
-  return getAgentsHome();
+  return getScholarHome();
 }
 
 export function getSkillsPath(): string {
-  return join(getResearchAssistantHome(), "skills");
+  return join(getScholarHome(), "skills");
 }
 
 export function getWorkspacePath(): string {
-  return join(getResearchAssistantHome(), "workspace");
+  return join(getScholarHome(), "workspace");
 }
 
-export function getProjectSkillsPaths(projectFolderPath: string): string[] {
-  return [join(projectFolderPath, ".agents"), join(projectFolderPath, ".research-assistant")];
+export function getProjectConfigPath(slug: string): string {
+  return join(getScholarHome(), "projects", slug);
 }

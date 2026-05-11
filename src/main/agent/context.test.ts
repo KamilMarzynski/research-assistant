@@ -28,8 +28,8 @@ describe("loadSkillIndexXml", () => {
     expect(result).toBe("");
   });
 
-  it("returns XML with skills found in ~/.research-assistant/skills", async () => {
-    const skillDir = join(tmpHome, ".research-assistant", "skills", "my-skill");
+  it("returns XML with skills found in ~/.scholar/skills", async () => {
+    const skillDir = join(tmpHome, ".scholar", "skills", "my-skill");
     await mkdir(skillDir, { recursive: true });
     await writeFile(
       join(skillDir, "SKILL.md"),
@@ -43,8 +43,8 @@ describe("loadSkillIndexXml", () => {
   });
 
   it("project-level skill overrides global when same name", async () => {
-    const globalDir = join(tmpHome, ".research-assistant", "skills", "shared-skill");
-    const projectDir = "/tmp/myproject-ctx-test/.agents/skills/shared-skill";
+    const globalDir = join(tmpHome, ".scholar", "skills", "shared-skill");
+    const projectDir = "/tmp/myproject-ctx-test/.scholar/skills/shared-skill";
 
     await mkdir(globalDir, { recursive: true });
     await writeFile(
@@ -66,7 +66,7 @@ describe("loadSkillIndexXml", () => {
   });
 
   it("skips skill directories that contain .disabled file", async () => {
-    const skillDir = join(tmpHome, ".research-assistant", "skills", "disabled-skill");
+    const skillDir = join(tmpHome, ".scholar", "skills", "disabled-skill");
     await mkdir(skillDir, { recursive: true });
     await writeFile(
       join(skillDir, "SKILL.md"),
@@ -79,7 +79,7 @@ describe("loadSkillIndexXml", () => {
   });
 
   it("skips malformed skill entries missing frontmatter", async () => {
-    const skillDir = join(tmpHome, ".research-assistant", "skills", "bad-skill");
+    const skillDir = join(tmpHome, ".scholar", "skills", "bad-skill");
     await mkdir(skillDir, { recursive: true });
     await writeFile(join(skillDir, "SKILL.md"), "# No frontmatter here");
 
@@ -88,7 +88,7 @@ describe("loadSkillIndexXml", () => {
   });
 
   it("skips skill entries where readFile throws", async () => {
-    const skillDir = join(tmpHome, ".research-assistant", "skills", "dir-skill");
+    const skillDir = join(tmpHome, ".scholar", "skills", "dir-skill");
     await mkdir(skillDir, { recursive: true });
     // Create a directory named SKILL.md to make readFile throw EISDIR
     await mkdir(join(skillDir, "SKILL.md"), { recursive: true });
@@ -140,7 +140,7 @@ describe("buildSystemContext", () => {
   });
 
   it("includes config.md content when present", async () => {
-    const home = join(tmpHome, ".research-assistant");
+    const home = join(tmpHome, ".scholar");
     await mkdir(home, { recursive: true });
     await writeFile(join(home, "config.md"), "# My working style\nI prefer folders.");
 
@@ -149,7 +149,7 @@ describe("buildSystemContext", () => {
   });
 
   it("includes AGENTS.md content when present", async () => {
-    const home = join(tmpHome, ".research-assistant");
+    const home = join(tmpHome, ".scholar");
     const slug = "my-project";
     await mkdir(join(home, "projects", slug), { recursive: true });
     await writeFile(
@@ -162,7 +162,7 @@ describe("buildSystemContext", () => {
   });
 
   it("skips empty config.md", async () => {
-    const home = join(tmpHome, ".research-assistant");
+    const home = join(tmpHome, ".scholar");
     await mkdir(home, { recursive: true });
     await writeFile(join(home, "config.md"), "   ");
 
@@ -171,7 +171,7 @@ describe("buildSystemContext", () => {
   });
 
   it("skips empty AGENTS.md", async () => {
-    const home = join(tmpHome, ".research-assistant");
+    const home = join(tmpHome, ".scholar");
     const slug = "my-project";
     await mkdir(join(home, "projects", slug), { recursive: true });
     await writeFile(join(home, "projects", slug, "AGENTS.md"), "   ");
@@ -181,7 +181,7 @@ describe("buildSystemContext", () => {
   });
 
   it("generates correct slug from project name", async () => {
-    const home = join(tmpHome, ".research-assistant");
+    const home = join(tmpHome, ".scholar");
     // "My Cool Project!" → "my-cool-project"
     const slug = "my-cool-project";
     await mkdir(join(home, "projects", slug), { recursive: true });
@@ -192,7 +192,7 @@ describe("buildSystemContext", () => {
   });
 
   it("includes skills XML when skills are present", async () => {
-    const home = join(tmpHome, ".research-assistant");
+    const home = join(tmpHome, ".scholar");
     const skillDir = join(home, "skills", "my-skill");
     await mkdir(skillDir, { recursive: true });
     await writeFile(
@@ -212,7 +212,7 @@ describe("buildSystemContext", () => {
   });
 
   it("loads existing AGENTS.md when present", async () => {
-    const home = join(tmpHome, ".research-assistant");
+    const home = join(tmpHome, ".scholar");
     const slug = "test-project";
     await mkdir(join(home, "projects", slug), { recursive: true });
     await writeFile(
@@ -226,7 +226,7 @@ describe("buildSystemContext", () => {
   });
 
   it("includes app-level MEMORY.md when present", async () => {
-    const home = join(tmpHome, ".research-assistant");
+    const home = join(tmpHome, ".scholar");
     await mkdir(join(home, "app-memory"), { recursive: true });
     await writeFile(join(home, "app-memory", "MEMORY.md"), "# App Memory\nI remember things.");
 
@@ -260,7 +260,7 @@ describe("loadSkillsByContent", () => {
   });
 
   it("returns SKILL.md full content for a matching skill", async () => {
-    const skillDir = join(tmpHome, ".research-assistant", "skills", "my-skill");
+    const skillDir = join(tmpHome, ".scholar", "skills", "my-skill");
     await mkdir(skillDir, { recursive: true });
     await writeFile(
       join(skillDir, "SKILL.md"),
@@ -278,7 +278,7 @@ describe("loadSkillsByContent", () => {
 
   it("joins multiple skills with separator", async () => {
     for (const name of ["skill-a", "skill-b"]) {
-      const dir = join(tmpHome, ".research-assistant", "skills", name);
+      const dir = join(tmpHome, ".scholar", "skills", name);
       await mkdir(dir, { recursive: true });
       await writeFile(
         join(dir, "SKILL.md"),
@@ -291,14 +291,14 @@ describe("loadSkillsByContent", () => {
   });
 
   it("resolves skill from project folder when present", async () => {
-    const globalDir = join(tmpHome, ".research-assistant", "skills", "proj-skill");
+    const globalDir = join(tmpHome, ".scholar", "skills", "proj-skill");
     await mkdir(globalDir, { recursive: true });
     await writeFile(
       join(globalDir, "SKILL.md"),
       "---\nname: proj-skill\ndescription: global version\n---\n# global",
     );
 
-    const projectDir = "/tmp/proj-skill-test/.agents/skills/proj-skill";
+    const projectDir = "/tmp/proj-skill-test/.scholar/skills/proj-skill";
     await mkdir(projectDir, { recursive: true });
     await writeFile(
       join(projectDir, "SKILL.md"),

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import type { SkillInfo } from "../../shared/ipc-channels";
 import { BUILTIN_SKILLS } from "../agent/builtin-skills";
-import { getAgentsPath, getHomePath } from "../paths";
+import { getHomePath } from "../paths";
 import { SkillManagementService } from "./SkillManagementService";
 import { type ResearchTask, TaskPersistenceService } from "./TaskPersistenceService";
 import { ToolApprovalService } from "./ToolApprovalService";
@@ -25,13 +25,8 @@ export class HomeService {
     return getHomePath();
   }
 
-  getAgentsPath(): string {
-    return getAgentsPath();
-  }
-
   async ensureDirectories(): Promise<void> {
     const home = this.getHomePath();
-    const agents = this.getAgentsPath();
 
     const dirs = [
       home,
@@ -40,7 +35,6 @@ export class HomeService {
       join(home, "projects"),
       join(home, "tasks"),
       join(home, "pending-tools"),
-      join(agents, "skills"),
     ];
 
     for (const dir of dirs) {

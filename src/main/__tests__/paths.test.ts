@@ -1,51 +1,38 @@
 import { describe, expect, it } from "vitest";
 import {
-  getAgentsHome,
-  getAgentsPath,
   getHomePath,
-  getProjectSkillsPaths,
-  getResearchAssistantHome,
+  getProjectConfigPath,
+  getScholarHome,
   getSkillsPath,
   getWorkspacePath,
 } from "../paths";
 
 describe("paths", () => {
-  it("getResearchAssistantHome returns a path containing .research-assistant", () => {
-    const home = getResearchAssistantHome();
-    expect(home).toContain(".research-assistant");
+  it("getScholarHome returns a path containing .scholar", () => {
+    const home = getScholarHome();
+    expect(home).toContain(".scholar");
   });
 
-  it("getAgentsHome returns a path containing .agents", () => {
-    const home = getAgentsHome();
-    expect(home).toContain(".agents");
+  it("getHomePath is an alias for getScholarHome", () => {
+    expect(getHomePath()).toBe(getScholarHome());
   });
 
-  it("getHomePath is an alias for getResearchAssistantHome", () => {
-    expect(getHomePath()).toBe(getResearchAssistantHome());
-  });
-
-  it("getAgentsPath is an alias for getAgentsHome", () => {
-    expect(getAgentsPath()).toBe(getAgentsHome());
-  });
-
-  it("getSkillsPath returns a path under research-assistant home", () => {
+  it("getSkillsPath returns a path under scholar home", () => {
     const path = getSkillsPath();
     expect(path).toContain("skills");
-    expect(path).toContain(".research-assistant");
+    expect(path).toContain(".scholar");
   });
 
-  it("getWorkspacePath returns a path under research-assistant home", () => {
+  it("getWorkspacePath returns a path under scholar home", () => {
     const path = getWorkspacePath();
     expect(path).toContain("workspace");
-    expect(path).toContain(".research-assistant");
+    expect(path).toContain(".scholar");
   });
 
-  it("getProjectSkillsPaths returns parent dirs so watch catches skills subdir creation", () => {
-    const paths = getProjectSkillsPaths("/my/project");
-    expect(paths).toHaveLength(2);
-    expect(paths[0]).toContain(".agents");
-    expect(paths[1]).toContain(".research-assistant");
-    expect(paths[0]).not.toContain("skills");
-    expect(paths[1]).not.toContain("skills");
+  it("getProjectConfigPath returns a path under projects with the given slug", () => {
+    const path = getProjectConfigPath("my-project");
+    expect(path).toContain("projects");
+    expect(path).toContain("my-project");
+    expect(path).toContain(".scholar");
   });
 });

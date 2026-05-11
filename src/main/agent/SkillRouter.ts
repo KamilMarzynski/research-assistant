@@ -1,7 +1,7 @@
 import { existsSync, watch } from "node:fs";
 import { access, readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { getAgentsHome, getProjectSkillsPaths, getResearchAssistantHome } from "../paths";
+import { getScholarHome } from "../paths";
 import { parseFrontmatter } from "../utils/frontmatter";
 
 export interface SkillMeta {
@@ -184,9 +184,8 @@ export function createDefaultSkillRouter(
   onChange?: (skillName: string, summary: string) => void,
 ): SkillRouter {
   const dirs = [
-    join(getAgentsHome(), "skills"),
-    join(getResearchAssistantHome(), "skills"),
-    ...(projectFolderPath ? getProjectSkillsPaths(projectFolderPath) : []),
+    join(getScholarHome(), "skills"),
+    ...(projectFolderPath ? [join(projectFolderPath, ".scholar")] : []),
   ];
   return new SkillRouter(dirs, onChange);
 }
