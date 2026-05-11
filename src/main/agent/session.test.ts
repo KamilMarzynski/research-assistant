@@ -44,6 +44,7 @@ vi.mock("./worker-agent", () => ({
 
 vi.mock("./context", () => ({
   buildSystemContext: vi.fn().mockResolvedValue("mocked system context"),
+  toSlug: vi.fn((name: string) => name.toLowerCase().replace(/\s+/g, "-")),
 }));
 
 const { AgentSession } = await import("./session");

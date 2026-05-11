@@ -95,7 +95,7 @@ export class AgentSession {
     this.projectName = projectName;
     this.folderPath = folderPath;
 
-    this.skillRouter = createDefaultSkillRouter(folderPath ?? undefined, (skillName, summary) => {
+    this.skillRouter = createDefaultSkillRouter(projectName, (skillName, summary) => {
       this.pendingSkillDeltas.push({ skillName, summary });
     });
 
@@ -247,7 +247,6 @@ export class AgentSession {
         const historyBlock = formatConversationHistory(memoryContext.recentMessages);
         const systemContext = await buildSystemContext(
           this.projectName,
-          this.folderPath ?? undefined,
           this.skillRouter.toXml(),
         );
 
