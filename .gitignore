@@ -12,3 +12,4 @@ coverage/
 .claude/skills/
 skills-lock.json
 test-results/
+tests/eval/reports/
