@@ -28,7 +28,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
-    include: ['src/**/__tests__/**/*.{ts,tsx}', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
+    include: ['src/**/__tests__/**/*.{ts,tsx}', 'src/**/*.test.ts', 'src/**/*.test.tsx', 'tests/eval/**/*.test.ts'],
     server: {
       deps: {
         fallbackCJS: true,
