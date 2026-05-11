@@ -84,6 +84,16 @@ const ALLOWED_BUILTINS = new Set([
   "[",
 ]);
 
+const INTERPRETER_META: Record<
+  string,
+  { language: InlineCodeHint["language"]; flagReason: string; replReason: string }
+> = {
+  python3: { language: "python", flagReason: "python3 -c flag", replReason: "interactive REPL" },
+  python: { language: "python", flagReason: "python -c flag", replReason: "interactive REPL" },
+  node: { language: "javascript", flagReason: "node -e flag", replReason: "interactive REPL" },
+  bun: { language: "typescript", flagReason: "bun -e flag", replReason: "interactive REPL" },
+};
+
 // Dangerous commands always blocked
 const DANGEROUS_COMMANDS = [
   {
@@ -136,8 +146,8 @@ function stripRedirects(command: string): string {
   cleaned = cleaned.replace(/\d*>&\d*/g, "");
   // Remove &> and &>> with target
   cleaned = cleaned.replace(/&>>?\s*\S+/g, "");
-  // Remove >>, >, < with target
-  cleaned = cleaned.replace(/(?<!\d)>>?\s*\S+/g, "");
+  // Remove >>, > with target (including fd-prefixed like 2> file)
+  cleaned = cleaned.replace(/\d*>>?\s*\S+/g, "");
   cleaned = cleaned.replace(/<<?\s*\S+/g, "");
   return cleaned.trim();
 }
@@ -153,9 +163,11 @@ function stripRedirects(command: string): string {
 function tokenize(command: string): string[] {
   const tokens: string[] = [];
   const regex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
-  let match;
-  while ((match = regex.exec(command)) !== null) {
+  let match: RegExpExecArray | null = null;
+  match = regex.exec(command);
+  while (match !== null) {
     tokens.push(match[1] ?? match[2] ?? match[0]);
+    match = regex.exec(command);
   }
   return tokens;
 }
@@ -171,7 +183,11 @@ export function detectInlineCode(command: string): InlineCodeHint | null {
 
   const binary = tokens[0].split("/").pop() ?? tokens[0];
 
-  if (binary !== "python3" && binary !== "python" && binary !== "node" && binary !== "bun") {
+  const isPython = binary === "python3" || binary === "python" || /^python3\.\d+$/.test(binary);
+  const isNode = binary === "node" || binary === "node.exe";
+  const isBun = binary === "bun";
+
+  if (!isPython && !isNode && !isBun) {
     return null;
   }
 
@@ -197,24 +213,14 @@ export function detectInlineCode(command: string): InlineCodeHint | null {
     return null;
   }
 
+  const metaKey = isPython ? (binary === "python" ? "python" : "python3") : isNode ? "node" : "bun";
+  const meta = INTERPRETER_META[metaKey];
+
   if (hasCodeFlag) {
-    if (binary === "python3" || binary === "python") {
-      return { detected: true, language: "python", reason: "python3 -c flag" };
-    }
-    if (binary === "node") {
-      return { detected: true, language: "javascript", reason: "node -e flag" };
-    }
-    return { detected: true, language: "typescript", reason: "bun -e flag" };
+    return { detected: true, language: meta.language, reason: meta.flagReason };
   }
 
-  // No positional args and no code flag → interactive REPL
-  if (binary === "python3" || binary === "python") {
-    return { detected: true, language: "python", reason: "interactive REPL" };
-  }
-  if (binary === "node") {
-    return { detected: true, language: "javascript", reason: "interactive REPL" };
-  }
-  return { detected: true, language: "typescript", reason: "interactive REPL" };
+  return { detected: true, language: meta.language, reason: meta.replReason };
 }
 
 function hasUnsafeOperators(command: string): boolean {

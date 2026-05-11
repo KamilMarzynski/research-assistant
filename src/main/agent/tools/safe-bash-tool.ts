@@ -14,7 +14,10 @@ export function createSafeBashTool(
     name: "safe_bash",
     label: "Run safe bash command",
     description:
-      "Execute a bash command in the project workspace. Always state your intent. Dangerous commands are blocked automatically.",
+      "Execute a bash command in the project workspace. " +
+      "Use for CLI operations, package managers, git, and running existing project scripts. " +
+      "For inline code execution (python3 -c, node -e, bun -e) or interactive interpreters, use run_in_docker instead. " +
+      "Always state your intent. Dangerous commands are blocked automatically.",
     parameters: safeBashParameters,
     execute: async (_id, { command, intent }) => {
       await mkdir(workspacePath, { recursive: true });

@@ -11,7 +11,9 @@ export function createDockerTool(
     name: "run_in_docker",
     label: "Run code in Docker",
     description:
-      "Execute code in an isolated Docker container. Write output files to /workspace/output/ to receive them back as outputFiles.",
+      "Execute code in an isolated Docker container. Use for running Python, JavaScript, TypeScript, or Bash code safely. " +
+      "Pass input files via workspaceFiles (absolute paths validated by jail) or inline via files. " +
+      "Write output files to /workspace/output/ to receive them back as outputFiles.",
     parameters: dockerParameters,
     execute: async (_id, { code, language, files, workspaceFiles, networkEnabled }) => {
       const resolvedWorkspaceFiles =
@@ -45,9 +47,15 @@ export function createDockerTool(
 
 const dockerParameters = Type.Object({
   code: Type.String({ description: "Code to execute" }),
-  language: Type.Union([Type.Literal("python"), Type.Literal("bash"), Type.Literal("typescript")], {
-    description: "Programming language",
-  }),
+  language: Type.Union(
+    [
+      Type.Literal("python"),
+      Type.Literal("bash"),
+      Type.Literal("typescript"),
+      Type.Literal("javascript"),
+    ],
+    { description: "Programming language" },
+  ),
   files: Type.Optional(
     Type.Array(Type.Object({ name: Type.String(), content: Type.String() }), {
       description: "Additional files to write into /workspace before execution",

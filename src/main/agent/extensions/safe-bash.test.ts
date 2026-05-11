@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -105,6 +105,16 @@ describe("detectInlineCode", () => {
       expect(result).toEqual({ detected: true, language: "python", reason: "interactive REPL" });
     });
 
+    it("detects python3.11 -c flag", () => {
+      const result = detectInlineCode('python3.11 -c "print(1)"');
+      expect(result).toEqual({ detected: true, language: "python", reason: "python3 -c flag" });
+    });
+
+    it("detects python3.12 interactive REPL", () => {
+      const result = detectInlineCode("python3.12");
+      expect(result).toEqual({ detected: true, language: "python", reason: "interactive REPL" });
+    });
+
     it("detects node -e flag", () => {
       const result = detectInlineCode('node -e "console.log(1)"');
       expect(result).toEqual({ detected: true, language: "javascript", reason: "node -e flag" });
@@ -127,7 +137,11 @@ describe("detectInlineCode", () => {
 
     it("detects node interactive REPL", () => {
       const result = detectInlineCode("node");
-      expect(result).toEqual({ detected: true, language: "javascript", reason: "interactive REPL" });
+      expect(result).toEqual({
+        detected: true,
+        language: "javascript",
+        reason: "interactive REPL",
+      });
     });
 
     it("detects bun -e flag", () => {
@@ -142,7 +156,11 @@ describe("detectInlineCode", () => {
 
     it("detects bun interactive REPL", () => {
       const result = detectInlineCode("bun");
-      expect(result).toEqual({ detected: true, language: "typescript", reason: "interactive REPL" });
+      expect(result).toEqual({
+        detected: true,
+        language: "typescript",
+        reason: "interactive REPL",
+      });
     });
   });
 
@@ -190,12 +208,25 @@ describe("detectInlineCode", () => {
 
     it("detects bare node after stripping heredoc redirect", () => {
       const result = detectInlineCode("node << 'EOF'");
-      expect(result).toEqual({ detected: true, language: "javascript", reason: "interactive REPL" });
+      expect(result).toEqual({
+        detected: true,
+        language: "javascript",
+        reason: "interactive REPL",
+      });
     });
 
     it("detects bare bun after stripping heredoc redirect", () => {
       const result = detectInlineCode("bun << 'EOF'");
-      expect(result).toEqual({ detected: true, language: "typescript", reason: "interactive REPL" });
+      expect(result).toEqual({
+        detected: true,
+        language: "typescript",
+        reason: "interactive REPL",
+      });
+    });
+
+    it("detects python3 after stripping fd-prefixed redirect", () => {
+      const result = detectInlineCode("python3 2> err.log");
+      expect(result).toEqual({ detected: true, language: "python", reason: "interactive REPL" });
     });
   });
 });
@@ -240,6 +271,38 @@ describe("runSafeBash", () => {
     expect(result.stdout).toContain("run_in_docker");
     expect(result.stdout).toContain("python");
     expect(result.stdout).toContain('"language": "python"');
+  });
+
+  it("returns inline code hint for node -e instead of executing", async () => {
+    const result = await runSafeBash({
+      command: 'node -e "console.log(1)"',
+      intent: "test node inline code detection",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe("");
+    expect(result.truncated).toBe(false);
+    expect(result.stdout).toContain("run_in_docker");
+    expect(result.stdout).toContain("javascript");
+    expect(result.stdout).toContain('"language": "javascript"');
+  });
+
+  it("returns inline code hint for bun -e instead of executing", async () => {
+    const result = await runSafeBash({
+      command: 'bun -e "console.log(1)"',
+      intent: "test bun inline code detection",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe("");
+    expect(result.truncated).toBe(false);
+    expect(result.stdout).toContain("run_in_docker");
+    expect(result.stdout).toContain("typescript");
+    expect(result.stdout).toContain('"language": "typescript"');
   });
 
   it("returns non-zero exitCode on failure", async () => {
@@ -301,25 +364,31 @@ describe("runSafeBash", () => {
   });
 
   it("truncates stdout when output exceeds MAX_OUTPUT_CHARS", async () => {
+    const bigStdoutFile = join(workDir, "big-stdout.js");
+    await writeFile(bigStdoutFile, "console.log('x'.repeat(70000))", "utf-8");
     const result = await runSafeBash({
-      command: `node -e "console.log('x'.repeat(70000))"`,
+      command: `node ${bigStdoutFile}`,
       intent: "test truncation",
       projectId: "p1",
       workspacePath: workDir,
       auditLogPath,
     });
+    expect(result.exitCode).toBe(0);
     expect(result.truncated).toBe(true);
     expect(result.stdout).toContain("[truncated");
   });
 
   it("truncates stderr when output exceeds MAX_OUTPUT_CHARS", async () => {
+    const bigStderrFile = join(workDir, "big-stderr.js");
+    await writeFile(bigStderrFile, "console.error('x'.repeat(70000))", "utf-8");
     const result = await runSafeBash({
-      command: `node -e "console.error('x'.repeat(70000))"`,
+      command: `node ${bigStderrFile}`,
       intent: "test stderr truncation",
       projectId: "p1",
       workspacePath: workDir,
       auditLogPath,
     });
+    expect(result.exitCode).toBe(0);
     expect(result.truncated).toBe(true);
     expect(result.stderr.length).toBeLessThanOrEqual(65536 + 1); // allow one char rounding
   });
