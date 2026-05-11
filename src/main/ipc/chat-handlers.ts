@@ -110,7 +110,7 @@ export function registerChatHandler(
           project.name,
           project.folderPath ?? undefined,
         );
-        const initialMemoryContext = await memoryManager.buildContext(projectId, 20);
+        const initialMemoryContext = await memoryManager.buildContext(projectId);
         const session = new AgentSession({
           messageService,
           eventBus,

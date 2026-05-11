@@ -243,7 +243,7 @@ export class AgentSession {
           this.skillRouterReady = true;
         }
 
-        const memoryContext = await this.memoryManager.buildContext(this.projectId, 20);
+        const memoryContext = await this.memoryManager.buildContext(this.projectId);
         const historyBlock = formatConversationHistory(memoryContext.recentMessages);
         const systemContext = await buildSystemContext(this.projectName, this.skillRouter.toXml());
 
