@@ -11,8 +11,10 @@ export interface MemoryContext {
   recentMessages: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
+const WORKING_SET_MESSAGES = 100;
+
 export interface IMemoryManager {
-  buildContext(projectId: string, maxRecent: number): Promise<MemoryContext>;
+  buildContext(projectId: string): Promise<MemoryContext>;
   save(
     projectId: string,
     turns: Array<{ role: "user" | "assistant"; content: string }>,
@@ -50,7 +52,7 @@ export class MemoryManager implements IMemoryManager {
     return this.initPromise;
   }
 
-  async buildContext(projectId: string, maxRecent: number): Promise<MemoryContext> {
+  async buildContext(projectId: string): Promise<MemoryContext> {
     try {
       const store = await this.getStore();
       const memoryStore = await store.getStore("memory");
@@ -70,16 +72,17 @@ export class MemoryManager implements IMemoryManager {
       // Retrieve recent messages for history injection
       let recentMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
       try {
-        // orderBy createdAt ASC (default) returns messages oldest-first, which is
-        // the correct chronological order for <conversation_history> injection.
+        // Fetch newest-first (DESC), then slice and reverse to chronological order.
         // StorageListMessagesInput.orderBy is typed as StorageOrderBy<'createdAt'>.
         const result = await memoryStore.listMessages({
           threadId: projectId,
-          perPage: maxRecent,
-          orderBy: { field: "createdAt", direction: "ASC" },
+          perPage: WORKING_SET_MESSAGES,
+          orderBy: { field: "createdAt", direction: "DESC" },
         });
         recentMessages = result.messages
+          .slice(0, WORKING_SET_MESSAGES)
           .filter((m) => m.role === "user" || m.role === "assistant")
+          .reverse()
           .map((m) => ({
             role: m.role as "user" | "assistant",
             // Extract text from MastraMessageContentV2 parts

@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock electron — safeStorage is main-process only
+// Mock electron — safeStorage and dialog are main-process only
 vi.mock("electron", () => ({
   safeStorage: {
     isEncryptionAvailable: vi.fn().mockReturnValue(false),
@@ -9,6 +9,7 @@ vi.mock("electron", () => ({
     decryptString: vi.fn((b: Buffer) => b.toString()),
   },
   app: { getPath: vi.fn().mockReturnValue("/tmp") },
+  dialog: { showOpenDialog: vi.fn().mockResolvedValue({ canceled: true, filePaths: [] }) },
 }));
 
 // Mock node:fs/promises
@@ -149,7 +150,7 @@ describe("MemoryManager", () => {
 
   describe("buildContext()", () => {
     it("returns empty context on first use (no thread, no messages)", async () => {
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx).toEqual({ summary: "", recentMessages: [] });
     });
@@ -162,20 +163,21 @@ describe("MemoryManager", () => {
         return Promise.resolve(null);
       });
 
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.summary).toBe("Prior work summary.");
     });
 
     it("returns recent messages mapped to { role, content } strings", async () => {
+      // Mock returns DESC order (newest first); implementation reverses to chronological
       mockMemoryStore.listMessages.mockResolvedValue({
         messages: [
-          makeMastraMessage("user", "Hello from user"),
           makeMastraMessage("assistant", "Hello from assistant"),
+          makeMastraMessage("user", "Hello from user"),
         ],
       });
 
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.recentMessages).toEqual([
         { role: "user", content: "Hello from user" },
@@ -183,15 +185,31 @@ describe("MemoryManager", () => {
       ]);
     });
 
-    it("respects maxRecent by passing it as perPage to listMessages", async () => {
-      await manager.buildContext("proj-1", 5);
+    it("loads working set of 100 messages ordered by createdAt DESC", async () => {
+      await manager.buildContext("proj-1");
 
       expect(mockMemoryStore.listMessages).toHaveBeenCalledWith(
         expect.objectContaining({
-          perPage: 5,
-          orderBy: { field: "createdAt", direction: "ASC" },
+          perPage: 100,
+          orderBy: { field: "createdAt", direction: "DESC" },
         }),
       );
+    });
+
+    it("returns only the last 100 messages when 150 exist, in chronological order", async () => {
+      const allMessages = Array.from({ length: 150 }, (_, i) =>
+        makeMastraMessage(i % 2 === 0 ? "user" : "assistant", `message-${i}`),
+      );
+      // Simulate store returning the 100 newest messages in DESC order
+      const newest100 = allMessages.slice(-100).reverse();
+      mockMemoryStore.listMessages.mockResolvedValue({ messages: newest100 });
+
+      const ctx = await manager.buildContext("proj-1");
+
+      expect(ctx.recentMessages).toHaveLength(100);
+      // After DESC fetch + reverse, chronological order: message-50 ... message-149
+      expect(ctx.recentMessages[0].content).toBe("message-50");
+      expect(ctx.recentMessages[99].content).toBe("message-149");
     });
 
     it("filters out non-user/assistant messages (e.g. system)", async () => {
@@ -203,7 +221,7 @@ describe("MemoryManager", () => {
         ],
       });
 
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.recentMessages).toHaveLength(2);
       expect(ctx.recentMessages.every((m) => m.role === "user" || m.role === "assistant")).toBe(
@@ -214,7 +232,7 @@ describe("MemoryManager", () => {
     it("returns empty context when store.getStore('memory') throws", async () => {
       mockLibSQLStoreInstance.getStore.mockRejectedValueOnce(new Error("DB unavailable"));
 
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx).toEqual({ summary: "", recentMessages: [] });
     });
@@ -225,7 +243,7 @@ describe("MemoryManager", () => {
         messages: [makeMastraMessage("user", "some message")],
       });
 
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.summary).toBe("");
       expect(ctx.recentMessages).toHaveLength(1);
@@ -237,7 +255,7 @@ describe("MemoryManager", () => {
       });
       mockMemoryStore.listMessages.mockRejectedValueOnce(new Error("list error"));
 
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.summary).toBe("Existing summary.");
       expect(ctx.recentMessages).toEqual([]);
@@ -246,20 +264,21 @@ describe("MemoryManager", () => {
     it("returns empty context when store.getStore('memory') resolves to undefined in buildContext", async () => {
       mockLibSQLStoreInstance.getStore.mockResolvedValueOnce(undefined);
 
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx).toEqual({ summary: "", recentMessages: [] });
     });
 
     it("extracts content correctly when messages have plain string content", async () => {
+      // Mock returns DESC order (newest first); implementation reverses to chronological
       mockMemoryStore.listMessages.mockResolvedValue({
         messages: [
-          makeMastraMessageStringContent("user", "plain string content"),
           makeMastraMessageStringContent("assistant", "plain reply"),
+          makeMastraMessageStringContent("user", "plain string content"),
         ],
       });
 
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.recentMessages).toEqual([
         { role: "user", content: "plain string content" },
@@ -274,7 +293,7 @@ describe("MemoryManager", () => {
         messages: [nonFormat2Msg],
       });
 
-      const ctx = await manager.buildContext("proj-1", 10);
+      const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.recentMessages).toHaveLength(1);
       expect(ctx.recentMessages[0].content).toBe(JSON.stringify({ format: 1, data: "some data" }));
@@ -513,14 +532,14 @@ describe("MemoryManager", () => {
       mockLibSQLStoreInstance.init.mockRejectedValueOnce(new Error("DB locked"));
 
       // First call to buildContext should fail silently (returns empty context)
-      const ctx1 = await manager.buildContext("proj-1", 10);
+      const ctx1 = await manager.buildContext("proj-1");
       expect(ctx1).toEqual({ summary: "", recentMessages: [] });
 
       // Reset init to succeed
       mockLibSQLStoreInstance.init.mockResolvedValue(undefined);
 
       // Second call should succeed (initPromise was reset)
-      const ctx2 = await manager.buildContext("proj-1", 10);
+      const ctx2 = await manager.buildContext("proj-1");
       expect(ctx2).toEqual({ summary: "", recentMessages: [] });
     });
   });

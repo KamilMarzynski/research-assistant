@@ -32,7 +32,9 @@ vi.mock("./model-factory", () => ({
   createModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
 }));
 
-vi.mock("electron", () => ({}));
+vi.mock("electron", () => ({
+  ipcMain: { handle: vi.fn() },
+}));
 
 vi.mock("./tools", () => ({
   createAgentTools: vi.fn().mockReturnValue([{ name: "read_file" }, { name: "write_file" }]),
@@ -53,6 +55,11 @@ function triggerEvent(event: unknown) {
   expect(capturedSubscriber).not.toBeNull();
   // biome-ignore lint/style/noNonNullAssertion: expect() above narrowed the type
   return capturedSubscriber!(event);
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: vitest 4 does not export vi.mocked
+function mocked<T>(value: T): T & { mock: { calls: any[][]; results: any[] } } {
+  return value as never;
 }
 
 function makeMessageService() {
@@ -303,7 +310,7 @@ describe("AgentSession", () => {
   describe("Agent constructor callbacks", () => {
     it("getApiKey returns the configured API key", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
-      const constructorCall = vi.mocked(Agent).mock.calls[0];
+      const constructorCall = mocked(Agent).mock.calls[0];
       const options = constructorCall[0] as {
         getApiKey: () => Promise<string>;
       };
@@ -333,14 +340,14 @@ describe("AgentSession", () => {
         langfuseEnabled: false,
         allowlistService: new AllowlistService() as never,
       });
-      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const lastCall = mocked(Agent).mock.calls.at(-1);
       const opts = lastCall?.[0] as { initialState: { tools: unknown[] } };
       expect(opts.initialState.tools).toBeDefined();
     });
 
     it("beforeToolCall blocks unregistered tools", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
-      const constructorCall = vi.mocked(Agent).mock.calls[0];
+      const constructorCall = mocked(Agent).mock.calls[0];
       const options = constructorCall[0] as {
         beforeToolCall: (ctx: {
           toolCall: { name: string };
@@ -352,7 +359,7 @@ describe("AgentSession", () => {
 
     it("beforeToolCall allows registered tools", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
-      const constructorCall = vi.mocked(Agent).mock.calls[0];
+      const constructorCall = mocked(Agent).mock.calls[0];
       const options = constructorCall[0] as {
         beforeToolCall: (ctx: {
           toolCall: { name: string };
@@ -381,7 +388,7 @@ describe("AgentSession", () => {
         langfuseEnabled: false,
         allowlistService: new AllowlistService() as never,
       });
-      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const lastCall = mocked(Agent).mock.calls.at(-1);
       const opts = lastCall?.[0] as { getApiKey: () => Promise<string> };
       const key = await opts.getApiKey();
       expect(key).toBe("ollama");
@@ -411,7 +418,7 @@ describe("AgentSession", () => {
         langfuseEnabled: false,
         allowlistService: new AllowlistService() as never,
       });
-      const opts = vi.mocked(createAgentTools).mock.calls.at(-1)?.[0] as {
+      const opts = mocked(createAgentTools).mock.calls.at(-1)?.[0] as {
         startResearchFn?: (query: string, deep?: boolean) => Promise<unknown>;
       };
       await opts?.startResearchFn?.("deep query", true);
@@ -447,7 +454,7 @@ describe("AgentSession", () => {
         langfuseEnabled: false,
         allowlistService: new AllowlistService() as never,
       });
-      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
         ?.systemPrompt;
       expect(prompt).toContain("How do you organise your projects");
@@ -475,7 +482,7 @@ describe("AgentSession", () => {
         langfuseEnabled: false,
         allowlistService: new AllowlistService() as never,
       });
-      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
         ?.systemPrompt;
       expect(prompt).not.toContain("How do you organise");
@@ -629,7 +636,7 @@ describe("AgentSession", () => {
         langfuseEnabled: false,
         allowlistService: new AllowlistService() as never,
       });
-      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
         ?.systemPrompt;
       expect(prompt).toContain("Past context: user prefers TypeScript.");
@@ -670,7 +677,7 @@ describe("AgentSession", () => {
       expect(memoryManager.save).not.toHaveBeenCalled();
     });
 
-    it("injects recent messages as conversation history block when non-empty", async () => {
+    it("seeds initialState.messages with recent messages from memory context", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
       new AgentSession({
         eventBus: makeEventBus(),
@@ -698,12 +705,103 @@ describe("AgentSession", () => {
         langfuseEnabled: false,
         allowlistService: new AllowlistService() as never,
       });
-      const lastCall = vi.mocked(Agent).mock.calls.at(-1);
+      const lastCall = mocked(Agent).mock.calls.at(-1);
+      const messages = (
+        lastCall?.[0] as {
+          initialState: { messages?: Array<{ role: string; content: string }> };
+        }
+      )?.initialState?.messages;
+      expect(messages).toHaveLength(2);
+      expect(messages?.[0]).toMatchObject({ role: "user", content: "Hello from last session" });
+      expect(messages?.[1]).toMatchObject({
+        role: "assistant",
+        content: "Hi there from last session",
+      });
+      expect(messages?.[0]).toHaveProperty("timestamp");
+      expect(messages?.[1]).toHaveProperty("timestamp");
+    });
+
+    it("does not inject conversation history into system prompt", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      new AgentSession({
+        eventBus: makeEventBus(),
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: {
+          summary: "",
+          recentMessages: [
+            { role: "user", content: "Hello from last session" },
+            { role: "assistant", content: "Hi there from last session" },
+          ],
+        },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        provider: {
+          type: "openrouter",
+          apiKey: "sk-or-test",
+          model: "anthropic/claude-sonnet-4-6",
+        },
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+        allowlistService: new AllowlistService() as never,
+      });
+      const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
         ?.systemPrompt;
-      expect(prompt).toContain("Hello from last session");
-      expect(prompt).toContain("Hi there from last session");
-      expect(prompt).toContain("<conversation_history>");
+      expect(prompt).not.toContain("Hello from last session");
+      expect(prompt).not.toContain("Hi there from last session");
+      expect(prompt).not.toContain("<conversation_history>");
+    });
+
+    it("passes transformContext that prunes messages exceeding token budget", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      new AgentSession({
+        eventBus: makeEventBus(),
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        provider: {
+          type: "openrouter",
+          apiKey: "sk-or-test",
+          model: "anthropic/claude-sonnet-4-6",
+        },
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+        allowlistService: new AllowlistService() as never,
+      });
+      const lastCall = mocked(Agent).mock.calls.at(-1);
+      const transformContext = (
+        lastCall?.[0] as {
+          transformContext?: (
+            messages: Array<{ role: string; content: string }>,
+          ) => Promise<Array<{ role: string; content: string }>>;
+        }
+      )?.transformContext;
+      expect(transformContext).toBeDefined();
+
+      // A message large enough to exceed the Claude 200k context window budget
+      const longMessage = "x".repeat(800_000); // ~200k tokens
+      const messages = [
+        { role: "user" as const, content: longMessage },
+        { role: "assistant" as const, content: "middle" },
+        { role: "user" as const, content: "latest" },
+      ];
+      if (!transformContext) throw new Error("transformContext expected");
+      const result = await transformContext(messages);
+      // The oldest oversized message is pruned; the two newest are kept
+      expect(result).toHaveLength(2);
+      expect(result[0].content).toBe("middle");
+      expect(result[1].content).toBe("latest");
     });
   });
 
@@ -751,14 +849,19 @@ describe("AgentSession", () => {
   });
 
   describe("system prompt refresh", () => {
-    it("updates agent.state.systemPrompt on send()", async () => {
+    it("does NOT change systemPrompt when summary and context are unchanged", async () => {
       const { buildSystemContext } = await import("./context");
-      (buildSystemContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce("refreshed context");
+      (buildSystemContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce("stable context");
+      (buildSystemContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce("stable context");
 
       const memoryManager = makeMemoryManager();
       (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        summary: "refreshed summary",
-        recentMessages: [{ role: "user", content: "hi" }],
+        summary: "stable summary",
+        recentMessages: [],
+      });
+      (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        summary: "stable summary",
+        recentMessages: [],
       });
 
       const localSession = new AgentSession({
@@ -783,9 +886,98 @@ describe("AgentSession", () => {
       });
 
       await localSession.send("hello");
-      expect(mockAgent.state.systemPrompt).toContain("refreshed context");
-      expect(mockAgent.state.systemPrompt).toContain("refreshed summary");
-      expect(mockAgent.state.systemPrompt).toContain("hi");
+      const firstPrompt = mockAgent.state.systemPrompt;
+
+      await localSession.send("hello again");
+      expect(mockAgent.state.systemPrompt).toBe(firstPrompt);
+    });
+
+    it("DOES change systemPrompt when summary changes", async () => {
+      const { buildSystemContext } = await import("./context");
+      (buildSystemContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce("stable context");
+      (buildSystemContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce("stable context");
+
+      const memoryManager = makeMemoryManager();
+      (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        summary: "first summary",
+        recentMessages: [],
+      });
+      (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        summary: "changed summary",
+        recentMessages: [],
+      });
+
+      const localSession = new AgentSession({
+        eventBus: makeEventBus(),
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: memoryManager as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        provider: {
+          type: "openrouter",
+          apiKey: "sk-or-test",
+          model: "anthropic/claude-sonnet-4-6",
+        },
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+        allowlistService: new AllowlistService() as never,
+      });
+
+      await localSession.send("hello");
+      const firstPrompt = mockAgent.state.systemPrompt;
+
+      await localSession.send("hello again");
+      expect(mockAgent.state.systemPrompt).not.toBe(firstPrompt);
+      expect(mockAgent.state.systemPrompt).toContain("changed summary");
+    });
+
+    it("DOES change systemPrompt when buildSystemContext returns different context", async () => {
+      const { buildSystemContext } = await import("./context");
+      (buildSystemContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce("first context");
+      (buildSystemContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce("changed context");
+
+      const memoryManager = makeMemoryManager();
+      (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        summary: "stable summary",
+        recentMessages: [],
+      });
+      (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        summary: "stable summary",
+        recentMessages: [],
+      });
+
+      const localSession = new AgentSession({
+        eventBus: makeEventBus(),
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: memoryManager as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        provider: {
+          type: "openrouter",
+          apiKey: "sk-or-test",
+          model: "anthropic/claude-sonnet-4-6",
+        },
+        isFirstRun: false,
+        systemContext: "",
+        langfuseEnabled: false,
+        allowlistService: new AllowlistService() as never,
+      });
+
+      await localSession.send("hello");
+      const firstPrompt = mockAgent.state.systemPrompt;
+
+      await localSession.send("hello again");
+      expect(mockAgent.state.systemPrompt).not.toBe(firstPrompt);
+      expect(mockAgent.state.systemPrompt).toContain("changed context");
     });
   });
 });

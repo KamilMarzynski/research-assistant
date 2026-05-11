@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { Agent } from "@mariozechner/pi-agent-core";
 import type { EventBus } from "../event-bus";
 import { addPendingPathApproval } from "../ipc/command-handlers";
@@ -23,12 +24,48 @@ Your primary job is to delegate non-trivial tasks to background research workers
 
 When in doubt, research it. Do not guess. It is better to start a quick research task than to give an incomplete or wrong answer.`;
 
-function formatConversationHistory(
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
-): string {
-  if (messages.length === 0) return "";
-  const lines = messages.map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`);
-  return `<conversation_history>\n${lines.join("\n\n")}\n</conversation_history>`;
+const RESERVED_TOKENS = 6000;
+const CHARS_PER_TOKEN = 4;
+
+function createTransformContext(modelId: string) {
+  const contextWindow = getContextWindow(modelId);
+  return async (messages: AgentMessage[]) => {
+    const availableTokens = contextWindow - RESERVED_TOKENS;
+    let estimatedTokens = 0;
+    const pruned: AgentMessage[] = [];
+    // Walk backwards, keep messages that fit
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      const text = extractMessageText(msg);
+      const msgTokens = Math.ceil(text.length / CHARS_PER_TOKEN);
+      if (estimatedTokens + msgTokens > availableTokens) {
+        if (msg.role === "user" && pruned.length === 0) pruned.unshift(msg);
+        break;
+      }
+      estimatedTokens += msgTokens;
+      pruned.unshift(msg);
+    }
+    return pruned;
+  };
+}
+
+function getContextWindow(modelId: string): number {
+  if (modelId.includes("claude-3-opus")) return 200_000;
+  if (modelId.includes("claude-3-5-sonnet") || modelId.includes("claude-sonnet-4")) return 200_000;
+  if (modelId.includes("claude-3-haiku") || modelId.includes("claude-haiku-4")) return 200_000;
+  if (modelId.includes("gpt-4o")) return 128_000;
+  if (modelId.includes("gpt-4-turbo")) return 128_000;
+  if (modelId.includes("gpt-4")) return 8_192;
+  if (modelId.includes("gpt-3.5")) return 16_384;
+  return 128_000;
+}
+
+function extractMessageText(msg: { content: unknown }): string {
+  if (typeof msg.content === "string") return msg.content;
+  if (Array.isArray(msg.content)) {
+    return (msg.content as Array<{ text?: string }>).map((c) => c?.text ?? "").join("");
+  }
+  return "";
 }
 
 export interface AgentSessionOptions {
@@ -58,7 +95,6 @@ export class AgentSession {
   private readonly memoryManager: IMemoryManager;
   private readonly projectId: string;
   private readonly projectName: string;
-  private readonly folderPath: string | null;
   private assistantContent = "";
   private currentTurnId = 0;
   private savedForTurn = 0;
@@ -93,7 +129,6 @@ export class AgentSession {
     this.memoryManager = memoryManager;
     this.projectId = projectId;
     this.projectName = projectName;
-    this.folderPath = folderPath;
 
     this.skillRouter = createDefaultSkillRouter(projectName, (skillName, summary) => {
       this.pendingSkillDeltas.push({ skillName, summary });
@@ -104,16 +139,20 @@ export class AgentSession {
     });
 
     const homePath = homeService.getHomePath();
-    const historyBlock = formatConversationHistory(initialMemoryContext.recentMessages);
 
     const systemPrompt = [
       isFirstRun ? FIRST_RUN_SKILL : BASE_SYSTEM_PROMPT,
       initialMemoryContext.summary,
-      historyBlock,
       systemContext,
     ]
       .filter(Boolean)
       .join("\n\n");
+
+    const initialMessages = initialMemoryContext.recentMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      timestamp: Date.now(),
+    })) as AgentMessage[];
 
     const compressionService = new CompressionService(
       join(homePath, "workspace", projectId, ".compressed"),
@@ -170,7 +209,9 @@ export class AgentSession {
         systemPrompt,
         model: createModel({ provider, langfuseEnabled }),
         tools,
+        messages: initialMessages,
       },
+      transformContext: createTransformContext(provider.model),
       getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),
       beforeToolCall: async (ctx) => {
         const allowed = new Set(tools.map((t) => t.name));
@@ -243,19 +284,16 @@ export class AgentSession {
           this.skillRouterReady = true;
         }
 
-        const memoryContext = await this.memoryManager.buildContext(this.projectId, 20);
-        const historyBlock = formatConversationHistory(memoryContext.recentMessages);
+        const memoryContext = await this.memoryManager.buildContext(this.projectId);
         const systemContext = await buildSystemContext(this.projectName, this.skillRouter.toXml());
 
-        const systemPrompt = [
-          BASE_SYSTEM_PROMPT,
-          memoryContext.summary,
-          historyBlock,
-          systemContext,
-        ]
+        const newSystemPrompt = [BASE_SYSTEM_PROMPT, memoryContext.summary, systemContext]
           .filter(Boolean)
           .join("\n\n");
-        this.agent.state.systemPrompt = systemPrompt;
+
+        if (newSystemPrompt !== this.agent.state.systemPrompt) {
+          this.agent.state.systemPrompt = newSystemPrompt;
+        }
       } catch (err) {
         console.error("[AgentSession] Failed to refresh system context:", err);
       }
