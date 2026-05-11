@@ -62,9 +62,7 @@ const mockMemory = {
 };
 
 vi.mock("@mastra/memory", () => ({
-  Memory: vi.fn().mockImplementation(function () {
-    return mockMemory;
-  }),
+  Memory: vi.fn().mockImplementation(() => mockMemory),
 }));
 
 const { MemoryManager } = await import("../MemoryManager");
