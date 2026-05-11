@@ -2,7 +2,21 @@ import { join } from "node:path";
 import { LibSQLStore } from "@mastra/libsql";
 import { inject, injectable } from "tsyringe";
 import { USER_DATA_PATH_TOKEN } from "../di/tokens";
-import { extractTextContent, MemoryCompressionService } from "./MemoryCompressionService";
+import { MemoryCompressionService } from "./MemoryCompressionService";
+
+function extractTextContent(content: unknown): string {
+  if (typeof content === "string") return content;
+
+  const v2 = content as { format?: number; parts?: Array<{ type?: string; text?: string }> };
+  if (v2?.format === 2 && Array.isArray(v2.parts)) {
+    return v2.parts
+      .filter((p): p is { type: "text"; text: string } => p?.type === "text")
+      .map((p) => p.text ?? "")
+      .join("");
+  }
+
+  return JSON.stringify(content);
+}
 
 export interface MemoryContext {
   /** Compressed summary from past sessions. Empty string on first use. */
