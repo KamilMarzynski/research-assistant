@@ -3,6 +3,7 @@ import { access, readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { getScholarHome } from "../paths";
 import { parseFrontmatter } from "../utils/frontmatter";
+import { toSlug } from "./context";
 
 export interface SkillMeta {
   name: string;
@@ -180,12 +181,12 @@ export class SkillRouter {
 }
 
 export function createDefaultSkillRouter(
-  projectFolderPath: string | undefined,
+  projectName: string | undefined,
   onChange?: (skillName: string, summary: string) => void,
 ): SkillRouter {
-  const dirs = [
-    join(getScholarHome(), "skills"),
-    ...(projectFolderPath ? [join(projectFolderPath, ".scholar")] : []),
-  ];
+  const dirs = [join(getScholarHome(), "skills")];
+  if (projectName) {
+    dirs.push(join(getScholarHome(), "projects", toSlug(projectName), "skills"));
+  }
   return new SkillRouter(dirs, onChange);
 }
