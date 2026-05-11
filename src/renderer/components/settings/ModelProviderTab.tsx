@@ -24,8 +24,6 @@ export interface ModelOption {
 interface ModelProviderTabProps {
   activeProvider: string;
   onActiveProviderChange: (provider: string) => void;
-  defaultCloudProvider: string;
-  onDefaultCloudProviderChange: (provider: string) => void;
   credentials: ProviderCredentials;
   onCredentialsChange: (credentials: ProviderCredentials) => void;
   availableModels: ModelOption[];
@@ -58,8 +56,6 @@ const PROVIDERS: Array<{
 export default function ModelProviderTab({
   activeProvider,
   onActiveProviderChange,
-  defaultCloudProvider,
-  onDefaultCloudProviderChange,
   credentials,
   onCredentialsChange,
   availableModels,
@@ -318,24 +314,6 @@ export default function ModelProviderTab({
                 <IconX size={12} /> Not reachable
               </span>
             )}
-          </div>
-          <div style={{ marginTop: 4 }}>
-            <label
-              htmlFor="fallback-provider"
-              className="eyebrow"
-              style={{ display: "block", marginBottom: 6 }}
-            >
-              Fallback provider
-            </label>
-            <select
-              id="fallback-provider"
-              className="input"
-              value={defaultCloudProvider}
-              onChange={(e) => onDefaultCloudProviderChange(e.target.value)}
-            >
-              <option value="openrouter">OpenRouter</option>
-              <option value="openai">OpenAI</option>
-            </select>
           </div>
         </div>
       )}
