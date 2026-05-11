@@ -1,0 +1,10 @@
+Meeting notes — discussion with Dr. Elena Voss (QuantumScape technical lead)
+
+Main points:
+- Ceramic separator is THE bottleneck. Not energy density, not cost.
+- Manufacturing line needs 10x more dry-room space than Li-ion.
+- QuantumScape's latest prototype (2024) shows 1000+ cycles but only on small cells.
+- Scaling to automotive cell size (100+ Ah) introduces new failure modes.
+- Their internal target: 2027 for automotive samples, not commercial production.
+
+Elena's personal opinion: "Anyone promising 2026 SSB in a consumer EV is either lying or using a very loose definition of 'solid state'."

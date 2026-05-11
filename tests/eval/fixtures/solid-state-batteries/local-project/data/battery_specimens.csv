@@ -1,0 +1,5 @@
+manufacturer,chemistry,energy_density_wh_kg,prototype_year,commercial_target_year,status
+Toyota,Sulfide-based,450,2026,2026,announced
+QuantumScape,Oxide-based,380,2024,2027,pilot
+CATL,Condensed (semi-solid),400,2025,2028,development
+Samsung SDI,Sulfide-based,420,2024,2027,pilot
