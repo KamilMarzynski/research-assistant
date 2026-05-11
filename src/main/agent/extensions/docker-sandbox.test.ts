@@ -13,9 +13,7 @@ const mockContainer = {
 const mockCreateContainer = vi.fn();
 
 vi.mock("dockerode", () => {
-  const MockDocker = vi.fn(function (this: unknown) {
-    Object.assign(this as object, { createContainer: mockCreateContainer });
-  });
+  const MockDocker = vi.fn(() => ({ createContainer: mockCreateContainer }));
   return { default: MockDocker };
 });
 
@@ -47,6 +45,13 @@ describe("runInDocker", () => {
 
   it("selects node:20-alpine for typescript", async () => {
     await runInDocker({ code: 'console.log("hi")', language: "typescript" });
+    expect(mockCreateContainer).toHaveBeenCalledWith(
+      expect.objectContaining({ Image: "node:20-alpine" }),
+    );
+  });
+
+  it("selects node:20-alpine for javascript", async () => {
+    await runInDocker({ code: 'console.log("hi")', language: "javascript" });
     expect(mockCreateContainer).toHaveBeenCalledWith(
       expect.objectContaining({ Image: "node:20-alpine" }),
     );

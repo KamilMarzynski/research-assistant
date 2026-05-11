@@ -5,7 +5,7 @@ import Docker from "dockerode";
 
 export interface DockerSandboxInput {
   code: string;
-  language: "python" | "bash" | "typescript";
+  language: "python" | "bash" | "typescript" | "javascript";
   files?: Array<{ name: string; content: string }>;
   workspaceFiles?: Array<{ name: string; sourcePath: string }>;
   networkEnabled?: boolean;
@@ -21,12 +21,14 @@ const IMAGES: Record<DockerSandboxInput["language"], string> = {
   python: "python:3.11-slim",
   bash: "bash:5",
   typescript: "node:20-alpine",
+  javascript: "node:20-alpine",
 };
 
 const ENTRY_FILES: Record<DockerSandboxInput["language"], string> = {
   python: "main.py",
   bash: "main.sh",
   typescript: "main.ts",
+  javascript: "main.js",
 };
 
 // Redirect stdout+stderr to /workspace/.stdout so we can read it from the host mount.
@@ -35,6 +37,7 @@ const COMMANDS: Record<DockerSandboxInput["language"], string[]> = {
   python: ["sh", "-c", "python /workspace/main.py > /workspace/.stdout 2>&1"],
   bash: ["sh", "-c", "bash /workspace/main.sh > /workspace/.stdout 2>&1"],
   typescript: ["sh", "-c", "npx --yes tsx /workspace/main.ts > /workspace/.stdout 2>&1"],
+  javascript: ["sh", "-c", "node /workspace/main.js > /workspace/.stdout 2>&1"],
 };
 
 const TIMEOUT_MS = 60_000;
