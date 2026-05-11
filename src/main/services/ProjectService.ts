@@ -50,7 +50,6 @@ export class ProjectService {
     // Best-effort cleanup of app-managed filesystem artifacts
     await this.safeRm(join(this.homePath, "workspace", id));
     await this.safeRm(join(this.homePath, "projects", slug));
-
   }
 
   private async safeRm(path: string): Promise<void> {

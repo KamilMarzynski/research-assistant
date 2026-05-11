@@ -245,10 +245,7 @@ export class AgentSession {
 
         const memoryContext = await this.memoryManager.buildContext(this.projectId, 20);
         const historyBlock = formatConversationHistory(memoryContext.recentMessages);
-        const systemContext = await buildSystemContext(
-          this.projectName,
-          this.skillRouter.toXml(),
-        );
+        const systemContext = await buildSystemContext(this.projectName, this.skillRouter.toXml());
 
         const systemPrompt = [
           BASE_SYSTEM_PROMPT,

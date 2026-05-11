@@ -64,9 +64,7 @@ describe("HomeService", () => {
     const { access } = await import("node:fs/promises");
     await expect(access(join(tmpHome, ".scholar"))).resolves.toBeUndefined();
     await expect(access(join(tmpHome, ".scholar", "skills"))).resolves.toBeUndefined();
-    await expect(
-      access(join(tmpHome, ".scholar", "workspace")),
-    ).resolves.toBeUndefined();
+    await expect(access(join(tmpHome, ".scholar", "workspace"))).resolves.toBeUndefined();
     await expect(access(join(tmpHome, ".scholar", "projects"))).resolves.toBeUndefined();
     await expect(access(join(tmpHome, ".scholar", "tasks"))).resolves.toBeUndefined();
   });
@@ -229,9 +227,7 @@ describe("pending tools", () => {
     const svc = new HomeService(makeTaskPersistence(), makeSkillManagement(), makeToolApproval());
     await svc.ensureDirectories();
     const { access } = await import("node:fs/promises");
-    await expect(
-      access(join(tmpHome, ".scholar", "pending-tools")),
-    ).resolves.toBeUndefined();
+    await expect(access(join(tmpHome, ".scholar", "pending-tools"))).resolves.toBeUndefined();
   });
 
   it("savePendingTool writes SKILL.md", async () => {
@@ -315,9 +311,7 @@ describe("pending tools", () => {
     await expect(
       access(join(tmpHome, ".scholar", "skills", "my-tool", "SKILL.md")),
     ).resolves.toBeUndefined();
-    await expect(
-      access(join(tmpHome, ".scholar", "pending-tools", "my-tool")),
-    ).rejects.toThrow();
+    await expect(access(join(tmpHome, ".scholar", "pending-tools", "my-tool"))).rejects.toThrow();
   });
 
   it("rejectPendingTool deletes the dir", async () => {
@@ -326,9 +320,7 @@ describe("pending tools", () => {
     await svc.savePendingTool("bad-tool", "# bad-tool");
     await svc.rejectPendingTool("bad-tool");
     const { access } = await import("node:fs/promises");
-    await expect(
-      access(join(tmpHome, ".scholar", "pending-tools", "bad-tool")),
-    ).rejects.toThrow();
+    await expect(access(join(tmpHome, ".scholar", "pending-tools", "bad-tool"))).rejects.toThrow();
   });
 });
 

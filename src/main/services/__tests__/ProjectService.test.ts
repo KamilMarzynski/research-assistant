@@ -76,7 +76,6 @@ describe("ProjectService", () => {
       });
       expect(result).toEqual(project);
     });
-
   });
 
   describe("listProjects", () => {
@@ -142,7 +141,6 @@ describe("ProjectService", () => {
         force: true,
       });
     });
-
   });
 
   describe("linkFolder", () => {
