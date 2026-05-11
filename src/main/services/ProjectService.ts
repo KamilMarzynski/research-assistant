@@ -3,19 +3,31 @@ import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import type { Project } from "../../shared/types";
 import { toSlug } from "../agent/context";
+import { resolveProvider } from "../agent/model-provider";
 import { AGENT_HOME_PATH_TOKEN, PROJECT_REPO_TOKEN } from "../di/tokens";
 import type { IProjectRepository } from "../repositories/IProjectRepository";
 import { NotFoundError } from "./errors";
+import { SettingsService } from "./SettingsService";
 
 @injectable()
 export class ProjectService {
   constructor(
     @inject(PROJECT_REPO_TOKEN) private readonly repo: IProjectRepository,
     @inject(AGENT_HOME_PATH_TOKEN) private readonly homePath: string,
+    @inject(SettingsService) private readonly settingsService: SettingsService,
   ) {}
 
   async createProject(name: string, folderPath?: string | null): Promise<Project> {
-    const project = await this.repo.create({ name, folderPath: folderPath ?? null });
+    const settings = await this.settingsService.getSettings();
+    const provider = resolveProvider({ settings });
+    const modelOverride = `${provider.type}:${provider.model}`;
+
+    const project = await this.repo.create({
+      name,
+      folderPath: folderPath ?? null,
+      modelOverride,
+    });
+
     if (folderPath) {
       await mkdir(join(folderPath, ".research-assistant"), { recursive: true });
     }
@@ -77,5 +89,21 @@ export class ProjectService {
   async unlinkFolder(id: string): Promise<void> {
     await this.getProject(id);
     await this.repo.unlinkFolder(id);
+  }
+
+  async setModelOverride(id: string, modelOverride: string | null): Promise<void> {
+    await this.getProject(id);
+    await this.repo.setModelOverride(id, modelOverride);
+  }
+
+  async updateAllProjectsModel(): Promise<void> {
+    const settings = await this.settingsService.getSettings();
+    const provider = resolveProvider({ settings });
+    const modelOverride = `${provider.type}:${provider.model}`;
+
+    const allProjects = await this.repo.list();
+    for (const project of allProjects) {
+      await this.repo.setModelOverride(project.id, modelOverride);
+    }
   }
 }

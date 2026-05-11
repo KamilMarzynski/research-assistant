@@ -1,6 +1,5 @@
 import { MenuItem, Select } from "@mui/material";
-import { useEffect, useState } from "react";
-import { DEFAULT_OPENROUTER_MODEL } from "../../../../shared/constants";
+import { useEffect, useRef, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { IconChevD, IconCpu, IconSend } from "../../shared/Icons";
 
@@ -12,22 +11,53 @@ interface ModelInfo {
 interface MessageInputProps {
   onSend: (content: string) => void;
   disabled?: boolean;
+  projectId: string;
+  projectModelOverride: string | null;
 }
 
-export default function MessageInput({ onSend, disabled }: MessageInputProps) {
+export default function MessageInput({
+  onSend,
+  disabled,
+  projectId,
+  projectModelOverride,
+}: MessageInputProps) {
   const [content, setContent] = useState("");
-  const [model, setModel] = useState(DEFAULT_OPENROUTER_MODEL);
+  const [model, setModel] = useState<string>("");
   const [activeProvider, setActiveProvider] = useState<string>("openrouter");
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
+  const lastProjectId = useRef<string>("");
 
+  // Reset model state only when switching to a different project
   useEffect(() => {
-    window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
-      const provider = settings.activeProvider ?? "openrouter";
-      const currentModel = settings.providerCredentials[provider]?.defaultModel ?? "";
-      setActiveProvider(provider);
-      setModel(currentModel);
+    if (lastProjectId.current === projectId) return;
+    lastProjectId.current = projectId;
 
+    const load = async () => {
+      let provider: string;
+      let modelId: string;
+
+      if (projectModelOverride) {
+        const parts = projectModelOverride.split(":");
+        provider = parts[0] ?? "";
+        modelId = parts.slice(1).join(":") ?? "";
+      } else {
+        // Fallback to global settings for projects created before per-project models
+        const settings = await window.electronAPI.invoke(IPC.GET_SETTINGS);
+        provider = settings.activeProvider ?? "openrouter";
+        modelId =
+          settings.providerCredentials[provider as keyof typeof settings.providerCredentials]
+            ?.defaultModel ?? "";
+      }
+
+      if (!provider || !modelId) return;
+
+      setActiveProvider(provider);
+      setModel(modelId);
+
+      // Fetch available models for the project's provider
+      setModelsLoading(true);
+      const settings = await window.electronAPI.invoke(IPC.GET_SETTINGS);
       const apiKey =
         provider === "openai"
           ? (settings.providerCredentials.openai?.apiKey ?? undefined)
@@ -36,27 +66,29 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
             : undefined;
       const host = provider === "ollama" ? settings.providerCredentials.ollama?.host : undefined;
 
-      setModelsLoading(true);
       window.electronAPI
         .invoke(IPC.GET_PROVIDER_MODELS, { provider, apiKey, host })
         .then((result: { models?: ModelInfo[] }) => {
           if (result.models && result.models.length > 0) {
             setAvailableModels(result.models);
+          } else {
+            setAvailableModels([{ id: modelId, name: modelId }]);
           }
         })
         .catch(() => {
-          // Fall back to empty list — Select still shows current model
+          setAvailableModels([{ id: modelId, name: modelId }]);
         })
         .finally(() => setModelsLoading(false));
-    });
-  }, []);
+    };
+
+    load();
+  }, [projectId, projectModelOverride]);
 
   const handleModelChange = async (newModel: string) => {
     setModel(newModel);
-    await window.electronAPI.invoke(IPC.SAVE_SETTINGS, {
-      providerCredentials: {
-        [activeProvider]: { defaultModel: newModel },
-      },
+    await window.electronAPI.invoke(IPC.SET_PROJECT_MODEL, {
+      projectId,
+      modelOverride: `${activeProvider}:${newModel}`,
     });
   };
 
@@ -119,7 +151,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
               <Select
                 size="small"
                 value={model}
-                disabled={modelsLoading || disabled}
+                disabled={modelsLoading || disabled || !model}
                 onChange={(e) => handleModelChange(e.target.value)}
                 IconComponent={() => null}
                 renderValue={() => (

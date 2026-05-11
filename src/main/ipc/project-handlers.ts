@@ -5,6 +5,7 @@ import {
   DeleteProjectSchema,
   LinkFolderSchema,
   RenameProjectSchema,
+  SetProjectModelSchema,
   UnlinkFolderSchema,
 } from "../ipc-validation";
 import type { ProjectService } from "../services/ProjectService";
@@ -48,6 +49,16 @@ export function registerProjectHandlers(
   ipcMain.handle(IPC.UNLINK_FOLDER, async (_event, payload: unknown) => {
     const { id } = parseOrThrow(UnlinkFolderSchema, payload, "UNLINK_FOLDER");
     await projectService.unlinkFolder(id);
+  });
+
+  ipcMain.handle(IPC.SET_PROJECT_MODEL, async (_event, payload: unknown) => {
+    const { projectId, modelOverride } = parseOrThrow(
+      SetProjectModelSchema,
+      payload,
+      "SET_PROJECT_MODEL",
+    );
+    await projectService.setModelOverride(projectId, modelOverride);
+    sessionManager.delete(projectId);
   });
 
   ipcMain.handle(IPC.OPEN_FOLDER_DIALOG, async () => {

@@ -63,6 +63,11 @@ export const UnlinkFolderSchema = z.object({
   id: z.string(),
 });
 
+export const SetProjectModelSchema = z.object({
+  projectId: z.string(),
+  modelOverride: z.string(),
+});
+
 export const ResolveBlockedCommandSchema = z.object({
   commandId: z.string(),
   action: z.enum(["approve_once", "approve_session", "deny"]),

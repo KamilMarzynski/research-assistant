@@ -74,13 +74,6 @@ export interface PathApprovalPayload {
   projectId: string;
 }
 
-/** Payload for MODEL_FALLBACK push event */
-export interface ModelFallbackPayload {
-  reason: string;
-  requestedModel: string;
-  fallbackProvider: string;
-}
-
 /** Payload for RESEARCH_COMPLETE push event */
 export interface ResearchCompletePayload {
   taskId: string;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodeMessageChunk, decodeMessageDone } from "../../../../shared/ipc-guards";
-import type { Message } from "../../../../shared/types";
+import type { Message, Project } from "../../../../shared/types";
 import { useProject } from "../../../contexts/ProjectContext";
 import WindowDragBar from "../../layout/WindowDragBar";
 import ChatHeader from "./ChatHeader";
@@ -18,15 +18,17 @@ export default function ChatPanel() {
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   // Check API key once on mount
   useEffect(() => {
     window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
       setHasApiKey(settings.hasApiKey);
     });
+    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
   }, []);
 
-  // Load message history when active project changes
+  // Load message history and refresh project list when active project changes
   useEffect(() => {
     if (!activeProjectId) {
       setMessages([]);
@@ -39,7 +41,10 @@ export default function ChatPanel() {
     window.electronAPI
       .invoke(IPC.GET_MESSAGES, { projectId: activeProjectId })
       .then((msgs) => setMessages(msgs));
+    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
   }, [activeProjectId]);
+
+  const activeProject = projects.find((p) => p.id === activeProjectId);
 
   // Subscribe to streaming events
   useEffect(() => {
@@ -142,7 +147,12 @@ export default function ChatPanel() {
           No API key configured. Open Settings to set up your model provider.
         </div>
       ) : (
-        <MessageInput onSend={handleSend} disabled={processing || streamingContent !== null} />
+        <MessageInput
+          onSend={handleSend}
+          disabled={processing || streamingContent !== null}
+          projectId={activeProjectId}
+          projectModelOverride={activeProject?.modelOverride ?? null}
+        />
       )}
     </div>
   );

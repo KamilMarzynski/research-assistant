@@ -23,6 +23,7 @@ export class DrizzleProjectRepository
       id: this.id(),
       name: data.name,
       folderPath: data.folderPath ?? null,
+      modelOverride: data.modelOverride ?? null,
       maxRecentMessages: data.maxRecentMessages ?? 20,
       createdAt: now,
       updatedAt: now,
@@ -31,6 +32,7 @@ export class DrizzleProjectRepository
       id: project.id,
       name: project.name,
       folderPath: project.folderPath,
+      modelOverride: project.modelOverride,
       maxRecentMessages: project.maxRecentMessages,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
@@ -78,10 +80,19 @@ export class DrizzleProjectRepository
     if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
   }
 
+  async setModelOverride(id: string, modelOverride: string | null): Promise<void> {
+    const result = await this.db
+      .update(projects)
+      .set({ modelOverride, updatedAt: this.now() })
+      .where(eq(projects.id, id));
+    if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
+  }
+
   protected rowToEntity = (row: typeof projects.$inferSelect): Project => ({
     id: row.id,
     name: row.name,
     folderPath: row.folderPath ?? null,
+    modelOverride: row.modelOverride ?? null,
     maxRecentMessages: row.maxRecentMessages ?? 20,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import type { EventBus } from "../event-bus";
 import type { AppSettings } from "../services/SettingsService";
 
 export type ModelProvider =
@@ -134,34 +133,4 @@ export async function checkOllamaAvailable(host: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-export async function resolveProviderWithFallback(
-  opts: ResolveProviderOpts,
-  eventBus?: EventBus,
-): Promise<ModelProvider> {
-  const primary = resolveProvider({ ...opts });
-
-  if (primary.type !== "ollama") {
-    return primary;
-  }
-
-  const available = await checkOllamaAvailable(primary.host);
-  if (available) return primary;
-
-  console.warn(
-    `[ModelFactory] Ollama unavailable at ${primary.host}, ` +
-      `falling back to ${opts.settings.defaultCloudProvider}`,
-  );
-
-  eventBus?.emit({
-    type: "model:fallback",
-    payload: {
-      reason: "ollama_unavailable",
-      requestedModel: primary.model,
-      fallbackProvider: opts.settings.defaultCloudProvider,
-    },
-  });
-
-  return buildDefaultProvider(opts.settings);
 }

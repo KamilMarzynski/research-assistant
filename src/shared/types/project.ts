@@ -2,6 +2,7 @@ export type Project = {
   id: string;
   name: string;
   folderPath: string | null;
+  modelOverride: string | null;
   maxRecentMessages: number;
   createdAt: Date;
   updatedAt: Date;

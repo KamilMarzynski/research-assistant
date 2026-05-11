@@ -3,6 +3,7 @@ import { IPC } from "../../shared/ipc-channels";
 import { getOllamaModels, getOpenAiModels, getOpenRouterModels } from "../agent/model-discovery";
 import { checkOllamaAvailable } from "../agent/model-provider";
 import { CheckOllamaSchema, GetProviderModelsSchema, SaveSettingsSchema } from "../ipc-validation";
+import type { ProjectService } from "../services/ProjectService";
 import type { SettingsService } from "../services/SettingsService";
 import { parseOrThrow } from "./parse-util";
 import type { SessionManager } from "./session-manager";
@@ -12,9 +13,10 @@ export function registerSettingsHandlers(
   deps: {
     settingsService: SettingsService;
     sessionManager: SessionManager;
+    projectService: ProjectService;
   },
 ): void {
-  const { settingsService, sessionManager } = deps;
+  const { settingsService, sessionManager, projectService } = deps;
 
   ipcMain.handle(IPC.GET_SETTINGS, async () => {
     const settings = await settingsService.getSettings();
@@ -37,8 +39,10 @@ export function registerSettingsHandlers(
     const p = parseOrThrow(SaveSettingsSchema, payload, "SAVE_SETTINGS");
     await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
 
-    // Clear sessions if model-related or provider settings change (not tracing flags)
+    // When global provider/model changes, bulk-update all existing projects and
+    // clear sessions so they pick up the new model on next message.
     if ("activeProvider" in p || "defaultCloudProvider" in p || "providerCredentials" in p) {
+      await projectService.updateAllProjectsModel();
       sessionManager.clear();
     }
 

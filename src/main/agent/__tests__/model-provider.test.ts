@@ -1,12 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../event-bus";
 import type { AppSettings } from "../../services/SettingsService";
-import {
-  checkOllamaAvailable,
-  isCloudProvider,
-  resolveProvider,
-  resolveProviderWithFallback,
-} from "../model-provider";
+import { checkOllamaAvailable, isCloudProvider, resolveProvider } from "../model-provider";
 
 const baseSettings: AppSettings = {
   activeProvider: "openrouter",
@@ -187,44 +181,5 @@ describe("checkOllamaAvailable", () => {
   it("returns false for non-http protocols", async () => {
     const result = await checkOllamaAvailable("file:///etc/passwd");
     expect(result).toBe(false);
-  });
-});
-
-describe("resolveProviderWithFallback", () => {
-  it("returns ollama when available", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true });
-    const settings = { ...baseSettings, activeProvider: "ollama" as const };
-    const p = await resolveProviderWithFallback({ settings });
-    expect(p.type).toBe("ollama");
-  });
-
-  it("falls back to default cloud when ollama unavailable", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error("Connection refused"));
-    const settings = { ...baseSettings, activeProvider: "ollama" as const };
-    const p = await resolveProviderWithFallback({ settings });
-    expect(p.type).toBe("openrouter");
-  });
-
-  it("emits fallback event when ollama is down", async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error("Connection refused"));
-    const settings = { ...baseSettings, activeProvider: "ollama" as const };
-    const eventBus = new EventBus();
-    const emitSpy = vi.spyOn(eventBus, "emit");
-    await resolveProviderWithFallback({ settings }, eventBus);
-    expect(emitSpy).toHaveBeenCalledWith({
-      type: "model:fallback",
-      payload: {
-        reason: "ollama_unavailable",
-        requestedModel: "llama3.2:3b",
-        fallbackProvider: "openrouter",
-      },
-    });
-  });
-
-  it("does not check ollama for non-ollama providers", async () => {
-    global.fetch = vi.fn();
-    const p = await resolveProviderWithFallback({ settings: baseSettings });
-    expect(p.type).toBe("openrouter");
-    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

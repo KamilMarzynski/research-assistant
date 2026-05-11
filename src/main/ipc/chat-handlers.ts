@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { type BrowserWindow, ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import { buildSystemContext } from "../agent/context";
-import { resolveProviderWithFallback } from "../agent/model-provider";
+import { resolveProvider } from "../agent/model-provider";
 import { AgentSession } from "../agent/session";
 import type { EventBus } from "../event-bus";
 import { ProjectIdSchema, SendMessageSchema } from "../ipc-validation";
@@ -88,29 +88,23 @@ export function registerChatHandler(
 
     try {
       const settings = await settingsService.getSettings();
-      const provider = await resolveProviderWithFallback({ settings }, eventBus);
 
-      if (provider.type !== "ollama" && !provider.apiKey) {
-        if (settings.activeProvider === "ollama") {
-          win.webContents.send(IPC.MESSAGE_CHUNK, {
-            projectId,
-            delta:
-              `⚠️ Ollama is not reachable at ${settings.providerCredentials.ollama.host}. ` +
-              `Fell back to ${settings.defaultCloudProvider}, which requires an API key. ` +
-              "Please start Ollama or add an API key in Settings.",
-          });
-        } else {
+      if (!sessionManager.get(projectId)) {
+        const project = await projectService.getProject(projectId);
+        const provider = resolveProvider({
+          settings,
+          projectModelOverride: project.modelOverride,
+        });
+
+        if (provider.type !== "ollama" && !provider.apiKey) {
           win.webContents.send(IPC.MESSAGE_CHUNK, {
             projectId,
             delta: "⚠️ No API key configured. Open Settings to add your API key.",
           });
+          win.webContents.send(IPC.MESSAGE_DONE, { projectId });
+          return { messageId: randomUUID() };
         }
-        win.webContents.send(IPC.MESSAGE_DONE, { projectId });
-        return { messageId: randomUUID() };
-      }
 
-      if (!sessionManager.get(projectId)) {
-        const project = await projectService.getProject(projectId);
         const isFirstRun = await homeService.isFirstRun();
         const systemContext = await buildSystemContext(
           project.name,

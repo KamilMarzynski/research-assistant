@@ -154,18 +154,28 @@ describe("DrizzleProjectRepository", () => {
     });
   });
 
-  describe("unlinkFolder", () => {
-    it("sets folderPath to null", async () => {
-      const project = await repo.create({ name: "Linked", folderPath: null });
-      await repo.linkFolder(project.id, "/some/path");
-      await repo.unlinkFolder(project.id);
+  describe("setModelOverride", () => {
+    it("persists modelOverride and get() returns it", async () => {
+      const project = await repo.create({ name: "Model Me", folderPath: null });
+      await repo.setModelOverride(project.id, "ollama:llama3.1");
 
       const found = await repo.get(project.id);
-      expect(found?.folderPath).toBeNull();
+      expect(found?.modelOverride).toBe("ollama:llama3.1");
+    });
+
+    it("clears modelOverride when set to null", async () => {
+      const project = await repo.create({ name: "Clear Me", folderPath: null });
+      await repo.setModelOverride(project.id, "openrouter:anthropic/claude-3.5-sonnet");
+      await repo.setModelOverride(project.id, null);
+
+      const found = await repo.get(project.id);
+      expect(found?.modelOverride).toBeNull();
     });
 
     it("throws when project does not exist", async () => {
-      await expect(repo.unlinkFolder("nonexistent-id")).rejects.toThrow("Project not found");
+      await expect(repo.setModelOverride("nonexistent-id", "ollama:test")).rejects.toThrow(
+        "Project not found",
+      );
     });
   });
 });

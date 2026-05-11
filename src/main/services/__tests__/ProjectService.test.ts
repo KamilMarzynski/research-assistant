@@ -18,6 +18,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
     folderPath: null,
+    modelOverride: null,
     maxRecentMessages: 20,
     ...overrides,
   };
@@ -32,7 +33,22 @@ function makeMockRepo(overrides: Partial<IProjectRepository> = {}): IProjectRepo
     linkFolder: vi.fn().mockResolvedValue(undefined),
     rename: vi.fn().mockResolvedValue(undefined),
     unlinkFolder: vi.fn().mockResolvedValue(undefined),
+    setModelOverride: vi.fn().mockResolvedValue(undefined),
     ...overrides,
+  };
+}
+
+function makeSettingsService() {
+  return {
+    getSettings: vi.fn().mockResolvedValue({
+      activeProvider: "openrouter",
+      defaultCloudProvider: "openrouter",
+      providerCredentials: {
+        openrouter: { apiKey: "sk-or-test", defaultModel: "anthropic/claude_sonnet-4-5" },
+      },
+      langfuseEnabled: false,
+      webAccessEnabled: true,
+    }),
   };
 }
 
@@ -44,17 +60,21 @@ describe("ProjectService", () => {
 
   beforeEach(() => {
     repo = makeMockRepo();
-    service = new ProjectService(repo, HOME);
+    service = new ProjectService(repo, HOME, makeSettingsService() as never);
   });
 
   describe("createProject", () => {
-    it("delegates to repo.create with the given name", async () => {
+    it("delegates to repo.create with the given name and resolved model", async () => {
       const project = makeProject({ name: "New" });
       vi.mocked(repo.create).mockResolvedValue(project);
 
       const result = await service.createProject("New");
 
-      expect(repo.create).toHaveBeenCalledWith({ name: "New", folderPath: null });
+      expect(repo.create).toHaveBeenCalledWith({
+        name: "New",
+        folderPath: null,
+        modelOverride: "openrouter:anthropic/claude_sonnet-4-5",
+      });
       expect(result).toEqual(project);
     });
 

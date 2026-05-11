@@ -10,9 +10,13 @@ import { IPC } from "../../../shared/ipc-channels";
 import type { SettingsResponse } from "../../../shared/ipc-types";
 import type { Project } from "../../../shared/types";
 import {
+  IconAnthropic,
   IconEdit,
   IconFolder,
   IconLogo,
+  IconOllama,
+  IconOpenAI,
+  IconOpenRouter,
   IconPlus,
   IconSettings,
   IconTrash,
@@ -40,6 +44,21 @@ function providerLabel(provider: string): string {
   }
 }
 
+function ProviderIcon({ provider, size = 18 }: { provider: string; size?: number }) {
+  switch (provider) {
+    case "openrouter":
+      return <IconOpenRouter size={size} />;
+    case "openai":
+      return <IconOpenAI size={size} />;
+    case "anthropic":
+      return <IconAnthropic size={size} />;
+    case "ollama":
+      return <IconOllama size={size} />;
+    default:
+      return null;
+  }
+}
+
 export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const { activeProjectId, setActiveProjectId } = useProject();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -63,6 +82,12 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
     });
     return unsub;
   }, []);
+
+  // Refresh projects when switching projects so footer model is current
+  useEffect(() => {
+    if (!activeProjectId) return;
+    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
+  }, [activeProjectId]);
 
   const handleBrowseFolder = async () => {
     const path = await window.electronAPI.invoke(IPC.OPEN_FOLDER_DIALOG);
@@ -375,15 +400,21 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
-          <span style={{ fontSize: 12, fontWeight: 500 }}>
-            {settings ? providerLabel(settings.activeProvider) : "…"}
-          </span>
-          <span className="t-tertiary t-mono" style={{ fontSize: 10 }}>
-            {settings
-              ? (settings.providerCredentials[settings.activeProvider]?.defaultModel ?? "")
-              : ""}
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--ink-2)" }}>
+          {(() => {
+            const activeProject = projects.find((p) => p.id === activeProjectId);
+            const [projectProvider] = activeProject?.modelOverride
+              ? activeProject.modelOverride.split(":")
+              : [settings?.activeProvider ?? ""];
+            return (
+              <>
+                <ProviderIcon provider={projectProvider} size={18} />
+                <span style={{ fontSize: 13, fontWeight: 500 }}>
+                  {providerLabel(projectProvider)}
+                </span>
+              </>
+            );
+          })()}
         </div>
         <button
           type="button"
