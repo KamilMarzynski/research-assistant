@@ -79,11 +79,7 @@ export function registerArtifactHandlers(
       for (const entry of entries) {
         if (count >= MAX_TREE_ENTRIES) break;
         if (IGNORED_NAMES.has(entry.name)) continue;
-        if (
-          entry.name.startsWith(".") &&
-          !entry.name.startsWith(".research-assistant") &&
-          !entry.name.startsWith(".agents")
-        ) {
+        if (entry.name.startsWith(".")) {
           continue;
         }
 
