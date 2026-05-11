@@ -24,7 +24,7 @@ describe("OutputRouter", () => {
 
   describe("parseConventions", () => {
     it("parses valid Output location section", () => {
-      const content = `# AGENTS.md
+      const content = `# FILES.md
 
 ## Output location
 - default: ~/Projects/my-app/research/
@@ -43,7 +43,7 @@ Some other content.
     });
 
     it("returns null when no Output location section", () => {
-      const content = `# AGENTS.md
+      const content = `# FILES.md
 
 ## Other section
 Some other content.
@@ -53,7 +53,7 @@ Some other content.
     });
 
     it("returns null when section exists but has no default key", () => {
-      const content = `# AGENTS.md
+      const content = `# FILES.md
 
 ## Output location
 - code: ~/Projects/my-app/scripts/
@@ -63,7 +63,7 @@ Some other content.
     });
 
     it("parses partial conventions (only default)", () => {
-      const content = `# AGENTS.md
+      const content = `# FILES.md
 
 ## Output location
 - default: ~/Projects/my-app/research/
