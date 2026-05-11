@@ -1,0 +1,43 @@
+prompts:
+  - file://tests/eval/fixtures/solid-state-batteries/scholar/GOAL.md
+
+providers:
+  - openai:gpt-4.1-mini
+
+tests:
+  - description: "Tier 1 — Completeness"
+    vars:
+      artifact_path: "{{artifact_path}}"
+    assert:
+      - type: contains
+        value: "solid-state"
+      - type: contains
+        value: "2030"
+      - type: contains
+        value: "Toyota"
+      - type: contains
+        value: "QuantumScape"
+      - type: contains
+        value: "CATL"
+      - type: contains
+        value: "ceramic separator"
+      - type: llm-rubric
+        value: "The document has a clear title, executive summary, and a sources/references section"
+
+  - description: "Tier 2 — Cross-Source Synthesis"
+    vars:
+      artifact_path: "{{artifact_path}}"
+    assert:
+      - type: llm-rubric
+        value: "The document reconciles conflicting timeline claims (Toyota 2026 vs CATL 2028-2030 vs QuantumScape 2027) and provides analysis of which is most credible"
+      - type: llm-rubric
+        value: "The document identifies ceramic separator as a key technical barrier and explains why it affects mass production timelines"
+      - type: llm-rubric
+        value: "The document references data from battery_specimens.csv or its analysis (e.g., energy density numbers, manufacturer comparison)"
+
+  - description: "Tier 3 — Actionable Quality"
+    vars:
+      artifact_path: "{{artifact_path}}"
+    assert:
+      - type: llm-rubric
+        value: "Rate the document's actionable quality for an engineer making a go/no-go decision on investing in SSB technology for EVs by 2030. Score 1 = vague, no decision support; 5 = clear recommendation with evidence. Provide the score and one-sentence reasoning."
