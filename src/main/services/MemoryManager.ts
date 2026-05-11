@@ -73,6 +73,8 @@ export class MemoryManager implements IMemoryManager {
             },
           });
 
+          // Eagerly trigger OM engine initialization so first getContext()
+          // doesn't block on the lazy getter.
           void memory.omEngine;
 
           return memory;
