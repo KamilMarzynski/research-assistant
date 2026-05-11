@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { runEval } from "./runner";
 import type { EvalOptions } from "./types";
 
 export async function main(argv: string[]): Promise<void> {
@@ -23,11 +24,19 @@ export async function main(argv: string[]): Promise<void> {
 		fixture: values.fixture as string,
 		judgeModel: values.judge as string,
 		keep: values.keep as boolean,
-		timeoutMs: Number.parseInt(values.timeout as string, 10),
+		timeoutMs: parseInt(values.timeout as string, 10),
 	};
 
-	console.log("Options:", options);
-	// TODO: call runner (will be implemented in Task 9)
+	const result = await runEval(options);
+
+	console.log("\n=== Eval Result ===");
+	console.log(`Completed: ${result.completed}`);
+	console.log(`Duration: ${result.durationMs}ms`);
+	console.log(`Tier 1: ${result.tier1Pass}/${result.tier1Total}`);
+	console.log(`Tier 2: ${result.tier2Pass}/${result.tier2Total}`);
+	console.log(`Tier 3: ${result.tier3Score}/5 — ${result.tier3Reasoning}`);
+
+	process.exit(result.completed && result.tier1Pass === result.tier1Total && result.tier2Pass === result.tier2Total ? 0 : 1);
 }
 
 if (import.meta.main) {
