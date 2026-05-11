@@ -2,7 +2,6 @@ export * from "./AllowlistService";
 export * from "./ArtifactService";
 export * from "./CrystallizationService";
 export * from "./HomeService";
-export * from "./MemoryCompressionService";
 export * from "./MemoryFileService";
 export * from "./MemoryManager";
 export * from "./MessageService";

@@ -24,7 +24,6 @@ import { AllowlistService } from "./services/AllowlistService";
 import { ArtifactService } from "./services/ArtifactService";
 import { CrystallizationService } from "./services/CrystallizationService";
 import { HomeService } from "./services/HomeService";
-import { MemoryCompressionService } from "./services/MemoryCompressionService";
 import { MemoryFileService } from "./services/MemoryFileService";
 import { type IMemoryManager, MemoryManager } from "./services/MemoryManager";
 import { MessageService } from "./services/MessageService";
@@ -65,7 +64,6 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(ResearchService);
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);
-  appContainer.registerSingleton(MemoryCompressionService);
   appContainer.register<IMemoryManager>(MEMORY_MANAGER_TOKEN, { useClass: MemoryManager });
   appContainer.registerSingleton(TaskPersistenceService);
   appContainer.registerSingleton(SkillManagementService);
