@@ -191,36 +191,24 @@ export class ResearchService {
         try {
           await this.homeService.updateTaskStatus(taskId, "complete");
 
-          // Read AGENTS.md for output conventions
+          // Read FILES.md for output conventions
           let filePaths: string[] = [];
           try {
             const homePath = this.homeService.getHomePath();
             const slug = toSlug(config.projectName);
-            let agentsMdContent = "";
+            let filesMdContent = "";
 
-            // Try linked folder first
-            if (config.folderPath) {
-              try {
-                agentsMdContent = await readFile(join(config.folderPath, "AGENTS.md"), "utf-8");
-              } catch {
-                /* not found */
-              }
-            }
-
-            // Fallback to app home
-            if (!agentsMdContent) {
-              try {
-                agentsMdContent = await readFile(
-                  join(homePath, "projects", slug, "AGENTS.md"),
-                  "utf-8",
-                );
-              } catch {
-                /* not found */
-              }
+            try {
+              filesMdContent = await readFile(
+                join(homePath, "projects", slug, "FILES.md"),
+                "utf-8",
+              );
+            } catch {
+              /* not found */
             }
 
             let conventions: { default: string; code?: string; reports?: string } | null = null;
-            if (agentsMdContent) {
+            if (filesMdContent) {
               const jail = new PathJail(
                 config.projectId,
                 config.folderPath,
@@ -228,7 +216,7 @@ export class ResearchService {
                 this.allowlistService,
               );
               const router = new OutputRouter(jail, this.artifactService);
-              conventions = router.parseConventions(agentsMdContent);
+              conventions = router.parseConventions(filesMdContent);
             }
             if (!conventions && config.folderPath) {
               conventions = { default: config.folderPath };
