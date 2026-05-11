@@ -13,32 +13,28 @@ vi.mock("electron", () => ({
 }));
 
 // Mock node:fs/promises
-const mockMkdir = vi.fn().mockResolvedValue(undefined);
-const mockWriteFile = vi.fn().mockResolvedValue(undefined);
-const mockReadFile = vi.fn().mockResolvedValue("");
-const mockAccess = vi.fn().mockResolvedValue(undefined);
-const mockReaddir = vi.fn().mockResolvedValue([]);
-
 vi.mock("node:fs/promises", () => ({
-  access: mockAccess,
-  mkdir: mockMkdir,
-  readFile: mockReadFile,
-  readdir: mockReaddir,
-  writeFile: mockWriteFile,
+  access: vi.fn().mockResolvedValue(undefined),
+  mkdir: vi.fn().mockResolvedValue(undefined),
+  readFile: vi.fn().mockResolvedValue(""),
+  readdir: vi.fn().mockResolvedValue([]),
+  writeFile: vi.fn().mockResolvedValue(undefined),
 }));
 
-// ---- LibSQLStore mock ----
-const mockMemoryStore = {
-  getThreadById: vi.fn().mockResolvedValue(null),
-  listMessages: vi.fn().mockResolvedValue({ messages: [] }),
-  saveMessages: vi.fn().mockResolvedValue(undefined),
-  saveThread: vi.fn().mockResolvedValue(undefined),
-  updateThread: vi.fn().mockResolvedValue(undefined),
-};
-
+// ---- @mastra/libsql mock ----
 const mockLibSQLStoreInstance = {
   init: vi.fn().mockResolvedValue(undefined),
-  getStore: vi.fn().mockResolvedValue(mockMemoryStore),
+  getStore: vi.fn().mockResolvedValue({
+    saveMessages: vi.fn().mockResolvedValue(undefined),
+    listMessages: vi.fn().mockResolvedValue({ messages: [] }),
+    getThreadById: vi.fn().mockResolvedValue(null),
+    listThreads: vi.fn().mockResolvedValue({ threads: [], total: 0 }),
+    saveThread: vi.fn().mockResolvedValue(undefined),
+    updateThread: vi.fn().mockResolvedValue(undefined),
+    deleteThread: vi.fn().mockResolvedValue(undefined),
+    cloneThread: vi.fn().mockResolvedValue({ thread: {}, clonedMessages: [] }),
+    supportsObservationalMemory: true,
+  }),
 };
 
 vi.mock("@mastra/libsql", () => ({
@@ -47,73 +43,37 @@ vi.mock("@mastra/libsql", () => ({
   }),
 }));
 
-// ---- @mariozechner/pi-ai mock ----
-const mockComplete = vi.fn().mockResolvedValue({
-  content: [{ type: "text", text: "Compressed summary." }],
-});
+// ---- @mastra/memory mock ----
+const mockOmEngine = {
+  observe: vi.fn().mockResolvedValue({ observed: false, reflected: false, record: {} }),
+};
 
-vi.mock("@mariozechner/pi-ai", () => ({
-  getModel: vi.fn().mockReturnValue({ provider: "openrouter", id: "test-model" }),
-  getModels: vi.fn().mockReturnValue([
-    { provider: "openrouter", id: "test-model" },
-    { provider: "openrouter", id: "anthropic/claude-sonnet-4-6" },
-    { provider: "openrouter", id: "anthropic/claude-haiku-4.5" },
-  ]),
-  complete: mockComplete,
+const mockMemory = {
+  getContext: vi.fn().mockResolvedValue({
+    systemMessage: "",
+    messages: [],
+    hasObservations: false,
+    omRecord: null,
+    continuationMessage: undefined,
+    otherThreadsContext: undefined,
+  }),
+  saveMessages: vi.fn().mockResolvedValue({ messages: [] }),
+  omEngine: Promise.resolve(mockOmEngine),
+};
+
+vi.mock("@mastra/memory", () => ({
+  Memory: vi.fn().mockImplementation(() => mockMemory),
 }));
 
 const { MemoryManager } = await import("../MemoryManager");
-const { MemoryCompressionService } = await import("../MemoryCompressionService");
 
 // ---- Helpers ----
 
-function makeSettingsService(apiKey: string | null = "sk-or-test") {
-  return {
-    getSettings: vi.fn().mockResolvedValue({
-      activeProvider: "openrouter",
-      defaultCloudProvider: "openrouter",
-      providerCredentials: {
-        openrouter: { apiKey, defaultModel: "anthropic/claude-sonnet-4-6" },
-        openai: { apiKey: null, defaultModel: "gpt-4o" },
-        anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
-        ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
-      },
-      langfuseEnabled: false,
-      webAccessEnabled: true,
-    }),
-  };
-}
-
-/** Build a MastraDBMessage-shaped object for use in listMessages results. */
 function makeMastraMessage(role: "user" | "assistant" | "system", text: string) {
   return {
     id: crypto.randomUUID(),
     role,
     content: { format: 2, parts: [{ type: "text", text }] },
-    threadId: "proj-1",
-    resourceId: "proj-1",
-    createdAt: new Date(),
-  };
-}
-
-/** Build a MastraDBMessage with plain string content (format-1 fast path). */
-function makeMastraMessageStringContent(role: "user" | "assistant", text: string) {
-  return {
-    id: crypto.randomUUID(),
-    role,
-    content: text,
-    threadId: "proj-1",
-    resourceId: "proj-1",
-    createdAt: new Date(),
-  };
-}
-
-/** Build a MastraDBMessage with non-format-2 content (JSON fallback path). */
-function makeMastraMessageNonFormat2Content(role: "user" | "assistant", data: unknown) {
-  return {
-    id: crypto.randomUUID(),
-    role,
-    content: { format: 1, data },
     threadId: "proj-1",
     resourceId: "proj-1",
     createdAt: new Date(),
@@ -128,39 +88,37 @@ describe("MemoryManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset defaults
-    mockMemoryStore.getThreadById.mockResolvedValue(null);
-    mockMemoryStore.listMessages.mockResolvedValue({ messages: [] });
-    mockMemoryStore.saveMessages.mockResolvedValue(undefined);
-    mockMemoryStore.saveThread.mockResolvedValue(undefined);
-    mockMemoryStore.updateThread.mockResolvedValue(undefined);
-    mockLibSQLStoreInstance.getStore.mockResolvedValue(mockMemoryStore);
-    mockComplete.mockResolvedValue({
-      content: [{ type: "text", text: "Compressed summary." }],
+    mockMemory.getContext.mockResolvedValue({
+      systemMessage: "",
+      messages: [],
+      hasObservations: false,
+      omRecord: null,
+      continuationMessage: undefined,
+      otherThreadsContext: undefined,
     });
+    mockMemory.saveMessages.mockResolvedValue({ messages: [] });
+    mockOmEngine.observe.mockResolvedValue({ observed: false, reflected: false, record: {} });
 
-    const compressionService = new MemoryCompressionService(
-      makeSettingsService() as never,
-      "/tmp/home",
-    );
-    manager = new MemoryManager("/tmp/test-userdata", compressionService as never);
+    manager = new MemoryManager("/tmp/test-userdata");
   });
 
   // ------------------------------------------------------------------ buildContext
 
   describe("buildContext()", () => {
-    it("returns empty context on first use (no thread, no messages)", async () => {
+    it("returns empty context on first use", async () => {
       const ctx = await manager.buildContext("proj-1");
 
       expect(ctx).toEqual({ summary: "", recentMessages: [] });
     });
 
-    it("returns summary from summary thread metadata when it exists", async () => {
-      mockMemoryStore.getThreadById.mockImplementation(({ threadId }: { threadId: string }) => {
-        if (threadId === "proj-1-summary") {
-          return Promise.resolve({ metadata: { summary: "Prior work summary." } });
-        }
-        return Promise.resolve(null);
+    it("returns summary from getContext systemMessage", async () => {
+      mockMemory.getContext.mockResolvedValue({
+        systemMessage: "Prior work summary.",
+        messages: [],
+        hasObservations: true,
+        omRecord: { activeObservations: "Prior work summary." },
+        continuationMessage: undefined,
+        otherThreadsContext: undefined,
       });
 
       const ctx = await manager.buildContext("proj-1");
@@ -168,57 +126,39 @@ describe("MemoryManager", () => {
       expect(ctx.summary).toBe("Prior work summary.");
     });
 
-    it("returns recent messages mapped to { role, content } strings", async () => {
-      // Mock returns DESC order (newest first); implementation reverses to chronological
-      mockMemoryStore.listMessages.mockResolvedValue({
+    it("returns recent messages from getContext", async () => {
+      mockMemory.getContext.mockResolvedValue({
+        systemMessage: "",
         messages: [
           makeMastraMessage("assistant", "Hello from assistant"),
           makeMastraMessage("user", "Hello from user"),
         ],
+        hasObservations: false,
+        omRecord: null,
+        continuationMessage: undefined,
+        otherThreadsContext: undefined,
       });
 
       const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.recentMessages).toEqual([
-        { role: "user", content: "Hello from user" },
         { role: "assistant", content: "Hello from assistant" },
+        { role: "user", content: "Hello from user" },
       ]);
     });
 
-    it("loads working set of 100 messages ordered by createdAt DESC", async () => {
-      await manager.buildContext("proj-1");
-
-      expect(mockMemoryStore.listMessages).toHaveBeenCalledWith(
-        expect.objectContaining({
-          perPage: 100,
-          orderBy: { field: "createdAt", direction: "DESC" },
-        }),
-      );
-    });
-
-    it("returns only the last 100 messages when 150 exist, in chronological order", async () => {
-      const allMessages = Array.from({ length: 150 }, (_, i) =>
-        makeMastraMessage(i % 2 === 0 ? "user" : "assistant", `message-${i}`),
-      );
-      // Simulate store returning the 100 newest messages in DESC order
-      const newest100 = allMessages.slice(-100).reverse();
-      mockMemoryStore.listMessages.mockResolvedValue({ messages: newest100 });
-
-      const ctx = await manager.buildContext("proj-1");
-
-      expect(ctx.recentMessages).toHaveLength(100);
-      // After DESC fetch + reverse, chronological order: message-50 ... message-149
-      expect(ctx.recentMessages[0].content).toBe("message-50");
-      expect(ctx.recentMessages[99].content).toBe("message-149");
-    });
-
-    it("filters out non-user/assistant messages (e.g. system)", async () => {
-      mockMemoryStore.listMessages.mockResolvedValue({
+    it("filters out non-user/assistant messages", async () => {
+      mockMemory.getContext.mockResolvedValue({
+        systemMessage: "",
         messages: [
           makeMastraMessage("system", "You are an assistant"),
           makeMastraMessage("user", "Hello"),
           makeMastraMessage("assistant", "Hi"),
         ],
+        hasObservations: false,
+        omRecord: null,
+        continuationMessage: undefined,
+        otherThreadsContext: undefined,
       });
 
       const ctx = await manager.buildContext("proj-1");
@@ -229,40 +169,19 @@ describe("MemoryManager", () => {
       );
     });
 
-    it("returns empty context when store.getStore('memory') throws", async () => {
-      mockLibSQLStoreInstance.getStore.mockRejectedValueOnce(new Error("DB unavailable"));
+    it("calls getContext with correct threadId and lastMessages config", async () => {
+      await manager.buildContext("proj-1");
 
-      const ctx = await manager.buildContext("proj-1");
-
-      expect(ctx).toEqual({ summary: "", recentMessages: [] });
+      expect(mockMemory.getContext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          threadId: "proj-1",
+          memoryConfig: expect.objectContaining({ lastMessages: 25 }),
+        }),
+      );
     });
 
-    it("still returns messages even when summary thread lookup throws", async () => {
-      mockMemoryStore.getThreadById.mockRejectedValueOnce(new Error("summary thread error"));
-      mockMemoryStore.listMessages.mockResolvedValue({
-        messages: [makeMastraMessage("user", "some message")],
-      });
-
-      const ctx = await manager.buildContext("proj-1");
-
-      expect(ctx.summary).toBe("");
-      expect(ctx.recentMessages).toHaveLength(1);
-    });
-
-    it("still returns summary even when listMessages throws", async () => {
-      mockMemoryStore.getThreadById.mockResolvedValue({
-        metadata: { summary: "Existing summary." },
-      });
-      mockMemoryStore.listMessages.mockRejectedValueOnce(new Error("list error"));
-
-      const ctx = await manager.buildContext("proj-1");
-
-      expect(ctx.summary).toBe("Existing summary.");
-      expect(ctx.recentMessages).toEqual([]);
-    });
-
-    it("returns empty context when store.getStore('memory') resolves to undefined in buildContext", async () => {
-      mockLibSQLStoreInstance.getStore.mockResolvedValueOnce(undefined);
+    it("returns empty context when getContext throws", async () => {
+      mockMemory.getContext.mockRejectedValueOnce(new Error("DB unavailable"));
 
       const ctx = await manager.buildContext("proj-1");
 
@@ -270,33 +189,38 @@ describe("MemoryManager", () => {
     });
 
     it("extracts content correctly when messages have plain string content", async () => {
-      // Mock returns DESC order (newest first); implementation reverses to chronological
-      mockMemoryStore.listMessages.mockResolvedValue({
+      mockMemory.getContext.mockResolvedValue({
+        systemMessage: "",
         messages: [
-          makeMastraMessageStringContent("assistant", "plain reply"),
-          makeMastraMessageStringContent("user", "plain string content"),
+          {
+            role: "assistant",
+            content: "plain reply",
+            id: "1",
+            threadId: "proj-1",
+            resourceId: "proj-1",
+            createdAt: new Date(),
+          },
+          {
+            role: "user",
+            content: "plain string content",
+            id: "2",
+            threadId: "proj-1",
+            resourceId: "proj-1",
+            createdAt: new Date(),
+          },
         ],
+        hasObservations: false,
+        omRecord: null,
+        continuationMessage: undefined,
+        otherThreadsContext: undefined,
       });
 
       const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.recentMessages).toEqual([
-        { role: "user", content: "plain string content" },
         { role: "assistant", content: "plain reply" },
+        { role: "user", content: "plain string content" },
       ]);
-    });
-
-    it("extracts content correctly when messages have non-format-2 content (JSON fallback)", async () => {
-      const nonFormat2Msg = makeMastraMessageNonFormat2Content("user", "some data");
-
-      mockMemoryStore.listMessages.mockResolvedValue({
-        messages: [nonFormat2Msg],
-      });
-
-      const ctx = await manager.buildContext("proj-1");
-
-      expect(ctx.recentMessages).toHaveLength(1);
-      expect(ctx.recentMessages[0].content).toBe(JSON.stringify({ format: 1, data: "some data" }));
     });
   });
 
@@ -309,8 +233,8 @@ describe("MemoryManager", () => {
         { role: "assistant", content: "Mastra is a framework." },
       ]);
 
-      expect(mockMemoryStore.saveMessages).toHaveBeenCalledTimes(1);
-      const { messages } = mockMemoryStore.saveMessages.mock.calls[0][0] as {
+      expect(mockMemory.saveMessages).toHaveBeenCalledTimes(1);
+      const { messages } = mockMemory.saveMessages.mock.calls[0][0] as {
         messages: Array<{
           id: string;
           role: string;
@@ -342,203 +266,44 @@ describe("MemoryManager", () => {
       });
     });
 
+    it("triggers OM observation after saving messages", async () => {
+      await manager.save("proj-1", [
+        { role: "user", content: "Hello" },
+        { role: "assistant", content: "Hi there" },
+      ]);
+
+      expect(mockMemory.saveMessages).toHaveBeenCalled();
+      expect(mockOmEngine.observe).toHaveBeenCalledWith({ threadId: "proj-1" });
+    });
+
     it("does not throw when saveMessages fails", async () => {
-      mockMemoryStore.saveMessages.mockRejectedValueOnce(new Error("write failed"));
+      mockMemory.saveMessages.mockRejectedValueOnce(new Error("write failed"));
 
       await expect(
         manager.save("proj-1", [{ role: "user", content: "Hello" }]),
       ).resolves.toBeUndefined();
     });
 
-    it("returns without error when store.getStore('memory') resolves to undefined in save", async () => {
-      mockLibSQLStoreInstance.getStore.mockResolvedValueOnce(undefined);
+    it("does not throw when OM observation fails", async () => {
+      mockOmEngine.observe.mockRejectedValueOnce(new Error("OM error"));
 
       await expect(
         manager.save("proj-1", [{ role: "user", content: "Hello" }]),
       ).resolves.toBeUndefined();
-
-      expect(mockMemoryStore.saveMessages).not.toHaveBeenCalled();
     });
   });
 
-  // ------------------------------------------------------------------ maybeCompress (Observer)
-
-  describe("maybeCompress (Observer via save)", () => {
-    it("does NOT call complete() when total chars are below threshold", async () => {
-      // Below threshold: 120,000 chars total (30,000 tokens × 4 chars/token)
-      const shortMessage = makeMastraMessage("user", "short");
-      mockMemoryStore.listMessages.mockResolvedValue({ messages: [shortMessage] });
-
-      await manager.save("proj-1", [{ role: "user", content: "short" }]);
-
-      // Let the async void task settle
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockComplete).not.toHaveBeenCalled();
-    });
-
-    it("skips compression when no API key configured", async () => {
-      const compressionService = new MemoryCompressionService(
-        makeSettingsService(null) as never,
-        "/tmp/home",
-      );
-      manager = new MemoryManager("/tmp/test-userdata", compressionService as never);
-
-      // Build messages above threshold (120,001 chars)
-      const longText = "x".repeat(120_001);
-      mockMemoryStore.listMessages.mockResolvedValue({
-        messages: [makeMastraMessage("user", longText)],
-      });
-
-      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockComplete).not.toHaveBeenCalled();
-    });
-
-    it("calls complete() and saves summary thread when chars exceed threshold", async () => {
-      // Above threshold: 120,001 chars
-      const longText = "x".repeat(120_001);
-      mockMemoryStore.listMessages.mockResolvedValue({
-        messages: [makeMastraMessage("user", longText)],
-      });
-      // No existing summary thread
-      mockMemoryStore.getThreadById.mockResolvedValue(null);
-
-      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockComplete).toHaveBeenCalledTimes(1);
-      expect(mockComplete).toHaveBeenCalledWith(
-        expect.objectContaining({ provider: "openrouter" }),
-        expect.objectContaining({ messages: expect.any(Array) }),
-        { apiKey: "sk-or-test" },
-      );
-      expect(mockMemoryStore.saveThread).toHaveBeenCalledWith(
-        expect.objectContaining({
-          thread: expect.objectContaining({
-            id: "proj-1-summary",
-            metadata: { summary: "Compressed summary." },
-          }),
-        }),
-      );
-    });
-
-    it("calls updateThread when summary thread already exists", async () => {
-      const longText = "x".repeat(120_001);
-      mockMemoryStore.listMessages.mockResolvedValue({
-        messages: [makeMastraMessage("user", longText)],
-      });
-      // Existing summary thread
-      mockMemoryStore.getThreadById.mockImplementation(({ threadId }: { threadId: string }) => {
-        if (threadId === "proj-1-summary") {
-          return Promise.resolve({ id: "proj-1-summary", metadata: { summary: "old summary" } });
-        }
-        return Promise.resolve(null);
-      });
-
-      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockMemoryStore.updateThread).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: "proj-1-summary",
-          title: "Memory Summary",
-          metadata: { summary: "Compressed summary." },
-        }),
-      );
-      expect(mockMemoryStore.saveThread).not.toHaveBeenCalled();
-    });
-
-    it("does NOT call saveThread when compress returns no text parts", async () => {
-      // complete() returns content with no text parts
-      mockComplete.mockResolvedValueOnce({ content: [] });
-
-      const longText = "x".repeat(120_001);
-      mockMemoryStore.listMessages.mockResolvedValue({
-        messages: [makeMastraMessage("user", longText)],
-      });
-      mockMemoryStore.getThreadById.mockResolvedValue(null);
-
-      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockComplete).toHaveBeenCalledTimes(1);
-      expect(mockMemoryStore.saveThread).not.toHaveBeenCalled();
-      expect(mockMemoryStore.updateThread).not.toHaveBeenCalled();
-    });
-
-    it("skips compression when store.getStore('memory') resolves to undefined in maybeCompress", async () => {
-      const longText = "x".repeat(120_001);
-      // First call (from save()) returns mockMemoryStore, second call (from maybeCompress()) returns undefined
-      mockLibSQLStoreInstance.getStore
-        .mockResolvedValueOnce(mockMemoryStore)
-        .mockResolvedValueOnce(undefined);
-
-      mockMemoryStore.saveMessages.mockResolvedValue(undefined);
-
-      await manager.save("proj-1", [{ role: "user", content: longText }]);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockComplete).not.toHaveBeenCalled();
-    });
-
-    it("writes compressed summary to filesystem memory/YYYY-MM-DD.md", async () => {
-      const longText = "x".repeat(120_001);
-      mockMemoryStore.listMessages.mockResolvedValue({
-        messages: [makeMastraMessage("user", longText)],
-      });
-      mockMemoryStore.getThreadById.mockResolvedValue(null);
-
-      await manager.save("proj-1", [{ role: "user", content: "trigger" }]);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockMkdir).toHaveBeenCalledWith(expect.stringContaining("memory"), {
-        recursive: true,
-      });
-      expect(mockWriteFile).toHaveBeenCalledWith(
-        expect.stringMatching(/memory\/\d{4}-\d{2}-\d{2}\.md$/),
-        expect.stringContaining("type: observation"),
-        "utf-8",
-      );
-      const writtenContent = mockWriteFile.mock.calls[0][1] as string;
-      expect(writtenContent).toContain("thread_id: proj-1");
-      expect(writtenContent).toContain("project_id: proj-1");
-      expect(writtenContent).toContain("Compressed summary.");
-    });
-
-    it("does NOT throw when filesystem write fails", async () => {
-      mockWriteFile.mockRejectedValueOnce(new Error("disk full"));
-
-      const longText = "x".repeat(120_001);
-      mockMemoryStore.listMessages.mockResolvedValue({
-        messages: [makeMastraMessage("user", longText)],
-      });
-      mockMemoryStore.getThreadById.mockResolvedValue(null);
-
-      // Should resolve without throwing even though writeFile rejects
-      await expect(
-        manager.save("proj-1", [{ role: "user", content: "trigger" }]),
-      ).resolves.toBeUndefined();
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockWriteFile).toHaveBeenCalled();
-    });
-  });
+  // ------------------------------------------------------------------ initPromise retry
 
   describe("initPromise retry", () => {
     it("resets initPromise on store.init() failure so next call retries", async () => {
-      // Make the first init() call fail
       mockLibSQLStoreInstance.init.mockRejectedValueOnce(new Error("DB locked"));
 
-      // First call to buildContext should fail silently (returns empty context)
       const ctx1 = await manager.buildContext("proj-1");
       expect(ctx1).toEqual({ summary: "", recentMessages: [] });
 
-      // Reset init to succeed
       mockLibSQLStoreInstance.init.mockResolvedValue(undefined);
 
-      // Second call should succeed (initPromise was reset)
       const ctx2 = await manager.buildContext("proj-1");
       expect(ctx2).toEqual({ summary: "", recentMessages: [] });
     });

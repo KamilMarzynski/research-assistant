@@ -1,8 +1,13 @@
 import { join } from "node:path";
 import { LibSQLStore } from "@mastra/libsql";
+import { Memory } from "@mastra/memory";
 import { inject, injectable } from "tsyringe";
 import { USER_DATA_PATH_TOKEN } from "../di/tokens";
-import { MemoryCompressionService } from "./MemoryCompressionService";
+
+export interface MemoryContext {
+  summary: string;
+  recentMessages: Array<{ role: "user" | "assistant"; content: string }>;
+}
 
 function extractTextContent(content: unknown): string {
   if (typeof content === "string") return content;
@@ -18,15 +23,6 @@ function extractTextContent(content: unknown): string {
   return JSON.stringify(content);
 }
 
-export interface MemoryContext {
-  /** Compressed summary from past sessions. Empty string on first use. */
-  summary: string;
-  /** Last N raw conversation turns for history injection. */
-  recentMessages: Array<{ role: "user" | "assistant"; content: string }>;
-}
-
-const WORKING_SET_MESSAGES = 100;
-
 export interface IMemoryManager {
   buildContext(projectId: string): Promise<MemoryContext>;
   save(
@@ -37,28 +33,51 @@ export interface IMemoryManager {
 
 @injectable()
 export class MemoryManager implements IMemoryManager {
-  private initPromise: Promise<LibSQLStore> | null = null;
+  private initPromise: Promise<Memory> | null = null;
   private readonly dbPath: string;
 
-  constructor(
-    @inject(USER_DATA_PATH_TOKEN) userDataPath: string,
-    @inject(MemoryCompressionService) private readonly compressionService: MemoryCompressionService,
-  ) {
+  constructor(@inject(USER_DATA_PATH_TOKEN) userDataPath: string) {
     this.dbPath = join(userDataPath, "research-assistant.db");
   }
 
-  private getStore(): Promise<LibSQLStore> {
+  private async getMemory(): Promise<Memory> {
     if (!this.initPromise) {
       this.initPromise = (async () => {
         try {
-          const store = new LibSQLStore({
+          const storage = new LibSQLStore({
             id: "research-assistant-memory",
             url: `file:${this.dbPath}`,
           });
-          await store.init();
-          return store;
+          await storage.init();
+
+          const memory = new Memory({
+            storage,
+            options: {
+              lastMessages: 25,
+              observationalMemory: {
+                enabled: true,
+                scope: "thread",
+                temporalMarkers: true,
+                model: "ollama/gemma4:31b-cloud",
+                observation: {
+                  messageTokens: 30_000,
+                  bufferTokens: 0.2,
+                  bufferActivation: 0.8,
+                  modelSettings: { temperature: 0.3 },
+                },
+                reflection: {
+                  observationTokens: 60_000,
+                  modelSettings: { temperature: 0 },
+                },
+              },
+            },
+          });
+
+          void memory.omEngine;
+
+          return memory;
         } catch (err) {
-          this.initPromise = null; // Reset so next call retries
+          this.initPromise = null;
           throw err;
         }
       })();
@@ -68,43 +87,20 @@ export class MemoryManager implements IMemoryManager {
 
   async buildContext(projectId: string): Promise<MemoryContext> {
     try {
-      const store = await this.getStore();
-      const memoryStore = await store.getStore("memory");
-      if (!memoryStore) return { summary: "", recentMessages: [] };
+      const memory = await this.getMemory();
+      const ctx = await memory.getContext({
+        threadId: projectId,
+        memoryConfig: { lastMessages: 25 },
+      });
 
-      // Retrieve summary stored as metadata on a dedicated summary thread
-      let summary = "";
-      try {
-        const summaryThread = await memoryStore.getThreadById({
-          threadId: `${projectId}-summary`,
-        });
-        summary = (summaryThread?.metadata as { summary?: string } | undefined)?.summary ?? "";
-      } catch {
-        // No summary thread yet — first session
-      }
+      const summary = ctx.systemMessage ?? "";
 
-      // Retrieve recent messages for history injection
-      let recentMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
-      try {
-        // Fetch newest-first (DESC), then slice and reverse to chronological order.
-        // StorageListMessagesInput.orderBy is typed as StorageOrderBy<'createdAt'>.
-        const result = await memoryStore.listMessages({
-          threadId: projectId,
-          perPage: WORKING_SET_MESSAGES,
-          orderBy: { field: "createdAt", direction: "DESC" },
-        });
-        recentMessages = result.messages
-          .slice(0, WORKING_SET_MESSAGES)
-          .filter((m) => m.role === "user" || m.role === "assistant")
-          .reverse()
-          .map((m) => ({
-            role: m.role as "user" | "assistant",
-            // Extract text from MastraMessageContentV2 parts
-            content: extractTextContent(m.content),
-          }));
-      } catch {
-        // No messages yet
-      }
+      const recentMessages = ctx.messages
+        .filter((m) => m.role === "user" || m.role === "assistant")
+        .map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: extractTextContent(m.content),
+        }));
 
       return { summary, recentMessages };
     } catch (err) {
@@ -118,9 +114,7 @@ export class MemoryManager implements IMemoryManager {
     turns: Array<{ role: "user" | "assistant"; content: string }>,
   ): Promise<void> {
     try {
-      const store = await this.getStore();
-      const memoryStore = await store.getStore("memory");
-      if (!memoryStore) return;
+      const memory = await this.getMemory();
 
       const messages = turns.map((t) => ({
         id: crypto.randomUUID(),
@@ -134,10 +128,12 @@ export class MemoryManager implements IMemoryManager {
         createdAt: new Date(),
       }));
 
-      await memoryStore.saveMessages({ messages });
+      await memory.saveMessages({ messages });
 
-      // Fire Observer compression async — non-blocking
-      void this.compressionService.compress(projectId, store);
+      const omEngine = await memory.omEngine;
+      if (omEngine) {
+        await omEngine.observe({ threadId: projectId });
+      }
     } catch (err) {
       console.error("[MemoryManager] save failed:", err);
     }
