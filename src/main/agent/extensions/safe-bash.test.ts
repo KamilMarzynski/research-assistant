@@ -6,6 +6,7 @@ import {
   BlockedCommandError,
   checkBlocklist,
   clearAllowlists,
+  detectInlineCode,
   resolveBlockedCommand,
   runSafeBash,
 } from "./safe-bash";
@@ -77,6 +78,128 @@ describe("checkBlocklist", () => {
   });
 });
 
+describe("detectInlineCode", () => {
+  describe("detection cases", () => {
+    it("detects python3 -c flag", () => {
+      const result = detectInlineCode('python3 -c "print(1)"');
+      expect(result).toEqual({ detected: true, language: "python", reason: "python3 -c flag" });
+    });
+
+    it("detects python3 --command flag", () => {
+      const result = detectInlineCode('python3 --command "print(1)"');
+      expect(result).toEqual({ detected: true, language: "python", reason: "python3 -c flag" });
+    });
+
+    it("detects python3 with equals syntax", () => {
+      const result = detectInlineCode("python3 -c=print(1)");
+      expect(result).toEqual({ detected: true, language: "python", reason: "python3 -c flag" });
+    });
+
+    it("detects python3 interactive REPL", () => {
+      const result = detectInlineCode("python3");
+      expect(result).toEqual({ detected: true, language: "python", reason: "interactive REPL" });
+    });
+
+    it("detects python interactive REPL", () => {
+      const result = detectInlineCode("python");
+      expect(result).toEqual({ detected: true, language: "python", reason: "interactive REPL" });
+    });
+
+    it("detects node -e flag", () => {
+      const result = detectInlineCode('node -e "console.log(1)"');
+      expect(result).toEqual({ detected: true, language: "javascript", reason: "node -e flag" });
+    });
+
+    it("detects node --eval flag", () => {
+      const result = detectInlineCode('node --eval "console.log(1)"');
+      expect(result).toEqual({ detected: true, language: "javascript", reason: "node -e flag" });
+    });
+
+    it("detects node -p flag", () => {
+      const result = detectInlineCode('node -p "1+1"');
+      expect(result).toEqual({ detected: true, language: "javascript", reason: "node -e flag" });
+    });
+
+    it("detects node --print flag", () => {
+      const result = detectInlineCode('node --print "1+1"');
+      expect(result).toEqual({ detected: true, language: "javascript", reason: "node -e flag" });
+    });
+
+    it("detects node interactive REPL", () => {
+      const result = detectInlineCode("node");
+      expect(result).toEqual({ detected: true, language: "javascript", reason: "interactive REPL" });
+    });
+
+    it("detects bun -e flag", () => {
+      const result = detectInlineCode('bun -e "console.log(1)"');
+      expect(result).toEqual({ detected: true, language: "typescript", reason: "bun -e flag" });
+    });
+
+    it("detects bun --eval flag", () => {
+      const result = detectInlineCode('bun --eval "console.log(1)"');
+      expect(result).toEqual({ detected: true, language: "typescript", reason: "bun -e flag" });
+    });
+
+    it("detects bun interactive REPL", () => {
+      const result = detectInlineCode("bun");
+      expect(result).toEqual({ detected: true, language: "typescript", reason: "interactive REPL" });
+    });
+  });
+
+  describe("non-detection cases", () => {
+    it("returns null for python3 with positional arg", () => {
+      expect(detectInlineCode("python3 script.py")).toBeNull();
+    });
+
+    it("returns null for python3 -m pytest", () => {
+      expect(detectInlineCode("python3 -m pytest")).toBeNull();
+    });
+
+    it("returns null for node with positional arg", () => {
+      expect(detectInlineCode("node build.js")).toBeNull();
+    });
+
+    it("returns null for bun run dev", () => {
+      expect(detectInlineCode("bun run dev")).toBeNull();
+    });
+
+    it("returns null for other commands", () => {
+      expect(detectInlineCode("ls -la")).toBeNull();
+      expect(detectInlineCode("echo hello")).toBeNull();
+      expect(detectInlineCode("cat file.txt")).toBeNull();
+    });
+
+    it("returns null for python3 -c with additional positional arg", () => {
+      expect(detectInlineCode('python3 -c "print(1)" script.py')).toBeNull();
+    });
+
+    it("returns null for node -e with additional positional arg", () => {
+      expect(detectInlineCode('node -e "console.log(1)" build.js')).toBeNull();
+    });
+
+    it("returns null for bun -e with additional positional arg", () => {
+      expect(detectInlineCode('bun -e "console.log(1)" run.ts')).toBeNull();
+    });
+  });
+
+  describe("heredoc detection", () => {
+    it("detects bare python3 after stripping heredoc redirect", () => {
+      const result = detectInlineCode("python3 << 'EOF'");
+      expect(result).toEqual({ detected: true, language: "python", reason: "interactive REPL" });
+    });
+
+    it("detects bare node after stripping heredoc redirect", () => {
+      const result = detectInlineCode("node << 'EOF'");
+      expect(result).toEqual({ detected: true, language: "javascript", reason: "interactive REPL" });
+    });
+
+    it("detects bare bun after stripping heredoc redirect", () => {
+      const result = detectInlineCode("bun << 'EOF'");
+      expect(result).toEqual({ detected: true, language: "typescript", reason: "interactive REPL" });
+    });
+  });
+});
+
 describe("runSafeBash", () => {
   let workDir: string;
   let auditLogPath: string;
@@ -101,6 +224,22 @@ describe("runSafeBash", () => {
     expect(result.stdout.trim()).toBe("hello");
     expect(result.exitCode).toBe(0);
     expect(result.truncated).toBe(false);
+  });
+
+  it("returns inline code hint for python3 -c instead of executing", async () => {
+    const result = await runSafeBash({
+      command: 'python3 -c "print(1)"',
+      intent: "test inline code detection",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe("");
+    expect(result.truncated).toBe(false);
+    expect(result.stdout).toContain("run_in_docker");
+    expect(result.stdout).toContain("python");
+    expect(result.stdout).toContain('"language": "python"');
   });
 
   it("returns non-zero exitCode on failure", async () => {

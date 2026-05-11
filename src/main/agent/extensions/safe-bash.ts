@@ -14,6 +14,12 @@ export interface BlockedResult {
     | "unknown_binary";
 }
 
+export interface InlineCodeHint {
+  detected: true;
+  language: "python" | "javascript" | "typescript";
+  reason: string;
+}
+
 const ALLOWED_BINARIES = new Set([
   "ls",
   "cat",
@@ -140,6 +146,77 @@ function stripRedirects(command: string): string {
  * Check if a command string contains shell operators (;, |, &) in unquoted positions.
  * We consider text outside of single-quoted regions as unquoted.
  */
+/**
+ * Simple quote-aware tokenizer for shell-like command strings.
+ * Handles unquoted words, double-quoted strings, and single-quoted strings.
+ */
+function tokenize(command: string): string[] {
+  const tokens: string[] = [];
+  const regex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
+  let match;
+  while ((match = regex.exec(command)) !== null) {
+    tokens.push(match[1] ?? match[2] ?? match[0]);
+  }
+  return tokens;
+}
+
+const VALUE_FLAGS = new Set(["-c", "--command", "-e", "--eval", "-p", "--print"]);
+
+export function detectInlineCode(command: string): InlineCodeHint | null {
+  const stripped = stripRedirects(command).trim();
+  if (!stripped) return null;
+
+  const tokens = tokenize(stripped);
+  if (tokens.length === 0) return null;
+
+  const binary = tokens[0].split("/").pop() ?? tokens[0];
+
+  if (binary !== "python3" && binary !== "python" && binary !== "node" && binary !== "bun") {
+    return null;
+  }
+
+  let hasCodeFlag = false;
+  let i = 1;
+  while (i < tokens.length) {
+    const token = tokens[i];
+    if (token.startsWith("-")) {
+      const flag = token.includes("=") ? token.split("=")[0] : token;
+      if (VALUE_FLAGS.has(flag)) {
+        hasCodeFlag = true;
+        if (token.includes("=")) {
+          i += 1;
+        } else {
+          i += 2;
+        }
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+    // Any non-flag token is a positional argument → not inline code
+    return null;
+  }
+
+  if (hasCodeFlag) {
+    if (binary === "python3" || binary === "python") {
+      return { detected: true, language: "python", reason: "python3 -c flag" };
+    }
+    if (binary === "node") {
+      return { detected: true, language: "javascript", reason: "node -e flag" };
+    }
+    return { detected: true, language: "typescript", reason: "bun -e flag" };
+  }
+
+  // No positional args and no code flag → interactive REPL
+  if (binary === "python3" || binary === "python") {
+    return { detected: true, language: "python", reason: "interactive REPL" };
+  }
+  if (binary === "node") {
+    return { detected: true, language: "javascript", reason: "interactive REPL" };
+  }
+  return { detected: true, language: "typescript", reason: "interactive REPL" };
+}
+
 function hasUnsafeOperators(command: string): boolean {
   // Remove single-quoted strings (they are safe)
   const withoutSingleQuotes = command.replace(/'[^']*'/g, "");
@@ -471,7 +548,33 @@ export function resolveBlockedCommand(
 
 // --- Public API ---
 
+function buildInlineCodeHint(hint: InlineCodeHint): string {
+  const example = {
+    tool: "run_in_docker",
+    language: hint.language,
+    code: "<your code here>",
+  };
+  return [
+    `Inline ${hint.language} code execution detected (${hint.reason}).`,
+    "For security, inline code execution is not allowed in safe_bash.",
+    "Please use run_in_docker instead.",
+    "",
+    "Example:",
+    JSON.stringify(example, null, 2),
+  ].join("\n");
+}
+
 export async function runSafeBash(opts: SafeBashOptions): Promise<SafeBashResult> {
+  const inlineHint = detectInlineCode(opts.command);
+  if (inlineHint) {
+    return {
+      exitCode: 1,
+      stderr: "",
+      truncated: false,
+      stdout: buildInlineCodeHint(inlineHint),
+    };
+  }
+
   const entry = checkCommand(opts.command);
 
   if (!entry) {
