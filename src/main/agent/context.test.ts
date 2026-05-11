@@ -49,7 +49,6 @@ describe("loadSkillIndexXml", () => {
 			".scholar",
 			"projects",
 			"my-project",
-			".scholar",
 			"skills",
 			"shared-skill",
 		);
@@ -328,7 +327,6 @@ describe("loadSkillsByContent", () => {
 			".scholar",
 			"projects",
 			projectSlug,
-			".scholar",
 			"skills",
 			"proj-skill",
 		);

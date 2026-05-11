@@ -4,10 +4,7 @@ import { getScholarHome } from "../paths";
 import { createDefaultSkillRouter } from "./SkillRouter";
 
 export async function loadSkillIndexXml(projectName: string | undefined): Promise<string> {
-	const projectFolderPath = projectName
-		? join(getScholarHome(), "projects", toSlug(projectName))
-		: undefined;
-	const router = createDefaultSkillRouter(projectFolderPath);
+	const router = createDefaultSkillRouter(projectName);
 	await router.buildIndex();
 	return router.toXml();
 }
@@ -27,10 +24,7 @@ export async function loadSkillsByContent(
 ): Promise<string> {
 	if (skillNames.length === 0) return "";
 
-	const projectFolderPath = projectName
-		? join(getScholarHome(), "projects", toSlug(projectName))
-		: undefined;
-	const router = createDefaultSkillRouter(projectFolderPath);
+	const router = createDefaultSkillRouter(projectName);
 	await router.buildIndex();
 	const parts: string[] = [];
 	for (const name of skillNames) {
