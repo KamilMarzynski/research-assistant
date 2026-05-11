@@ -289,10 +289,13 @@ export class AgentSession {
         const memoryContext = await this.memoryManager.buildContext(this.projectId);
         const systemContext = await buildSystemContext(this.projectName, this.skillRouter.toXml());
 
-        const systemPrompt = [BASE_SYSTEM_PROMPT, memoryContext.summary, systemContext]
+        const newSystemPrompt = [BASE_SYSTEM_PROMPT, memoryContext.summary, systemContext]
           .filter(Boolean)
           .join("\n\n");
-        this.agent.state.systemPrompt = systemPrompt;
+
+        if (newSystemPrompt !== this.agent.state.systemPrompt) {
+          this.agent.state.systemPrompt = newSystemPrompt;
+        }
       } catch (err) {
         console.error("[AgentSession] Failed to refresh system context:", err);
       }
