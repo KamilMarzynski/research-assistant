@@ -55,7 +55,7 @@ describe("ProjectService", () => {
   let repo: IProjectRepository;
   let service: ProjectService;
 
-  const HOME = "/tmp/.research-assistant";
+  const HOME = "/tmp/.scholar";
 
   beforeEach(() => {
     repo = makeMockRepo();
@@ -132,11 +132,11 @@ describe("ProjectService", () => {
 
       expect(repo.delete).toHaveBeenCalledWith("p1");
       const { rm } = await import("node:fs/promises");
-      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.research-assistant/workspace/p1", {
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.scholar/workspace/p1", {
         recursive: true,
         force: true,
       });
-      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.research-assistant/projects/my-project", {
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.scholar/projects/my-project", {
         recursive: true,
         force: true,
       });

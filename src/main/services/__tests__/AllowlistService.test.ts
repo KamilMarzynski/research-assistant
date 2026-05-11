@@ -112,7 +112,7 @@ describe("AllowlistService", () => {
     });
 
     it("parses config.md allowed paths section", async () => {
-      const home = join(tmpHome, ".research-assistant");
+      const home = join(tmpHome, ".scholar");
       await mkdir(home, { recursive: true });
       await writeFile(
         join(home, "config.md"),
@@ -139,7 +139,7 @@ Some content.
     });
 
     it("returns empty array when no Allowed paths section exists", async () => {
-      const home = join(tmpHome, ".research-assistant");
+      const home = join(tmpHome, ".scholar");
       await mkdir(home, { recursive: true });
       await writeFile(
         join(home, "config.md"),

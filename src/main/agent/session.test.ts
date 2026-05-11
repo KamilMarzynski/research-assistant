@@ -78,7 +78,7 @@ function makeEventBus() {
 function makeHomeService() {
   return {
     isFirstRun: vi.fn().mockResolvedValue(false),
-    getHomePath: vi.fn().mockReturnValue("/tmp/.research-assistant"),
+    getHomePath: vi.fn().mockReturnValue("/tmp/.scholar"),
   };
 }
 
