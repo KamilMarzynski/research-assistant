@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { normalize, resolve } from "node:path";
 import { injectable } from "tsyringe";
-import { getResearchAssistantHome } from "../paths";
+import { getScholarHome } from "../paths";
 
 export class ApprovalRequiredError extends Error {
   readonly path: string;
@@ -20,7 +20,7 @@ export class AllowlistService {
   private sessionAllowlists = new Map<string, Set<string>>(); // projectId -> Set of resolved paths
 
   async getGlobalAllowlist(): Promise<string[]> {
-    const home = getResearchAssistantHome();
+    const home = getScholarHome();
     try {
       const content = await readFile(`${home}/config.md`, "utf-8");
       const section = content.match(/## Allowed paths[\s\S]*?(?=## |\n# |\n*$)/);

@@ -6,7 +6,7 @@ import { IPC } from "../../shared/ipc-channels";
 import type { FileNode } from "../../shared/ipc-types";
 import { PathJail } from "../agent/path-jail";
 import { ProjectIdSchema, ReadArtifactFileSchema } from "../ipc-validation";
-import { getResearchAssistantHome } from "../paths";
+import { getScholarHome } from "../paths";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { ArtifactService } from "../services/ArtifactService";
 import type { ProjectService } from "../services/ProjectService";
@@ -129,7 +129,7 @@ export function registerArtifactHandlers(
     }
 
     try {
-      const workspacePath = join(getResearchAssistantHome(), "workspace", project.id);
+      const workspacePath = join(getScholarHome(), "workspace", project.id);
       const resolvedWorkspace = jail.validate(workspacePath, "read");
       const workspaceStats = await stat(resolvedWorkspace);
       if (workspaceStats.isDirectory()) {

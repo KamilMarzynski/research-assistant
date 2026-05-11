@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { getResearchAssistantHome } from "../paths";
+import { getScholarHome } from "../paths";
 import { createDefaultSkillRouter } from "./SkillRouter";
 
 export async function loadSkillIndexXml(projectFolderPath: string | undefined): Promise<string> {
@@ -43,13 +43,13 @@ export async function buildSystemContext(
   folderPath: string | undefined,
   skillIndexXml?: string,
 ): Promise<string> {
-  const raHome = getResearchAssistantHome();
+  const scholarHome = getScholarHome();
   const slug = toSlug(projectName);
   const parts: string[] = [];
 
   // 1. config.md
   try {
-    const config = await readFile(join(raHome, "config.md"), "utf-8");
+    const config = await readFile(join(scholarHome, "config.md"), "utf-8");
     if (config.trim()) {
       parts.push("<!-- User working style (config.md) -->", config.trim());
     }
@@ -72,7 +72,7 @@ export async function buildSystemContext(
   }
   if (!agentsFile) {
     try {
-      agentsFile = await readFile(join(raHome, "projects", slug, "AGENTS.md"), "utf-8");
+      agentsFile = await readFile(join(scholarHome, "projects", slug, "AGENTS.md"), "utf-8");
     } catch {
       // not yet discovered
     }
@@ -96,7 +96,7 @@ export async function buildSystemContext(
 
   // 4. App-level MEMORY.md
   try {
-    const appMemory = await readFile(join(raHome, "app-memory", "MEMORY.md"), "utf-8");
+    const appMemory = await readFile(join(scholarHome, "app-memory", "MEMORY.md"), "utf-8");
     if (appMemory.trim()) {
       parts.push("<!-- App-level memory (MEMORY.md) -->", appMemory.trim());
     }
@@ -115,7 +115,7 @@ export async function buildSystemContext(
   }
   if (!projectMemory) {
     try {
-      projectMemory = await readFile(join(raHome, "projects", slug, "MEMORY.md"), "utf-8");
+      projectMemory = await readFile(join(scholarHome, "projects", slug, "MEMORY.md"), "utf-8");
     } catch {
       // not yet discovered
     }
