@@ -45,8 +45,18 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "write")).toThrow(/read-only/);
     });
 
+    it("allows read inside ~/.scholar/projects/<slug>/skills", () => {
+      const p = join(HOME, "projects", "test-project", "skills", "my-skill", "SKILL.md");
+      expect(() => jail.validate(p, "read")).not.toThrow();
+    });
+
+    it("blocks write to ~/.scholar/projects/<slug>/skills", () => {
+      const p = join(HOME, "projects", "test-project", "skills", "my-skill", "SKILL.md");
+      expect(() => jail.validate(p, "write")).toThrow(/read-only/);
+    });
+
     it("allows write inside ~/.scholar/projects/<slug>", () => {
-      const p = join(HOME, "projects", "test-project", "AGENTS.md");
+      const p = join(HOME, "projects", "test-project", "GOAL.md");
       expect(() => jail.validate(p, "write")).not.toThrow();
     });
 

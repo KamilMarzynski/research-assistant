@@ -9,7 +9,7 @@ export class PathJail {
   private readonly home: string;
   private readonly homeSkills: string;
   private readonly projectFolder: string | null;
-  private readonly projectHomeSkills: string | null;
+  private readonly projectSkills: string;
   private readonly projectsDir: string;
   private readonly readWriteZones: string[];
   private readonly readOnlyZones: string[];
@@ -25,9 +25,7 @@ export class PathJail {
     this.workspace = join(this.home, "workspace", projectId);
     this.homeSkills = join(this.home, "skills");
     this.projectFolder = folderPath ? resolve(normalize(folderPath)) : null;
-    this.projectHomeSkills = this.projectFolder
-      ? join(this.projectFolder, ".scholar", "skills")
-      : null;
+    this.projectSkills = join(this.home, "projects", toSlug(projectName), "skills");
     this.projectsDir = join(this.home, "projects", toSlug(projectName));
 
     this.readWriteZones = [
@@ -38,7 +36,7 @@ export class PathJail {
 
     this.readOnlyZones = [
       this.homeSkills,
-      ...(this.projectHomeSkills ? [this.projectHomeSkills] : []),
+      this.projectSkills,
     ];
 
     this.allZones = [...this.readWriteZones, ...this.readOnlyZones];
@@ -104,17 +102,17 @@ export class PathJail {
   validate(inputPath: string, mode: "read" | "write"): string {
     const resolved = resolve(normalize(inputPath));
 
-    if (this.isInZone(resolved, this.readWriteZones)) {
-      this.walkComponents(resolved);
-      return resolved;
-    }
-
     if (this.isInZone(resolved, this.readOnlyZones)) {
       if (mode === "write") {
         throw new Error(
           `Path "${resolved}" is in a read-only zone (skills directory). Use a workspace or project folder path instead.`,
         );
       }
+      this.walkComponents(resolved);
+      return resolved;
+    }
+
+    if (this.isInZone(resolved, this.readWriteZones)) {
       this.walkComponents(resolved);
       return resolved;
     }
@@ -129,7 +127,7 @@ export class PathJail {
     }
 
     throw new Error(
-      `Path "${resolved}" is not allowed. Permitted zones: workspace (${this.workspace}), project folder${this.projectFolder ? ` (${this.projectFolder})` : " (none linked)"}, projects dir (${this.projectsDir}), skills directories.`,
+      `Path "${resolved}" is not allowed. Permitted zones: workspace (${this.workspace}), project folder${this.projectFolder ? ` (${this.projectFolder})` : " (none linked)"}, projects dir (${this.projectsDir}), skills directories (${this.homeSkills}, ${this.projectSkills}).`,
     );
   }
 }
