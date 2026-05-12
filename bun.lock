@@ -9,6 +9,7 @@
         "@emotion/styled": "^11.14.1",
         "@fontsource/inter": "^5.2.8",
         "@fontsource/manrope": "^5.2.8",
+        "@langfuse/tracing": "^5.3.0",
         "@libsql/client": "^0.17.2",
         "@mariozechner/pi-agent-core": "^0.67.68",
         "@mariozechner/pi-ai": "^0.67.68",
@@ -320,6 +321,10 @@
 
     "@js-sdsl/ordered-map": ["@js-sdsl/ordered-map@4.4.2", "", {}, "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw=="],
 
+    "@langfuse/core": ["@langfuse/core@5.3.0", "", { "peerDependencies": { "@opentelemetry/api": "^1.9.0" } }, "sha512-9JnDpSMBxsy6Mw5YTc0vERpAYJG5jJKxLtgv1mgA4yrNGWOtqV6ShkSSb/mWE7CeyKFnIFM0lRJpqblrMaRfQA=="],
+
+    "@langfuse/tracing": ["@langfuse/tracing@5.3.0", "", { "dependencies": { "@langfuse/core": "^5.3.0" }, "peerDependencies": { "@opentelemetry/api": "^1.9.0" } }, "sha512-Fz6da1O+OqrwG69nF1UAjdaZrYUfR+h+DyVjXJLTNhTrOCqx/jTiIVAP5A32rB07+l4ESgzfO4K222A6cdPW1w=="],
+
     "@libsql/client": ["@libsql/client@0.17.2", "", { "dependencies": { "@libsql/core": "^0.17.2", "@libsql/hrana-client": "^0.9.0", "js-base64": "^3.7.5", "libsql": "^0.5.28", "promise-limit": "^2.7.0" } }, "sha512-0aw0S3iQMHvOxfRt5j1atoCCPMT3gjsB2PS8/uxSM1DcDn39xqz6RlgSMxtP8I3JsxIXAFuw7S41baLEw0Zi+Q=="],
 
     "@libsql/core": ["@libsql/core@0.17.2", "", { "dependencies": { "js-base64": "^3.7.5" } }, "sha512-L8qv12HZ/jRBcETVR3rscP0uHNxh+K3EABSde6scCw7zfOdiLqO3MAkJaeE1WovPsjXzsN/JBoZED4+7EZVT3g=="],
@@ -387,6 +392,8 @@
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.4", "", { "dependencies": { "@tybys/wasm-util": "^0.10.1" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-3NQNNgA1YSlJb/kMH1ildASP9HW7/7kYnRI2szWJaofaS1hWmbGI4H+d3+22aGzXXN9IJ+n+GiFVcGipJP18ow=="],
 
     "@neon-rs/load": ["@neon-rs/load@0.0.4", "", {}, "sha512-kTPhdZyTQxB+2wpiRcFWrDcejc4JI6tkPuS7UZCG4l6Zvc5kU/gGQ/ozvHTh1XR5tS+UlfAfGuPajjzQjCiHCw=="],
+
+    "@opentelemetry/api": ["@opentelemetry/api@1.9.1", "", {}, "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.124.0", "", {}, "sha512-VBFWMTBvHxS11Z5Lvlr3IWgrwhMTXV+Md+EQF0Xf60+wAdsGFTBx7X7K/hP4pi8N7dcm1RvcHwDxZ16Qx8keUg=="],
 
