@@ -19,6 +19,7 @@ export function createModel(opts: ModelFactoryOptions): Model<Api> {
         process.env.LANGFUSE_BASE_URL ??
         "https://cloud.langfuse.com"
       ).replace(/\/$/, "");
+      const targetUrl = base.baseUrl.replace(/^(https?:\/\/)localhost\b/, "$1host.docker.internal");
       return {
         ...base,
         baseUrl: `${host}/api/proxy/openai/v1`,
@@ -26,7 +27,7 @@ export function createModel(opts: ModelFactoryOptions): Model<Api> {
           ...base.headers,
           "x-langfuse-public-key": publicKey,
           "x-langfuse-secret-key": secretKey,
-          "x-target-url": base.baseUrl,
+          "x-target-url": targetUrl,
         },
       };
     }

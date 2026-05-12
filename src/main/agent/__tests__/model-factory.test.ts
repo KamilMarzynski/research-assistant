@@ -97,7 +97,7 @@ describe("createModel", () => {
     expect(model.id).toBe("llama3");
   });
 
-  it("proxies ollama through LangFuse when enabled and keys present", () => {
+  it("proxies ollama through LangFuse rewriting localhost to host.docker.internal", () => {
     process.env.LANGFUSE_PUBLIC_KEY = "pk-test";
     process.env.LANGFUSE_SECRET_KEY = "sk-test";
     const ollamaProvider = {
@@ -107,7 +107,7 @@ describe("createModel", () => {
     };
     const model = createModel({ provider: ollamaProvider, langfuseEnabled: true });
     expect(model.baseUrl).toContain("cloud.langfuse.com");
-    expect(model.headers?.["x-target-url"]).toBe("http://localhost:11434/v1");
+    expect(model.headers?.["x-target-url"]).toBe("http://host.docker.internal:11434/v1");
   });
 
   it("falls back to LANGFUSE_BASE_URL when LANGFUSE_HOST is missing", () => {
