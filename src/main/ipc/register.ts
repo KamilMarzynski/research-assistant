@@ -8,6 +8,7 @@ import { HomeService } from "../services/HomeService";
 import { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager } from "../services/MemoryManager";
 import { MessageService } from "../services/MessageService";
+import { ObservabilityService } from "../services/ObservabilityService";
 import { OutputNotificationService } from "../services/OutputNotificationService";
 import { ProjectService } from "../services/ProjectService";
 import { ResearchService } from "../services/ResearchService";
@@ -37,6 +38,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const outputNotificationService = container.resolve(OutputNotificationService);
   const memoryFileService = container.resolve(MemoryFileService);
   const allowlistService = container.resolve(AllowlistService);
+  const observabilityService = container.resolve(ObservabilityService);
 
   registerProjectHandlers(win, { projectService, sessionManager });
   registerSettingsHandlers(win, { settingsService, sessionManager, projectService });
@@ -53,6 +55,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     outputNotificationService,
     memoryFileService,
     allowlistService,
+    observabilityService,
   });
   registerAdminHandlers(win, { homeService });
   registerResearchHandlers(win, { projectService, researchService, homeService });

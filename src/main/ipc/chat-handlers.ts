@@ -11,6 +11,7 @@ import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
+import type { ObservabilityService } from "../services/ObservabilityService";
 import type { OutputNotificationService } from "../services/OutputNotificationService";
 import type { ProjectService } from "../services/ProjectService";
 import type { ResearchService } from "../services/ResearchService";
@@ -32,6 +33,7 @@ export function registerChatHandler(
     outputNotificationService: OutputNotificationService;
     memoryFileService: MemoryFileService;
     allowlistService: AllowlistService;
+    observabilityService: ObservabilityService;
   },
 ): void {
   const {
@@ -46,6 +48,7 @@ export function registerChatHandler(
     outputNotificationService,
     memoryFileService,
     allowlistService,
+    observabilityService,
   } = deps;
 
   eventBus.on("agent:chunk", (payload) => {
@@ -127,6 +130,7 @@ export function registerChatHandler(
           webAccessEnabled: settings.webAccessEnabled,
           memoryFileService,
           allowlistService,
+          observabilityService,
           proposeSkillFn: async (name, skillContent, script) => {
             await homeService.savePendingTool(name, skillContent, script);
             eventBus.emit({ type: "tool:pending", payload: { name, skillContent } });
