@@ -26,12 +26,14 @@ describe("createModel", () => {
     delete process.env.LANGFUSE_PUBLIC_KEY;
     delete process.env.LANGFUSE_SECRET_KEY;
     delete process.env.LANGFUSE_HOST;
+    delete process.env.LANGFUSE_BASE_URL;
   });
 
   afterEach(() => {
     delete process.env.LANGFUSE_PUBLIC_KEY;
     delete process.env.LANGFUSE_SECRET_KEY;
     delete process.env.LANGFUSE_HOST;
+    delete process.env.LANGFUSE_BASE_URL;
   });
 
   it("returns base openrouter model when langfuseEnabled is false", () => {
@@ -93,6 +95,27 @@ describe("createModel", () => {
     const model = createModel({ provider: ollamaProvider, langfuseEnabled: false });
     expect(model.baseUrl).toBe("http://localhost:11434/v1");
     expect(model.id).toBe("llama3");
+  });
+
+  it("proxies ollama through LangFuse when enabled and keys present", () => {
+    process.env.LANGFUSE_PUBLIC_KEY = "pk-test";
+    process.env.LANGFUSE_SECRET_KEY = "sk-test";
+    const ollamaProvider = {
+      type: "ollama" as const,
+      host: "http://localhost:11434",
+      model: "llama3",
+    };
+    const model = createModel({ provider: ollamaProvider, langfuseEnabled: true });
+    expect(model.baseUrl).toContain("cloud.langfuse.com");
+    expect(model.headers?.["x-target-url"]).toBe("http://localhost:11434/v1");
+  });
+
+  it("falls back to LANGFUSE_BASE_URL when LANGFUSE_HOST is missing", () => {
+    process.env.LANGFUSE_PUBLIC_KEY = "pk-test";
+    process.env.LANGFUSE_SECRET_KEY = "sk-test";
+    process.env.LANGFUSE_BASE_URL = "http://localhost:3000";
+    const model = createModel({ provider: openrouterProvider, langfuseEnabled: true });
+    expect(model.baseUrl).toBe("http://localhost:3000/api/proxy/openai/v1");
   });
 
   it("returns openai model config", () => {

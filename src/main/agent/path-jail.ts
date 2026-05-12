@@ -30,11 +30,13 @@ export class PathJail {
 
     this.readWriteZones = [
       this.workspace,
+      this.homeSkills,
+      this.projectSkills,
       this.projectsDir,
       ...(this.projectFolder ? [this.projectFolder] : []),
     ];
 
-    this.readOnlyZones = [this.homeSkills, this.projectSkills];
+    this.readOnlyZones = [];
 
     this.allZones = [...this.readWriteZones, ...this.readOnlyZones];
   }

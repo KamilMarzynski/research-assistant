@@ -1,7 +1,6 @@
 import type { Api, Model } from "@mariozechner/pi-ai";
 import { getModels } from "@mariozechner/pi-ai";
 import type { ModelProvider } from "./model-provider";
-import { isCloudProvider } from "./model-provider";
 
 export interface ModelFactoryOptions {
   provider: ModelProvider;
@@ -11,11 +10,15 @@ export interface ModelFactoryOptions {
 export function createModel(opts: ModelFactoryOptions): Model<Api> {
   const base = resolveBaseConfig(opts.provider);
 
-  if (opts.langfuseEnabled && isCloudProvider(opts.provider)) {
+  if (opts.langfuseEnabled) {
     const publicKey = process.env.LANGFUSE_PUBLIC_KEY;
     const secretKey = process.env.LANGFUSE_SECRET_KEY;
     if (publicKey && secretKey) {
-      const host = (process.env.LANGFUSE_HOST ?? "https://cloud.langfuse.com").replace(/\/$/, "");
+      const host = (
+        process.env.LANGFUSE_HOST ??
+        process.env.LANGFUSE_BASE_URL ??
+        "https://cloud.langfuse.com"
+      ).replace(/\/$/, "");
       return {
         ...base,
         baseUrl: `${host}/api/proxy/openai/v1`,
