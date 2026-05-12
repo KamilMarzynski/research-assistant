@@ -1,12 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getScholarHome } from "../paths";
-import { createDefaultSkillRouter } from "./SkillRouter";
+import { createDefaultSkillRouter, SkillRouter } from "./SkillRouter";
 
-export async function loadSkillIndexXml(projectName: string | undefined): Promise<string> {
-  const router = createDefaultSkillRouter(projectName);
-  await router.buildIndex();
-  return router.toXml();
+export async function loadSkillIndexXml(
+  projectName: string | undefined,
+  router?: SkillRouter,
+): Promise<string> {
+  const r = router ?? createDefaultSkillRouter(projectName);
+  if (!router) await r.buildIndex();
+  return r.toXml();
 }
 
 export function toSlug(name: string): string {
@@ -21,15 +24,16 @@ export function toSlug(name: string): string {
 export async function loadSkillsByContent(
   skillNames: string[],
   projectName: string | undefined,
+  router?: SkillRouter,
 ): Promise<string> {
   if (skillNames.length === 0) return "";
 
-  const router = createDefaultSkillRouter(projectName);
-  await router.buildIndex();
+  const r = router ?? createDefaultSkillRouter(projectName);
+  if (!router) await r.buildIndex();
   const parts: string[] = [];
   for (const name of skillNames) {
     try {
-      const content = await router.loadSkillWithExtras(name);
+      const content = await r.loadSkillWithExtras(name);
       parts.push(content);
     } catch (err) {
       console.error(`[context] failed to load skill "${name}":`, err);

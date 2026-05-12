@@ -1,6 +1,6 @@
-import { existsSync, watch } from "node:fs";
 import { access, readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { watch } from "chokidar";
 import { getScholarHome } from "../paths";
 import { parseFrontmatter } from "../utils/frontmatter";
 import { toSlug } from "./context";
@@ -100,22 +100,25 @@ export class SkillRouter {
   startWatching(): void {
     this.stopWatching();
     for (const dir of this.skillDirs) {
-      if (!existsSync(dir)) {
-        // Directory does not exist — skip silently; project-level skill dirs are optional
-        continue;
-      }
       try {
-        const watcher = watch(dir, { recursive: true }, async (_eventType, filename) => {
-          if (typeof filename !== "string" || !filename.endsWith("SKILL.md")) {
-            return;
-          }
+        const watcher = watch(dir, {
+          ignored: /(^|[/\\])\../,
+          persistent: true,
+          depth: 2,
+        });
+
+        const onSkillFileEvent = async (filePath: string) => {
+          if (!filePath.endsWith("SKILL.md")) return;
           await this.buildIndex();
-          const changedPath = join(dir, filename);
-          const changedSkill = this.index.skills.find((s) => s.location === changedPath);
+          const changedSkill = this.index.skills.find((s) => s.location === filePath);
           if (changedSkill && this.onChange) {
             this.onChange(changedSkill.name, `Description: ${changedSkill.description}`);
           }
-        });
+        };
+
+        watcher.on("add", onSkillFileEvent);
+        watcher.on("change", onSkillFileEvent);
+        watcher.on("unlink", onSkillFileEvent);
         this.watchers.push(watcher);
       } catch (err) {
         console.error(`[SkillRouter] Failed to watch ${dir}:`, err);

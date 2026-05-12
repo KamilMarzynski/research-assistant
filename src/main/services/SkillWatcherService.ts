@@ -64,7 +64,7 @@ export class SkillWatcherService {
       const meta = parseFrontmatter(raw);
       const name = meta.name || "unknown";
       const description = meta.description || "";
-      const hashInput = `${name}|${description}|${raw.slice(0, 200)}`;
+      const hashInput = `${name}|${description}|${raw}`;
       const hash = createHash("sha256").update(hashInput).digest("hex").slice(0, 16);
 
       if (this.manifest[name] === hash) return;

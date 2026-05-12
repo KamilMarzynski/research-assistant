@@ -134,10 +134,6 @@ export class AgentSession {
       this.pendingSkillDeltas.push({ skillName, summary });
     });
 
-    eventBus.on("skill:changed", (payload) => {
-      this.pendingSkillDeltas.push(payload);
-    });
-
     const homePath = homeService.getHomePath();
 
     const systemPrompt = [
