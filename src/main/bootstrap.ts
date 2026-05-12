@@ -27,6 +27,7 @@ import { HomeService } from "./services/HomeService";
 import { MemoryFileService } from "./services/MemoryFileService";
 import { type IMemoryManager, MemoryManager } from "./services/MemoryManager";
 import { MessageService } from "./services/MessageService";
+import { ObservabilityService } from "./services/ObservabilityService";
 import { OutputNotificationService } from "./services/OutputNotificationService";
 import { ProjectService } from "./services/ProjectService";
 import { ResearchService } from "./services/ResearchService";
@@ -64,6 +65,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(ResearchService);
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);
+  appContainer.registerSingleton(ObservabilityService);
   appContainer.register<IMemoryManager>(MEMORY_MANAGER_TOKEN, { useClass: MemoryManager });
   appContainer.registerSingleton(TaskPersistenceService);
   appContainer.registerSingleton(SkillManagementService);
