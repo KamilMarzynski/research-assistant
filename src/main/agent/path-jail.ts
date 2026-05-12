@@ -8,6 +8,7 @@ export class PathJail {
   private readonly workspace: string;
   private readonly home: string;
   private readonly homeSkills: string;
+  private readonly allProjectsDir: string;
   private readonly projectFolder: string | null;
   private readonly projectSkills: string;
   private readonly projectsDir: string;
@@ -25,10 +26,12 @@ export class PathJail {
     this.workspace = join(this.home, "workspace", projectId);
     this.homeSkills = join(this.home, "skills");
     this.projectFolder = folderPath ? resolve(normalize(folderPath)) : null;
+    this.allProjectsDir = join(this.home, "projects");
     this.projectSkills = join(this.home, "projects", toSlug(projectName), "skills");
     this.projectsDir = join(this.home, "projects", toSlug(projectName));
 
     this.readWriteZones = [
+      this.allProjectsDir,
       this.workspace,
       this.homeSkills,
       this.projectSkills,
