@@ -2,23 +2,23 @@
 html[data-theme="dark"] {
   /* Surfaces */
   --bg: oklch(0.17 0.008 60);
-  --surface: oklch(0.21 0.01 60);
-  --surface-2: oklch(0.25 0.012 60);
-  --surface-3: oklch(0.3 0.014 60);
-  --line: oklch(0.3 0.012 60);
-  --line-strong: oklch(0.38 0.014 60);
+  --surface: oklch(0.22 0.01 60);
+  --surface-2: oklch(0.27 0.012 60);
+  --surface-3: oklch(0.33 0.014 60);
+  --line: oklch(0.34 0.012 60);
+  --line-strong: oklch(0.44 0.014 60);
 
   /* Ink */
-  --ink: oklch(0.95 0.01 70);
-  --ink-2: oklch(0.74 0.012 70);
-  --ink-3: oklch(0.58 0.012 70);
+  --ink: oklch(0.97 0.01 70);
+  --ink-2: oklch(0.84 0.012 70);
+  --ink-3: oklch(0.7 0.012 70);
   --ink-on-accent: oklch(0.16 0.01 60);
 
   /* Accent */
-  --accent: oklch(0.74 0.14 50);
-  --accent-hover: oklch(0.8 0.14 50);
-  --accent-soft: oklch(0.3 0.06 45);
-  --accent-line: oklch(0.42 0.09 45);
+  --accent: oklch(0.74 0.075 70);
+  --accent-hover: oklch(0.8 0.075 70);
+  --accent-soft: oklch(0.32 0.035 65);
+  --accent-line: oklch(0.46 0.05 65);
 
   /* Status */
   --success: oklch(0.74 0.1 145);
@@ -35,7 +35,7 @@ html[data-theme="dark"] {
   --shadow-1: 0 1px 0 oklch(0 0 0 / 0.3), 0 1px 2px oklch(0 0 0 / 0.35);
   --shadow-2: 0 2px 4px oklch(0 0 0 / 0.4), 0 8px 24px oklch(0 0 0 / 0.45);
   --shadow-3: 0 4px 12px oklch(0 0 0 / 0.5), 0 24px 60px oklch(0 0 0 / 0.6);
-  --focus-ring: 0 0 0 3px oklch(0.74 0.14 50 / 0.3);
+  --focus-ring: 0 0 0 3px oklch(0.74 0.075 70 / 0.32);
 }
 
 /* Dark mode button/input overrides */
@@ -56,7 +56,7 @@ html[data-theme="dark"] .input--sunken {
 }
 html[data-theme="dark"] .chip--accent {
   background: var(--accent-soft);
-  color: oklch(0.88 0.1 50);
+  color: oklch(0.9 0.06 70);
   border-color: var(--accent-line);
 }
 html[data-theme="dark"] .chip--success {
@@ -81,7 +81,7 @@ html[data-theme="dark"] .chip--info {
 }
 html[data-theme="dark"] .dot--accent {
   background: var(--accent);
-  box-shadow: 0 0 0 3px oklch(0.74 0.14 50 / 0.18);
+  box-shadow: 0 0 0 3px oklch(0.74 0.075 70 / 0.22);
 }
 html[data-theme="dark"] .tl-close {
   background: oklch(0.65 0.16 25);

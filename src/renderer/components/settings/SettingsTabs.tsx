@@ -42,7 +42,7 @@ export default function SettingsTabs({
           gap: 6,
           fontSize: 13,
           fontWeight: isActive ? 500 : 400,
-          color: isActive ? "oklch(0.42 0.12 45)" : "var(--ink-2)",
+          color: isActive ? "var(--accent)" : "var(--ink-2)",
           cursor: "pointer",
           background: isActive ? "var(--accent-soft)" : "transparent",
           border: "none",

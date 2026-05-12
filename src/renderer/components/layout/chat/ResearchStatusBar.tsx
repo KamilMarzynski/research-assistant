@@ -157,11 +157,7 @@ export default function ResearchStatusBar() {
         style={{
           fontSize: 12,
           fontWeight: 500,
-          color: isErr
-            ? "oklch(0.42 0.12 25)"
-            : isDone
-              ? "oklch(0.38 0.09 145)"
-              : "oklch(0.42 0.12 45)",
+          color: isErr ? "oklch(0.42 0.12 25)" : isDone ? "oklch(0.38 0.09 145)" : "var(--accent)",
         }}
       >
         {state.active

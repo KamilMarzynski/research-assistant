@@ -60,7 +60,7 @@ export default function GeneralTab({
                   cursor: "pointer",
                   textTransform: "capitalize",
                   border: "none",
-                  color: theme === t ? "oklch(0.42 0.12 45)" : "var(--ink)",
+                  color: theme === t ? "var(--accent)" : "var(--ink)",
                 }}
               >
                 {t}

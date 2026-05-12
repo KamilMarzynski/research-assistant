@@ -56,7 +56,7 @@ export default function AuditTab({
                 cursor: "pointer",
                 textTransform: "capitalize",
                 border: "none",
-                color: filter === f ? "oklch(0.42 0.12 45)" : "var(--ink)",
+                color: filter === f ? "var(--accent)" : "var(--ink)",
               }}
             >
               {f}

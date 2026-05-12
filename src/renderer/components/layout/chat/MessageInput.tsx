@@ -217,7 +217,7 @@ export default function MessageInput({
                       "&:hover": { background: "var(--surface-2)" },
                       "&.Mui-selected": {
                         background: "var(--accent-soft)",
-                        color: "oklch(0.42 0.12 45)",
+                        color: "var(--accent)",
                       },
                       "&.Mui-selected:hover": { background: "var(--accent-soft)" },
                     }}

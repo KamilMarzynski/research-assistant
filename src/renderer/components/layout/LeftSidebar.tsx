@@ -208,7 +208,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
             borderRadius: 8,
             cursor: "pointer" as const,
             background: isActive ? "var(--accent-soft)" : "transparent",
-            color: isActive ? "oklch(0.42 0.12 45)" : "var(--ink)",
+            color: isActive ? "var(--accent)" : "var(--ink)",
             fontWeight: isActive ? (500 as const) : (400 as const),
             fontSize: 13,
             marginBottom: 2,
@@ -257,10 +257,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
                 {p.name}
               </span>
               {p.folderPath && (
-                <IconFolder
-                  size={13}
-                  strokeColor={isActive ? "oklch(0.5 0.1 45)" : "var(--ink-3)"}
-                />
+                <IconFolder size={13} strokeColor={isActive ? "var(--accent)" : "var(--ink-3)"} />
               )}
             </button>
           );
