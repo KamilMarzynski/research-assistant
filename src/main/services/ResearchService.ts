@@ -12,6 +12,8 @@ import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
 import { ArtifactService } from "./ArtifactService";
 import { HomeService } from "./HomeService";
+import { ObservabilityService } from "./ObservabilityService";
+import type { ObservationSpan } from "./ObservabilityService";
 import { ProjectService } from "./ProjectService";
 import { SettingsService } from "./SettingsService";
 
@@ -34,6 +36,7 @@ export class ResearchService {
     @inject(AllowlistService) private readonly allowlistService: AllowlistService,
     @inject(ProjectService) private readonly projectService: ProjectService,
     @inject(ArtifactService) private readonly artifactService: ArtifactService,
+    @inject(ObservabilityService) private readonly observabilityService: ObservabilityService,
   ) {}
 
   async startResearch(
@@ -122,6 +125,9 @@ export class ResearchService {
     const taskId = randomUUID();
     const settings = await this.settingsService.getSettings();
 
+    // Get trace for observability
+    const traceId = await this.observabilityService.getTraceId(config.projectId, config.projectName);
+
     const homePath = this.homeService.getHomePath();
     const workspacePath = join(homePath, "workspace", config.projectId, taskId);
 
@@ -140,6 +146,15 @@ export class ResearchService {
       folderPath: config.folderPath,
       startedAt: new Date().toISOString(),
     });
+
+    let researchSpan: ObservationSpan | null = null;
+    if (traceId) {
+      researchSpan = await this.observabilityService.startObservation("research", {
+        asType: "agent",
+        input: { query: config.query },
+        metadata: { taskId, projectId: config.projectId, projectName: config.projectName },
+      });
+    }
 
     const onProgress = (label: string, delta: string) => {
       if (label) {
@@ -186,6 +201,11 @@ export class ResearchService {
           });
         }
       } else if (e.type === "agent_end") {
+        researchSpan?.update({
+          output: { status: "complete" },
+          metadata: { taskId },
+        });
+        researchSpan?.end();
         try {
           await this.homeService.updateTaskStatus(taskId, "complete");
 
@@ -259,6 +279,11 @@ export class ResearchService {
     });
 
     agent.prompt(config.query).catch(async (err) => {
+      researchSpan?.update({
+        output: { status: "failed", error: String(err) },
+        metadata: { taskId },
+      });
+      researchSpan?.end();
       console.error("[ResearchService] worker error:", err);
       await this.homeService.updateTaskStatus(taskId, "failed", String(err));
       await rm(workspacePath, { recursive: true, force: true }).catch(() => {

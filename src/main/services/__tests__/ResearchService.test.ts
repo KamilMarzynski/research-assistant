@@ -100,6 +100,16 @@ function makeArtifactService() {
   };
 }
 
+function makeObservabilityService() {
+  return {
+    getTraceId: vi.fn().mockResolvedValue(null),
+    startObservation: vi.fn().mockResolvedValue(null),
+    observe: vi.fn().mockImplementation((_name: string, fn: (span: unknown) => Promise<unknown>) =>
+      fn({ update: () => {}, end: () => {} }),
+    ),
+  };
+}
+
 function makeHomeService() {
   return {
     getHomePath: vi.fn().mockReturnValue("/tmp/home"),
@@ -133,6 +143,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskId).toBeTruthy();
@@ -151,6 +162,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -169,6 +181,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(home.saveTask).toHaveBeenCalledWith(
@@ -190,6 +203,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -223,6 +237,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await expect(svc.startResearch("p1", "My Project", "research X", null)).rejects.toThrow(
       "No API key configured",
@@ -257,6 +272,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -279,6 +295,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -308,6 +325,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -344,6 +362,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await new Promise((r) => setTimeout(r, 200));
@@ -378,6 +397,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     await new Promise((r) => setTimeout(r, 200));
@@ -402,6 +422,7 @@ describe("ResearchService", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -438,6 +459,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -463,6 +485,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 3 }));
@@ -481,6 +504,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -506,6 +530,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -524,6 +549,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -561,6 +587,7 @@ describe("ResearchService – _runResearch internals", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query A", null);
@@ -590,6 +617,7 @@ describe("ResearchService – _runResearch internals", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -621,6 +649,7 @@ describe("ResearchService – _runResearch internals", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
 
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
@@ -646,6 +675,7 @@ describe("ResearchService – _runResearch internals", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -672,6 +702,7 @@ describe("ResearchService – _runResearch internals", () => {
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
       makeArtifactService() as never,
+      makeObservabilityService() as never,
     );
     await svc.startResearch("p1", "My Project", "query", null);
     await new Promise((r) => setTimeout(r, 50));
