@@ -1,5 +1,9 @@
 import "reflect-metadata";
 import { join } from "node:path";
+import { config as dotenvConfig } from "dotenv";
+
+dotenvConfig();
+
 import { app, BrowserWindow } from "electron";
 import { DRAG_BAR_HEIGHT } from "../shared/constants";
 import { bootstrap } from "./bootstrap";
