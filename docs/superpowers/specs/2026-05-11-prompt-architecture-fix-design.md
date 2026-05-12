@@ -7,7 +7,7 @@
 
 ## Goal
 
-Fix Scholar's prompt architecture to align with industry best practices: keep the system prompt static, move conversation history to the agent's messages array, and lay the groundwork for migrating from custom compression to Mastra's built-in observational memory.
+Fix Scholar's prompt architecture to align with industry best practices: keep the system prompt static, move conversation history to the agent's messages array, and migrate from custom compression to Mastra's built-in observational memory.
 
 ---
 
@@ -229,8 +229,6 @@ function pruneMessagesToFitContextWindow(
 
 ## Phase 2: Migrate to Mastra Observational Memory (Next)
 
-**Note:** Phase 2 is deliberately scoped but not implemented in this run. It is documented here so it is not forgotten and so Phase 1 does not paint us into a corner.
-
 ### 2.1 Current State (Custom Implementation)
 
 Scholar uses `LibSQLStore` directly with custom compression logic:
@@ -244,15 +242,26 @@ This works but re-invents what Mastra already provides.
 
 ### 2.2 Target State (Mastra `Memory` Class)
 
-Mastra's `Memory` class (from `@mastra/core` or `@mastra/memory`) provides:
+Mastra's `Memory` class (from `@mastra/memory`) provides:
 
 - **Storage:** Same `LibSQLStore` — data format is compatible
 - **Observer:** Automatic compression when token threshold hits (default 30k)
 - **Reflector:** Deeper synthesis when higher threshold hits (default 60k)
-- **Working Memory:** The compressed summary, automatically injected into `recall()` results
-- **API:** `memory.saveMessages()` and `memory.recall()` — same pattern as current `IMemoryManager`
+- **Working Memory:** The compressed summary, automatically returned via `getContext()`
+- **API:** `memory.getContext()` returns both observations (summary) and recent messages in one call
 
-### 2.3 Interface Compatibility
+### 2.3 Two-Store Architecture
+
+This migration preserves the existing two-store architecture:
+
+| Store | Technology | Purpose | Compressed? |
+|---|---|---|---|
+| UI messages | Drizzle `messages` table (`MessageService`) | Source of truth for renderer chat history | Never |
+| Agent context | Mastra `Memory` (`MemoryManager`) | LLM context window injection | Yes, via OM |
+
+Both write to the same SQLite file (`research-assistant.db`) but manage separate tables. **Do not merge them.** The Drizzle table must never be compressed because the UI needs exact message history.
+
+### 2.4 Interface Compatibility
 
 Current `IMemoryManager`:
 
@@ -263,28 +272,31 @@ export interface IMemoryManager {
 }
 ```
 
-This interface is **already compatible** with Mastra. The swap is internal to `MemoryManager`:
+This interface stays **exactly the same**. The swap is internal to `MemoryManager`:
 
 ```typescript
-// Phase 2: MemoryManager refactored to use Mastra Memory
 class MemoryManager implements IMemoryManager {
-  private memory: Memory; // from @mastra/core
+  private memory: Memory; // from @mastra/memory
 
   async buildContext(projectId: string): Promise<MemoryContext> {
-    const result = await this.memory.recall({
+    const ctx = await this.memory.getContext({
       threadId: projectId,
-      resourceId: projectId,
+      memoryConfig: { lastMessages: 25 },
     });
 
-    const summary = result.workingMemory?.text ?? '';
-    const allMessages = result.messages
+    // systemMessage contains observations + working memory
+    const summary = ctx.systemMessage ?? '';
+
+    // messages are unobserved (recent) messages when OM is active,
+    // or last N messages when OM is not yet active
+    const recentMessages = ctx.messages
       .filter((m) => m.role === 'user' || m.role === 'assistant')
       .map((m) => ({
         role: m.role as 'user' | 'assistant',
         content: extractTextContent(m.content),
       }));
 
-    return { summary, allMessages };
+    return { summary, recentMessages };
   }
 
   async save(projectId: string, turns: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<void> {
@@ -297,40 +309,128 @@ class MemoryManager implements IMemoryManager {
       createdAt: new Date(),
     }));
 
+    // Persist to Mastra memory store
     await this.memory.saveMessages({ messages });
-    // Mastra handles Observer/Reflector compression automatically
+
+    // Trigger OM observation manually (we're not using Mastra Agent,
+    // so the OM processor pipeline doesn't run automatically)
+    const omEngine = await this.memory.omEngine;
+    if (omEngine) {
+      await omEngine.observe({ threadId: projectId });
+    }
   }
 }
 ```
 
 **Boundary:** `AgentSession` does not change. `chat-handlers.ts` does not change. Only `MemoryManager` and `MemoryCompressionService` are affected.
 
-### 2.4 Data Migration
+### 2.5 Why `getContext()` Instead of `getWorkingMemory` + `recall`
+
+The old plan used two separate calls:
+
+```typescript
+const summary = await memory.getWorkingMemory({ threadId });
+const result = await memory.recall({ threadId, perPage: 100 });
+```
+
+This is incorrect because:
+1. `recall()` returns paginated messages but does NOT inject OM observations
+2. `getWorkingMemory()` returns only the working memory string, not OM observations
+3. The two calls are not atomic — observations could change between them
+
+`memory.getContext()` is the official Mastra API for "get everything needed for an LLM call in one shot." It:
+1. Loads the OM record and builds the observation system message
+2. Loads working memory template data
+3. Returns unobserved messages (when OM is active) or recent messages (when inactive)
+4. All in a single atomic operation
+
+**Key:** When OM is active, `getContext().messages` returns only **unobserved messages** (messages after `lastObservedAt`), not the last N messages. This is the correct behavior — observed messages are already in the summary. We set `lastMessages: 25` as a fallback for when OM has not yet accumulated observations.
+
+### 2.6 Why Manual `omEngine.observe()` Trigger
+
+In Mastra's built-in `Agent`, OM runs as an output processor (`ObservationalMemoryProcessor.processOutputResult`). After each agent turn, the processor:
+1. Saves messages
+2. Checks token thresholds
+3. Triggers observation/reflection if needed
+
+Since Scholar uses `@mariozechner/pi-agent-core` (not Mastra `Agent`), the processor pipeline never runs. We must manually trigger OM observation after each `save()`:
+
+```typescript
+const omEngine = await this.memory.omEngine;
+if (omEngine) {
+  await omEngine.observe({ threadId: projectId });
+}
+```
+
+This is a synchronous (blocking) call that runs the Observer LLM when thresholds are met. In practice, observation only fires every ~30k tokens, so it is non-blocking on most turns.
+
+### 2.7 OM Configuration
+
+```typescript
+new Memory({
+  storage: new LibSQLStore({ id: 'research-assistant-memory', url: `file:${dbPath}` }),
+  options: {
+    lastMessages: 25, // Fallback when OM hasn't accumulated observations yet
+    observationalMemory: {
+      enabled: true,
+      scope: 'thread', // Per-project isolation (DO NOT use 'resource' — experimental, disables async buffering)
+      temporalMarkers: true,
+      model: 'ollama/gemma4:31b-cloud',
+      observation: {
+        messageTokens: 30_000,
+        bufferTokens: 0.2,
+        bufferActivation: 0.8,
+        modelSettings: { temperature: 0.3 },
+      },
+      reflection: {
+        observationTokens: 60_000,
+        modelSettings: { temperature: 0 },
+      },
+    },
+  },
+});
+```
+
+**Why `scope: 'thread'`:**
+- Default is `'thread'` — observations are per-thread (per-project in our case)
+- `'resource'` is experimental and disables async buffering silently
+- `'resource'` risks cross-thread contamination between projects
+- We want per-project isolation, so `'thread'` is correct
+
+**Why `lastMessages: 25`:**
+- When OM is inactive (first session or low token count), `getContext()` falls back to returning recent messages
+- 25 is sufficient because OM observations replace the need for a large raw message tail
+- Old implementation used 100 — excessive once OM is running
+
+### 2.8 Data Migration
 
 Existing messages in LibSQL use Mastra's standard format (`MastraMessageContentV2`). Mastra's `Memory` class reads the same tables. **No data migration needed.** The swap is implementation-only.
 
-### 2.5 What Gets Deleted in Phase 2
+However, old custom summaries (stored as `${projectId}-summary` thread metadata) are not migrated. Mastra OM will rebuild observations from messages over time. One-time cold start is acceptable.
+
+### 2.9 What Gets Deleted in Phase 2
 
 - `MemoryCompressionService` — Mastra handles compression internally
-- Custom `${projectId}-summary` thread metadata — Mastra's `workingMemory` replaces it
+- Custom `${projectId}-summary` thread metadata — Mastra's OM record replaces it
 - Manual `complete()` calls for summarization — Mastra's Observer/Reflector replaces them
 
-### 2.6 What Gets Added in Phase 2
+### 2.10 What Gets Added in Phase 2
 
-- Dependency: `@mastra/core` or `@mastra/memory` (check Mastra v1.9.0 package structure)
+- Dependency: `@mastra/memory` v1.17.5 (already in package.json)
 - `Memory` instance in `MemoryManager` constructor
-- Configuration: Observer/Reflector model, thresholds (can reuse existing `COMPRESSION_MODEL_ID`)
+- OM configuration in constructor
+- Manual `omEngine.observe()` trigger in `save()`
 
-### 2.7 Files Changed in Phase 2
+### 2.11 Files Changed in Phase 2
 
 | File | Change |
 |---|---|
-| `src/main/services/MemoryManager.ts` | Replace `LibSQLStore` direct usage with `Memory` class from Mastra. |
+| `src/main/services/MemoryManager.ts` | Replace `LibSQLStore` direct usage with `Memory` class. Use `getContext()` for `buildContext()`. Trigger `omEngine.observe()` in `save()`. |
 | `src/main/services/MemoryCompressionService.ts` | **Delete.** Mastra handles compression. |
-| `package.json` | Add `@mastra/core` or `@mastra/memory` dependency. |
-| `src/main/bootstrap.ts` | Update DI registration if needed. |
+| `src/main/bootstrap.ts` | Remove `MemoryCompressionService` from DI. |
+| `package.json` | `@mastra/memory` already present at v1.17.5. |
 
-### 2.8 Dependencies Between Phases
+### 2.12 Dependencies Between Phases
 
 Phase 1 must be completed before Phase 2 because:
 - Phase 1 fixes the fundamental architecture (system prompt vs messages array)
@@ -354,8 +454,8 @@ Phase 1 must be completed before Phase 2 because:
 ### Phase 2 Tests
 
 1. **Unit test:** `MemoryManager.buildContext` returns same shape with Mastra backend
-2. **Unit test:** `MemoryManager.save` persists messages and triggers Mastra Observer
-3. **Integration test:** Conversation exceeds 30k tokens, verify compression fires automatically
+2. **Unit test:** `MemoryManager.save` persists messages and triggers OM observation
+3. **Integration test:** Conversation exceeds 30k tokens, verify OM observation fires automatically
 4. **Data migration test:** Existing messages readable after switching to Mastra backend
 5. **Regression test:** All Phase 1 tests still pass after Phase 2 swap
 
@@ -368,8 +468,10 @@ Phase 1 must be completed before Phase 2 because:
 | Pi agent framework does not support `initialState.messages` | Already verified in source (`agent.js:27-44`). Fallback: inject history as first user message. |
 | Context window overflow with many messages | `transformContext` dynamically prunes messages to fit model context window. Full history kept in agent state, only LLM call is pruned. |
 | System prompt still too dynamic (summary changes) | Summary changes are rare (~every 30k tokens). Cache hits on 95%+ of turns. |
-| Phase 2 Mastra package not available | Already have `@mastra/libsql` v1.9.0. `Memory` class should be in `@mastra/core` or `@mastra/memory`. Verify before Phase 2. |
+| Phase 2 Mastra package not available | Already have `@mastra/memory` v1.17.5 installed. |
 | Data loss during Phase 2 migration | No migration needed — same LibSQL tables. Keep backup of `research-assistant.db` anyway. |
+| OM observation blocks on every save | Observation only fires at 30k token threshold. Most turns are non-blocking. |
+| `getContext()` returns unobserved messages only | Correct behavior — observed messages are in the summary. Fallback `lastMessages: 25` for inactive OM. |
 
 ---
 
