@@ -4,40 +4,10 @@ import type { ModelProvider } from "./model-provider";
 
 export interface ModelFactoryOptions {
   provider: ModelProvider;
-  langfuseEnabled: boolean;
 }
 
 export function createModel(opts: ModelFactoryOptions): Model<Api> {
-  const base = resolveBaseConfig(opts.provider);
-
-  if (opts.langfuseEnabled) {
-    const publicKey = process.env.LANGFUSE_PUBLIC_KEY;
-    const secretKey = process.env.LANGFUSE_SECRET_KEY;
-    if (publicKey && secretKey) {
-      const host = (
-        process.env.LANGFUSE_HOST ??
-        process.env.LANGFUSE_BASE_URL ??
-        "https://cloud.langfuse.com"
-      ).replace(/\/$/, "");
-      const targetUrl = base.baseUrl.replace(/^(https?:\/\/)localhost\b/, "$1host.docker.internal");
-      return {
-        ...base,
-        baseUrl: `${host}/api/proxy/openai/v1`,
-        headers: {
-          ...base.headers,
-          "x-langfuse-public-key": publicKey,
-          "x-langfuse-secret-key": secretKey,
-          "x-target-url": targetUrl,
-        },
-      };
-    }
-    console.warn(
-      "[Langfuse] LANGFUSE_PUBLIC_KEY and/or LANGFUSE_SECRET_KEY missing. " +
-        "Tracing disabled despite langfuseEnabled=true.",
-    );
-  }
-
-  return base;
+  return resolveBaseConfig(opts.provider);
 }
 
 function resolveBaseConfig(provider: ModelProvider): Model<Api> {

@@ -281,7 +281,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
   const agent = new Agent({
     initialState: {
       systemPrompt,
-      model: createModel({ provider, langfuseEnabled: false }),
+      model: createModel({ provider }),
       tools,
     },
     getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),

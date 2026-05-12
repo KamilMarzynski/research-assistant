@@ -126,7 +126,6 @@ describe("AgentSession", () => {
       provider: { type: "openrouter", apiKey: "sk-or-test", model: "anthropic/claude-sonnet-4-6" },
       isFirstRun: false,
       systemContext: "",
-      langfuseEnabled: false,
       allowlistService: new AllowlistService() as never,
     });
   });
@@ -337,8 +336,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const opts = lastCall?.[0] as { initialState: { tools: unknown[] } };
@@ -385,8 +383,7 @@ describe("AgentSession", () => {
         provider: { type: "ollama", host: "http://localhost:11434", model: "llama3" },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const opts = lastCall?.[0] as { getApiKey: () => Promise<string> };
@@ -415,8 +412,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
       const opts = mocked(createAgentTools).mock.calls.at(-1)?.[0] as {
         startResearchFn?: (query: string, deep?: boolean) => Promise<unknown>;
@@ -451,8 +447,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: true,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
@@ -479,8 +474,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
@@ -566,8 +560,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
 
       await localSession.send("my question");
@@ -602,8 +595,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
 
       void localSession;
@@ -633,8 +625,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
@@ -661,8 +652,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
 
       // Simulate a follow-up turn: assistant responds but lastUserContent was never set via send()
@@ -702,8 +692,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const messages = (
@@ -746,8 +735,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
@@ -776,8 +764,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const transformContext = (
@@ -881,8 +868,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
 
       await localSession.send("hello");
@@ -924,8 +910,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
 
       await localSession.send("hello");
@@ -968,8 +953,7 @@ describe("AgentSession", () => {
         },
         isFirstRun: false,
         systemContext: "",
-        langfuseEnabled: false,
-        allowlistService: new AllowlistService() as never,
+          allowlistService: new AllowlistService() as never,
       });
 
       await localSession.send("hello");

@@ -83,7 +83,6 @@ export interface AgentSessionOptions {
   provider: ModelProvider;
   isFirstRun: boolean;
   systemContext?: string;
-  langfuseEnabled: boolean;
   webAccessEnabled?: boolean;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   memoryFileService?: MemoryFileService;
@@ -121,7 +120,6 @@ export class AgentSession {
     provider,
     isFirstRun,
     systemContext = "",
-    langfuseEnabled,
     webAccessEnabled,
     onFileWrite,
     memoryFileService,
@@ -208,7 +206,7 @@ export class AgentSession {
     this.agent = new Agent({
       initialState: {
         systemPrompt,
-        model: createModel({ provider, langfuseEnabled }),
+        model: createModel({ provider }),
         tools,
         messages: initialMessages,
       },

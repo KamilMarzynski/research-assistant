@@ -124,7 +124,6 @@ export function registerChatHandler(
           provider,
           isFirstRun,
           systemContext,
-          langfuseEnabled: settings.langfuseEnabled,
           webAccessEnabled: settings.webAccessEnabled,
           memoryFileService,
           allowlistService,
