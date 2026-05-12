@@ -13,7 +13,7 @@ const mockContainer = {
 const mockCreateContainer = vi.fn();
 
 vi.mock("dockerode", () => {
-  const MockDocker = vi.fn(() => ({ createContainer: mockCreateContainer }));
+  const MockDocker = vi.fn(function () { return { createContainer: mockCreateContainer }; });
   return { default: MockDocker };
 });
 
