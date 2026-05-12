@@ -158,7 +158,7 @@ export class AgentSession {
 
     const initialMessages = initialMemoryContext.recentMessages.map((m) => ({
       role: m.role,
-      content: m.content,
+      content: m.role === "assistant" ? [{ type: "text" as const, text: m.content }] : m.content,
       timestamp: Date.now(),
     })) as AgentMessage[];
 

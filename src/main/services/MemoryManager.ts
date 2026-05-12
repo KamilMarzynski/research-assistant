@@ -59,7 +59,7 @@ export class MemoryManager implements IMemoryManager {
                 enabled: true,
                 scope: "thread",
                 temporalMarkers: true,
-                model: "ollama-cloud/gemma4:31b-cloud",
+                model: "ollama-cloud/gemma4:31b",
                 observation: {
                   messageTokens: 30_000,
                   bufferTokens: 0.2,

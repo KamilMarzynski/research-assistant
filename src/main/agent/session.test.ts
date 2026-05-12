@@ -736,7 +736,7 @@ describe("AgentSession", () => {
       expect(messages?.[0]).toMatchObject({ role: "user", content: "Hello from last session" });
       expect(messages?.[1]).toMatchObject({
         role: "assistant",
-        content: "Hi there from last session",
+        content: [{ type: "text", text: "Hi there from last session" }],
       });
       expect(messages?.[0]).toHaveProperty("timestamp");
       expect(messages?.[1]).toHaveProperty("timestamp");

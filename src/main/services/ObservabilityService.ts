@@ -1,3 +1,4 @@
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 import { inject, injectable } from "tsyringe";
 import { SettingsService } from "./SettingsService";
 
@@ -19,6 +20,7 @@ export class ObservabilityService {
   private failed = false;
   private enabled = false;
   private initAttempted = false;
+  private providerInitPromise: Promise<void> | null = null;
 
   constructor(@inject(SettingsService) private readonly settingsService: SettingsService) {}
 
@@ -31,18 +33,56 @@ export class ObservabilityService {
     return this.enabled && !this.failed;
   }
 
-  async getTraceId(projectId: string, _projectName: string): Promise<string | null> {
-    if (!(await this.isEnabled())) return null;
+  private async ensureProvider(): Promise<boolean> {
+    if (this.failed) return false;
+    if (!(await this.isEnabled())) return false;
 
     const publicKey = process.env.LANGFUSE_PUBLIC_KEY;
     const secretKey = process.env.LANGFUSE_SECRET_KEY;
-    if (!publicKey || !secretKey) return null;
+    if (!publicKey || !secretKey) return false;
+
+    if (this.providerInitPromise) {
+      await this.providerInitPromise;
+      return !this.failed;
+    }
+
+    this.providerInitPromise = (async () => {
+      try {
+        const { LangfuseSpanProcessor } = await import("@langfuse/otel");
+        const { setLangfuseTracerProvider } = await import("@langfuse/tracing");
+
+        const baseUrl =
+          process.env.LANGFUSE_HOST ??
+          process.env.LANGFUSE_BASE_URL ??
+          "https://cloud.langfuse.com";
+
+        const processor = new LangfuseSpanProcessor({
+          publicKey,
+          secretKey,
+          baseUrl: baseUrl.replace(/\/$/, ""),
+        });
+        const provider = new NodeTracerProvider({
+          spanProcessors: [processor],
+        } as ConstructorParameters<typeof NodeTracerProvider>[0]);
+        provider.register();
+
+        setLangfuseTracerProvider(provider);
+      } catch (err) {
+        this.markFailed(err);
+      }
+    })();
+
+    await this.providerInitPromise;
+    return !this.failed;
+  }
+
+  async getTraceId(projectId: string, _projectName: string): Promise<string | null> {
+    if (!(await this.ensureProvider())) return null;
 
     const cached = this.traceCache.get(projectId);
     if (cached) return cached;
 
     try {
-      // Dynamic import to avoid loading SDK when disabled
       const { createTraceId } = await import("@langfuse/tracing");
       const traceId = await createTraceId();
       this.traceCache.set(projectId, traceId);
@@ -58,13 +98,7 @@ export class ObservabilityService {
     fn: (span: ObservationSpan) => Promise<T>,
     options?: ObserveOptions,
   ): Promise<T> {
-    if (!(await this.isEnabled())) {
-      return fn({ update: () => {}, end: () => {} });
-    }
-
-    const publicKey = process.env.LANGFUSE_PUBLIC_KEY;
-    const secretKey = process.env.LANGFUSE_SECRET_KEY;
-    if (!publicKey || !secretKey) {
+    if (!(await this.ensureProvider())) {
       return fn({ update: () => {}, end: () => {} });
     }
 
@@ -113,11 +147,7 @@ export class ObservabilityService {
   }
 
   async startObservation(name: string, options?: ObserveOptions): Promise<ObservationSpan | null> {
-    if (!(await this.isEnabled())) return null;
-
-    const publicKey = process.env.LANGFUSE_PUBLIC_KEY;
-    const secretKey = process.env.LANGFUSE_SECRET_KEY;
-    if (!publicKey || !secretKey) return null;
+    if (!(await this.ensureProvider())) return null;
 
     try {
       const { startObservation } = await import("@langfuse/tracing");

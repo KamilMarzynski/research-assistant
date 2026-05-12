@@ -30,6 +30,19 @@ vi.mock("@langfuse/tracing", () => ({
     };
     return fn(span);
   }),
+  setLangfuseTracerProvider: vi.fn(),
+}));
+
+vi.mock("@langfuse/otel", () => ({
+  LangfuseSpanProcessor: vi.fn(),
+}));
+
+function MockNodeTracerProvider() {
+  return { register: vi.fn() };
+}
+
+vi.mock("@opentelemetry/sdk-trace-node", () => ({
+  NodeTracerProvider: vi.fn().mockImplementation(MockNodeTracerProvider),
 }));
 
 // Import after mocks are registered

@@ -45,6 +45,8 @@
     "@emotion/styled": "^11.14.1",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/manrope": "^5.2.8",
+    "@langfuse/otel": "^5.3.0",
+    "@langfuse/tracing": "^5.3.0",
     "@libsql/client": "^0.17.2",
     "@mariozechner/pi-agent-core": "^0.67.68",
     "@mariozechner/pi-ai": "^0.67.68",
@@ -52,6 +54,7 @@
     "@mastra/memory": "^1.17.5",
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
+    "@opentelemetry/sdk-trace-node": "^2.7.1",
     "chokidar": "^5.0.0",
     "dockerode": "^5.0.0",
     "dotenv": "^17.4.2",
@@ -63,8 +66,7 @@
     "remark-gfm": "^4.0.1",
     "tsyringe": "^4.10.0",
     "yaml": "^2.8.3",
-    "zod": "^4.4.2",
-    "@langfuse/tracing": "^5.3.0"
+    "zod": "^4.4.2"
   },
   "trustedDependencies": [
     "@swc/core"
