@@ -290,11 +290,12 @@ export class AgentSession {
           }
           this.eventBus.emit({ type: "agent:done", payload: { projectId: this.projectId } });
         } else if (e.type === "message_start") {
-          this.activeGenerationSpan = await this.observabilityService?.startObservation("llm-generation", {
-            asType: "generation",
-            input: e.message?.content,
-            metadata: { model: this.provider.model },
-          }) ?? null;
+          this.activeGenerationSpan =
+            (await this.observabilityService?.startObservation("llm-generation", {
+              asType: "generation",
+              input: e.message?.content,
+              metadata: { model: this.provider.model },
+            })) ?? null;
         } else if (e.type === "message_end") {
           this.activeGenerationSpan?.update({
             output: e.message?.content,
@@ -302,10 +303,11 @@ export class AgentSession {
           this.activeGenerationSpan?.end();
           this.activeGenerationSpan = null;
         } else if (e.type === "tool_execution_start") {
-          this.activeToolSpan = await this.observabilityService?.startObservation(`tool:${e.toolName ?? "unknown"}`, {
-            asType: "tool",
-            input: e.args,
-          }) ?? null;
+          this.activeToolSpan =
+            (await this.observabilityService?.startObservation(`tool:${e.toolName ?? "unknown"}`, {
+              asType: "tool",
+              input: e.args,
+            })) ?? null;
         } else if (e.type === "tool_execution_end") {
           this.activeToolSpan?.update({
             output: e.result,
@@ -333,11 +335,12 @@ export class AgentSession {
       await this.observabilityService?.getTraceId(this.projectId, this.projectName);
 
       // Start turn observation
-      this.activeTurnSpan = await this.observabilityService?.startObservation("agent-turn", {
-        asType: "agent",
-        input: { role: "user", content },
-        metadata: { turnNumber: this.currentTurnId, projectId: this.projectId },
-      }) ?? null;
+      this.activeTurnSpan =
+        (await this.observabilityService?.startObservation("agent-turn", {
+          asType: "agent",
+          input: { role: "user", content },
+          metadata: { turnNumber: this.currentTurnId, projectId: this.projectId },
+        })) ?? null;
 
       // Refresh system context before each prompt so AGENTS.md updates are picked up
       try {
@@ -415,13 +418,15 @@ export class AgentSession {
       this.currentTurnId++;
       this.savedForTurn = 0;
 
-      void this.observabilityService?.startObservation("agent-turn", {
-        asType: "agent",
-        input: { role: "user", content },
-        metadata: { turnNumber: this.currentTurnId, projectId: this.projectId, followUp: true },
-      }).then((span) => {
-        this.activeTurnSpan = span ?? null;
-      });
+      void this.observabilityService
+        ?.startObservation("agent-turn", {
+          asType: "agent",
+          input: { role: "user", content },
+          metadata: { turnNumber: this.currentTurnId, projectId: this.projectId, followUp: true },
+        })
+        .then((span) => {
+          this.activeTurnSpan = span ?? null;
+        });
 
       await this.agent.followUp({ role: "user", content, timestamp: Date.now() });
     } catch (err) {

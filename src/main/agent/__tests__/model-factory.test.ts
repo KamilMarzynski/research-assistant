@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const mockBaseModel = {
   id: "anthropic/claude-sonnet-4-6",
@@ -30,9 +30,7 @@ describe("createModel", () => {
   it("throws when model ID is not found in registry", async () => {
     const { getModels } = await import("@mariozechner/pi-ai");
     vi.mocked(getModels).mockReturnValueOnce([]);
-    expect(() => createModel({ provider: openrouterProvider })).toThrow(
-      "Unknown OpenRouter model",
-    );
+    expect(() => createModel({ provider: openrouterProvider })).toThrow("Unknown OpenRouter model");
   });
 
   it("returns ollama model config", () => {
@@ -59,8 +57,6 @@ describe("createModel", () => {
       apiKey: "sk-anthropic",
       model: "claude-3-5-sonnet",
     };
-    expect(() => createModel({ provider: anthropicProvider })).toThrow(
-      "Direct Anthropic API",
-    );
+    expect(() => createModel({ provider: anthropicProvider })).toThrow("Direct Anthropic API");
   });
 });

@@ -137,20 +137,16 @@ export class ObservabilityService {
       if (options?.input !== undefined) metadata.input = options.input;
       if (options?.metadata !== undefined) metadata.metadata = options.metadata;
 
-      const span = typedStartObservation(
-        name,
-        metadata,
-        {
-          asType: options?.asType ?? "span",
-          parentSpanContext: options?.parentSpanContext
-            ? {
-                traceId: options.parentSpanContext.traceId,
-                spanId: options.parentSpanContext.spanId,
-                traceFlags: 1,
-              }
-            : undefined,
-        },
-      );
+      const span = typedStartObservation(name, metadata, {
+        asType: options?.asType ?? "span",
+        parentSpanContext: options?.parentSpanContext
+          ? {
+              traceId: options.parentSpanContext.traceId,
+              spanId: options.parentSpanContext.spanId,
+              traceFlags: 1,
+            }
+          : undefined,
+      });
       return {
         update: (payload) => span.update(payload),
         end: () => span.end(),

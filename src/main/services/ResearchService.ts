@@ -12,8 +12,8 @@ import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
 import { ArtifactService } from "./ArtifactService";
 import { HomeService } from "./HomeService";
-import { ObservabilityService } from "./ObservabilityService";
 import type { ObservationSpan } from "./ObservabilityService";
+import { ObservabilityService } from "./ObservabilityService";
 import { ProjectService } from "./ProjectService";
 import { SettingsService } from "./SettingsService";
 
@@ -126,7 +126,10 @@ export class ResearchService {
     const settings = await this.settingsService.getSettings();
 
     // Get trace for observability
-    const traceId = await this.observabilityService.getTraceId(config.projectId, config.projectName);
+    const traceId = await this.observabilityService.getTraceId(
+      config.projectId,
+      config.projectName,
+    );
 
     const homePath = this.homeService.getHomePath();
     const workspacePath = join(homePath, "workspace", config.projectId, taskId);

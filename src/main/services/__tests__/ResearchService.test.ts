@@ -104,9 +104,11 @@ function makeObservabilityService() {
   return {
     getTraceId: vi.fn().mockResolvedValue(null),
     startObservation: vi.fn().mockResolvedValue(null),
-    observe: vi.fn().mockImplementation((_name: string, fn: (span: unknown) => Promise<unknown>) =>
-      fn({ update: () => {}, end: () => {} }),
-    ),
+    observe: vi
+      .fn()
+      .mockImplementation((_name: string, fn: (span: unknown) => Promise<unknown>) =>
+        fn({ update: () => {}, end: () => {} }),
+      ),
   };
 }
 
