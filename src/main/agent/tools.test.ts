@@ -103,28 +103,28 @@ describe("createAgentTools – spawn + orchestrator tools", () => {
     expect(tools.map((t) => t.name)).toContain("spawn_agents_parallel");
   });
 
-  it("excludes propose_tool when proposeToolFn not provided", () => {
-    const tools = createAgentTools({ ...BASE, toolNames: ["propose_tool"] });
-    expect(tools.map((t) => t.name)).not.toContain("propose_tool");
+  it("excludes propose_skill when proposeSkillFn not provided", () => {
+    const tools = createAgentTools({ ...BASE, toolNames: ["propose_skill"] });
+    expect(tools.map((t) => t.name)).not.toContain("propose_skill");
   });
 
-  it("includes propose_tool when proposeToolFn provided", () => {
+  it("includes propose_skill when proposeSkillFn provided", () => {
     const tools = createAgentTools({
       ...BASE,
-      toolNames: ["propose_tool"],
-      proposeToolFn: vi.fn().mockResolvedValue(undefined),
+      toolNames: ["propose_skill"],
+      proposeSkillFn: vi.fn().mockResolvedValue(undefined),
     });
-    expect(tools.map((t) => t.name)).toContain("propose_tool");
+    expect(tools.map((t) => t.name)).toContain("propose_skill");
   });
 
-  it("propose_tool rejects invalid name (spaces not allowed)", async () => {
-    const proposeToolFn = vi.fn().mockResolvedValue(undefined);
+  it("propose_skill rejects invalid name (spaces not allowed)", async () => {
+    const proposeSkillFn = vi.fn().mockResolvedValue(undefined);
     const tools = createAgentTools({
       ...BASE,
-      toolNames: ["propose_tool"],
-      proposeToolFn,
+      toolNames: ["propose_skill"],
+      proposeSkillFn,
     });
-    const tool = tools.find((t) => t.name === "propose_tool");
+    const tool = tools.find((t) => t.name === "propose_skill");
     await expect(
       tool?.execute("call-1", {
         name: "invalid name",
@@ -132,23 +132,23 @@ describe("createAgentTools – spawn + orchestrator tools", () => {
         skillContent: "# skill",
       }),
     ).rejects.toThrow(/invalid/i);
-    expect(proposeToolFn).not.toHaveBeenCalled();
+    expect(proposeSkillFn).not.toHaveBeenCalled();
   });
 
-  it("propose_tool calls proposeToolFn with valid name", async () => {
-    const proposeToolFn = vi.fn().mockResolvedValue(undefined);
+  it("propose_skill calls proposeSkillFn with valid name", async () => {
+    const proposeSkillFn = vi.fn().mockResolvedValue(undefined);
     const tools = createAgentTools({
       ...BASE,
-      toolNames: ["propose_tool"],
-      proposeToolFn,
+      toolNames: ["propose_skill"],
+      proposeSkillFn,
     });
-    const tool = tools.find((t) => t.name === "propose_tool");
+    const tool = tools.find((t) => t.name === "propose_skill");
     await tool?.execute("call-1", {
       name: "fetch-arxiv",
       description: "fetches arxiv papers",
       skillContent: "# fetch-arxiv\n\nFetches arxiv papers.",
     });
-    expect(proposeToolFn).toHaveBeenCalledWith(
+    expect(proposeSkillFn).toHaveBeenCalledWith(
       "fetch-arxiv",
       "# fetch-arxiv\n\nFetches arxiv papers.",
       undefined,

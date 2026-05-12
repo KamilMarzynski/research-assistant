@@ -22,7 +22,9 @@ const BASE_SYSTEM_PROMPT = `You are a helpful research assistant.
 
 Your primary job is to delegate non-trivial tasks to background research workers. If a user asks something that would benefit from reading files, running commands, fetching web pages, or investigating multiple sources, call start_research instead of answering from your own knowledge.
 
-When in doubt, research it. Do not guess. It is better to start a quick research task than to give an incomplete or wrong answer.`;
+When in doubt, research it. Do not guess. It is better to start a quick research task than to give an incomplete or wrong answer.
+
+When the user explicitly asks you to create or write a skill, write it directly to ~/.scholar/skills/<name>/SKILL.md so it is available immediately. If you discover a reusable pattern during research that the user did not explicitly request, use the propose_skill tool to suggest it for their approval instead.`;
 
 const RESERVED_TOKENS = 6000;
 const CHARS_PER_TOKEN = 4;
@@ -86,6 +88,7 @@ export interface AgentSessionOptions {
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   memoryFileService?: MemoryFileService;
   allowlistService: AllowlistService;
+  proposeSkillFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
 }
 
 export class AgentSession {
@@ -123,6 +126,7 @@ export class AgentSession {
     onFileWrite,
     memoryFileService,
     allowlistService,
+    proposeSkillFn,
   }: AgentSessionOptions) {
     this.eventBus = eventBus;
     this.messageService = messageService;
@@ -198,6 +202,7 @@ export class AgentSession {
         : undefined,
       compressionService,
       allowlistService,
+      proposeSkillFn,
     });
 
     this.agent = new Agent({

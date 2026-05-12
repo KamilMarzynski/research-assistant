@@ -11,7 +11,6 @@ import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agen
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
 import { ArtifactService } from "./ArtifactService";
-import { CrystallizationService } from "./CrystallizationService";
 import { HomeService } from "./HomeService";
 import { ProjectService } from "./ProjectService";
 import { SettingsService } from "./SettingsService";
@@ -33,7 +32,6 @@ export class ResearchService {
     @inject(SettingsService) private readonly settingsService: SettingsService,
     @inject(HomeService) private readonly homeService: HomeService,
     @inject(AllowlistService) private readonly allowlistService: AllowlistService,
-    @inject(CrystallizationService) private readonly crystallizationService: CrystallizationService,
     @inject(ProjectService) private readonly projectService: ProjectService,
     @inject(ArtifactService) private readonly artifactService: ArtifactService,
   ) {}
@@ -235,18 +233,6 @@ export class ResearchService {
           } catch (err) {
             console.error("[ResearchService] output routing failed:", err);
           }
-
-          // Post-research: evaluate for skill crystallization
-          this.crystallizationService
-            .crystallizeAndSave(
-              config.query,
-              config.projectId,
-              config.projectName,
-              config.folderPath,
-            )
-            .catch((err) => {
-              console.error("[ResearchService] crystallization failed:", err);
-            });
 
           this.eventBus.emit({
             type: "research:complete",

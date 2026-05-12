@@ -65,30 +65,4 @@ export class CrystallizationService {
     }
     return null;
   }
-
-  async crystallizeAndSave(
-    query: string,
-    projectId: string,
-    projectName: string,
-    folderPath: string | null,
-  ): Promise<void> {
-    const result = await this.evaluateForCrystallization(query, projectId, projectName, folderPath);
-    if (result?.crystallize && result.skillName && result.skillDescription) {
-      const skillContent = `---
-name: ${result.skillName}
-description: >-
-  ${result.skillDescription}
----
-
-# ${result.skillName}
-
-## When to use
-- (auto-generated from research pattern)
-
-## Steps
-1. (steps would be filled by agent)
-`;
-      await this.homeService.savePendingTool(result.skillName, skillContent);
-    }
-  }
 }

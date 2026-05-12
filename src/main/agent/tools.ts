@@ -10,7 +10,7 @@ import { createRequestEvaluationTool } from "./tools/eval-tools";
 import { createListDirTool, createReadFileTool, createWriteFileTool } from "./tools/file-tools";
 import { createReadMemoryTool, createSaveMemoryTool } from "./tools/memory-tools";
 import { createSpawnAgentsParallelTool, createSpawnAgentTool } from "./tools/orchestrator-tools";
-import { createProposeToolTool } from "./tools/propose-tool";
+import { createProposeSkillTool } from "./tools/propose-skill";
 import { createStartResearchTool } from "./tools/research-tools";
 import { createSafeBashTool } from "./tools/safe-bash-tool";
 import { createFetchUrlTool } from "./tools/web/fetch-url";
@@ -28,7 +28,7 @@ export type AgentToolName =
   | "run_in_docker"
   | "spawn_agent"
   | "spawn_agents_parallel"
-  | "propose_tool"
+  | "propose_skill"
   | "save_memory"
   | "read_memory"
   | "compress";
@@ -55,7 +55,7 @@ export interface AgentToolsOptions {
   spawnAgentsParallelFn?: (
     agents: Array<{ type: AgentType; query: string; outputPath: string }>,
   ) => Promise<SpawnResult[]>;
-  proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  proposeSkillFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
   saveMemoryFn?: (
     category: string,
     title: string,
@@ -146,8 +146,8 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
     tools.push(createSpawnAgentsParallelTool(jail, opts.spawnAgentsParallelFn));
   }
 
-  if (opts.proposeToolFn) {
-    tools.push(createProposeToolTool(opts.proposeToolFn));
+  if (opts.proposeSkillFn) {
+    tools.push(createProposeSkillTool(opts.proposeSkillFn));
   }
 
   if (opts.toolNames) {

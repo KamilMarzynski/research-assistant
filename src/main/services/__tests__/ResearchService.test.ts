@@ -90,10 +90,6 @@ function makeSettingsService() {
   };
 }
 
-function makeCrystallizationService() {
-  return { crystallizeAndSave: vi.fn().mockResolvedValue(undefined) };
-}
-
 function makeArtifactService() {
   return {
     saveArtifact: vi.fn().mockResolvedValue(undefined),
@@ -131,7 +127,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -150,7 +145,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -169,7 +163,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -191,7 +184,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -225,7 +217,6 @@ describe("ResearchService", () => {
       settingsSvc as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -260,7 +251,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -283,7 +273,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -313,7 +302,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -350,7 +338,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -385,7 +372,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -410,7 +396,6 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -427,35 +412,6 @@ describe("ResearchService", () => {
         type: "research:complete",
         payload: expect.objectContaining({ filePaths: [] }),
       }),
-    );
-  });
-
-  it("calls crystallizeAndSave when agent completes", async () => {
-    const home = makeHomeService();
-    const bus = makeEventBus();
-    const crystallization = makeCrystallizationService();
-    const svc = new ResearchService(
-      bus as never,
-      makeSettingsService() as never,
-      home as never,
-      new AllowlistService() as never,
-      crystallization as never,
-      {
-        getProject: vi
-          .fn()
-          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
-      } as never,
-      makeArtifactService() as never,
-    );
-    await svc.startResearch("p1", "My Project", "research X", null);
-    await getCaptured().current?.({ type: "agent_end" });
-    await new Promise((r) => setTimeout(r, 50));
-
-    expect(crystallization.crystallizeAndSave).toHaveBeenCalledWith(
-      "research X",
-      "p1",
-      "My Project",
-      null,
     );
   });
 });
@@ -476,7 +432,6 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -502,7 +457,6 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -521,7 +475,6 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -547,7 +500,6 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -566,7 +518,6 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -604,7 +555,6 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -634,7 +584,6 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -666,7 +615,6 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -692,7 +640,6 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()
@@ -719,7 +666,6 @@ describe("ResearchService – _runResearch internals", () => {
       makeSettingsService() as never,
       home as never,
       new AllowlistService() as never,
-      makeCrystallizationService() as never,
       {
         getProject: vi
           .fn()

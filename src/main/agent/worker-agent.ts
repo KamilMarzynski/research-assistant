@@ -32,7 +32,7 @@ export interface WorkerAgentConfig {
   homePath: string;
   provider: ModelProvider;
   remainingDepth?: number; // defaults to 0 (leaf)
-  proposeToolFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  proposeSkillFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
   agentLabel?: string;
   onProgress?: (label: string, delta: string) => void;
   webAccessEnabled?: boolean;
@@ -185,7 +185,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     homePath,
     provider,
     remainingDepth = 0,
-    proposeToolFn,
+    proposeSkillFn,
     onProgress,
     webAccessEnabled,
     allowlistService,
@@ -212,7 +212,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       folderPath,
       homePath,
       provider,
-      proposeToolFn,
+      proposeSkillFn,
       onProgress,
       webAccessEnabled,
       allowlistService,
@@ -272,7 +272,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       webAccessEnabled,
       allowlistService,
     }),
-    proposeToolFn,
+    proposeSkillFn,
     spawnAgentFn,
     spawnAgentsParallelFn,
     allowlistService,

@@ -128,6 +128,10 @@ export function registerChatHandler(
           webAccessEnabled: settings.webAccessEnabled,
           memoryFileService,
           allowlistService,
+          proposeSkillFn: async (name, skillContent, script) => {
+            await homeService.savePendingTool(name, skillContent, script);
+            eventBus.emit({ type: "tool:pending", payload: { name, skillContent } });
+          },
           onFileWrite: (absolutePath, relativePath, fileName) => {
             void outputNotificationService.recordWrite(
               projectId,
