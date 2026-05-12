@@ -35,6 +35,7 @@ export interface IMemoryManager {
 export class MemoryManager implements IMemoryManager {
   private initPromise: Promise<Memory> | null = null;
   private readonly dbPath: string;
+  private readonly observeTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(@inject(USER_DATA_PATH_TOKEN) userDataPath: string) {
     this.dbPath = join(userDataPath, "research-assistant.db");
@@ -58,7 +59,7 @@ export class MemoryManager implements IMemoryManager {
                 enabled: true,
                 scope: "thread",
                 temporalMarkers: true,
-                model: "ollama/gemma4:31b-cloud",
+                model: "ollama-cloud/gemma4:31b-cloud",
                 observation: {
                   messageTokens: 30_000,
                   bufferTokens: 0.2,
@@ -74,8 +75,10 @@ export class MemoryManager implements IMemoryManager {
           });
 
           // Eagerly trigger OM engine initialization so first getContext()
-          // doesn't block on the lazy getter.
-          void memory.omEngine;
+          // doesn't block on the lazy getter. Log failures non-blocking.
+          memory.omEngine?.catch?.((err: unknown) =>
+            console.error("[MemoryManager] OM engine init failed:", err),
+          );
 
           return memory;
         } catch (err) {
@@ -85,6 +88,32 @@ export class MemoryManager implements IMemoryManager {
       })();
     }
     return this.initPromise;
+  }
+
+  private debouncedObserve(projectId: string): void {
+    const existing = this.observeTimers.get(projectId);
+    if (existing) {
+      clearTimeout(existing);
+    }
+
+    const timer = setTimeout(() => {
+      this.observeTimers.delete(projectId);
+      void this.triggerObservation(projectId);
+    }, 1000);
+
+    this.observeTimers.set(projectId, timer);
+  }
+
+  private async triggerObservation(projectId: string): Promise<void> {
+    try {
+      const memory = await this.getMemory();
+      const omEngine = await memory.omEngine;
+      if (omEngine) {
+        await omEngine.observe({ threadId: projectId });
+      }
+    } catch (err) {
+      console.error("[MemoryManager] debounced observation failed:", err);
+    }
   }
 
   async buildContext(projectId: string): Promise<MemoryContext> {
@@ -132,10 +161,8 @@ export class MemoryManager implements IMemoryManager {
 
       await memory.saveMessages({ messages });
 
-      const omEngine = await memory.omEngine;
-      if (omEngine) {
-        await omEngine.observe({ threadId: projectId });
-      }
+      // Fire-and-forget debounced observation — avoids blocking the save path.
+      this.debouncedObserve(projectId);
     } catch (err) {
       console.error("[MemoryManager] save failed:", err);
     }

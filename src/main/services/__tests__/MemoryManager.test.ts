@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock electron — safeStorage and dialog are main-process only
 vi.mock("electron", () => ({
@@ -62,7 +62,9 @@ const mockMemory = {
 };
 
 vi.mock("@mastra/memory", () => ({
-  Memory: vi.fn().mockImplementation(function () { return mockMemory; }),
+  Memory: vi.fn().mockImplementation(function (this: unknown) {
+    return mockMemory;
+  }),
 }));
 
 const { MemoryManager } = await import("../MemoryManager");
@@ -227,6 +229,14 @@ describe("MemoryManager", () => {
   // ------------------------------------------------------------------ save
 
   describe("save()", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it("calls saveMessages with correctly-shaped MastraDBMessage objects", async () => {
       await manager.save("proj-1", [
         { role: "user", content: "What is Mastra?" },
@@ -266,13 +276,19 @@ describe("MemoryManager", () => {
       });
     });
 
-    it("triggers OM observation after saving messages", async () => {
+    it("debounces OM observation after saving messages", async () => {
       await manager.save("proj-1", [
         { role: "user", content: "Hello" },
         { role: "assistant", content: "Hi there" },
       ]);
 
       expect(mockMemory.saveMessages).toHaveBeenCalled();
+      // Observation is debounced — not called immediately.
+      expect(mockOmEngine.observe).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(mockOmEngine.observe).toHaveBeenCalledTimes(1);
       expect(mockOmEngine.observe).toHaveBeenCalledWith({ threadId: "proj-1" });
     });
 
@@ -287,9 +303,38 @@ describe("MemoryManager", () => {
     it("does not throw when OM observation fails", async () => {
       mockOmEngine.observe.mockRejectedValueOnce(new Error("OM error"));
 
-      await expect(
-        manager.save("proj-1", [{ role: "user", content: "Hello" }]),
-      ).resolves.toBeUndefined();
+      await manager.save("proj-1", [{ role: "user", content: "Hello" }]);
+
+      // Advance past debounce so the fire-and-forget observation runs.
+      await vi.advanceTimersByTimeAsync(1000);
+
+      // save() itself should still resolve without throwing.
+      expect(mockOmEngine.observe).toHaveBeenCalledWith({ threadId: "proj-1" });
+    });
+
+    it("coalesces multiple rapid saves into a single observation", async () => {
+      await manager.save("proj-1", [{ role: "user", content: "First" }]);
+      await manager.save("proj-1", [{ role: "assistant", content: "Second" }]);
+      await manager.save("proj-1", [{ role: "user", content: "Third" }]);
+
+      expect(mockMemory.saveMessages).toHaveBeenCalledTimes(3);
+      expect(mockOmEngine.observe).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(mockOmEngine.observe).toHaveBeenCalledTimes(1);
+      expect(mockOmEngine.observe).toHaveBeenCalledWith({ threadId: "proj-1" });
+    });
+
+    it("observes different projects independently", async () => {
+      await manager.save("proj-a", [{ role: "user", content: "A" }]);
+      await manager.save("proj-b", [{ role: "user", content: "B" }]);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(mockOmEngine.observe).toHaveBeenCalledTimes(2);
+      expect(mockOmEngine.observe).toHaveBeenCalledWith({ threadId: "proj-a" });
+      expect(mockOmEngine.observe).toHaveBeenCalledWith({ threadId: "proj-b" });
     });
   });
 

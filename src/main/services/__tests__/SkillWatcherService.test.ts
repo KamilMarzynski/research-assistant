@@ -22,7 +22,7 @@ describe("SkillWatcherService", () => {
       await mkdir(join(skillDir, "my-skill"), { recursive: true });
       await writeFile(
         skillFile,
-        '---\nname: my-skill\ndescription: A test skill\n---\nContent here.',
+        "---\nname: my-skill\ndescription: A test skill\n---\nContent here.",
       );
 
       const emit = vi.fn();
@@ -40,7 +40,7 @@ describe("SkillWatcherService", () => {
       // Modify the file
       await writeFile(
         skillFile,
-        '---\nname: my-skill\ndescription: A test skill updated\n---\nContent here updated.',
+        "---\nname: my-skill\ndescription: A test skill updated\n---\nContent here updated.",
       );
       await new Promise((r) => setTimeout(r, 300));
 
@@ -57,7 +57,7 @@ describe("SkillWatcherService", () => {
       await mkdir(skillDir, { recursive: true });
       const skillFile = join(skillDir, "stable-skill", "SKILL.md");
       await mkdir(join(skillDir, "stable-skill"), { recursive: true });
-      const content = '---\nname: stable-skill\ndescription: Stable\n---\nContent.';
+      const content = "---\nname: stable-skill\ndescription: Stable\n---\nContent.";
       await writeFile(skillFile, content);
 
       const emit = vi.fn();
@@ -95,7 +95,7 @@ describe("SkillWatcherService", () => {
       await mkdir(skillDir, { recursive: true });
       const skillFile = join(skillDir, "persisted-skill", "SKILL.md");
       await mkdir(join(skillDir, "persisted-skill"), { recursive: true });
-      const content = '---\nname: persisted-skill\ndescription: Persisted\n---\nData.';
+      const content = "---\nname: persisted-skill\ndescription: Persisted\n---\nData.";
       await writeFile(skillFile, content);
 
       const emit = vi.fn();

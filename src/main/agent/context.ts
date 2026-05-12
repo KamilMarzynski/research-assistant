@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getScholarHome } from "../paths";
-import { createDefaultSkillRouter, SkillRouter } from "./SkillRouter";
+import { createDefaultSkillRouter, type SkillRouter } from "./SkillRouter";
 
 export async function loadSkillIndexXml(
   projectName: string | undefined,
