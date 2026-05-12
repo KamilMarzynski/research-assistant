@@ -8,6 +8,7 @@ import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
+import type { ObservabilityService, ObservationSpan } from "../services/ObservabilityService";
 import type { ResearchService } from "../services/ResearchService";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { CompressionService } from "./CompressionService";
@@ -88,6 +89,7 @@ export interface AgentSessionOptions {
   memoryFileService?: MemoryFileService;
   allowlistService: AllowlistService;
   proposeSkillFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  observabilityService?: ObservabilityService;
 }
 
 export class AgentSession {
@@ -97,6 +99,7 @@ export class AgentSession {
   private readonly memoryManager: IMemoryManager;
   private readonly projectId: string;
   private readonly projectName: string;
+  private readonly provider: ModelProvider;
   private assistantContent = "";
   private currentTurnId = 0;
   private savedForTurn = 0;
@@ -106,6 +109,10 @@ export class AgentSession {
   private pendingSkillDeltas: Array<{ skillName: string; summary: string }> = [];
   private readonly skillRouter: ReturnType<typeof createDefaultSkillRouter>;
   private skillRouterReady = false;
+  private readonly observabilityService?: ObservabilityService;
+  private activeTurnSpan: ObservationSpan | null = null;
+  private activeGenerationSpan: ObservationSpan | null = null;
+  private activeToolSpan: ObservationSpan | null = null;
 
   constructor({
     messageService,
@@ -125,12 +132,15 @@ export class AgentSession {
     memoryFileService,
     allowlistService,
     proposeSkillFn,
+    observabilityService,
   }: AgentSessionOptions) {
     this.eventBus = eventBus;
     this.messageService = messageService;
     this.memoryManager = memoryManager;
     this.projectId = projectId;
     this.projectName = projectName;
+    this.provider = provider;
+    this.observabilityService = observabilityService;
 
     this.skillRouter = createDefaultSkillRouter(projectName, (skillName, summary) => {
       this.pendingSkillDeltas.push({ skillName, summary });
@@ -226,6 +236,12 @@ export class AgentSession {
         const e = event as {
           type: string;
           assistantMessageEvent?: { type: string; delta: string };
+          message?: AgentMessage;
+          toolCallId?: string;
+          toolName?: string;
+          args?: unknown;
+          result?: unknown;
+          isError?: boolean;
           messages?: unknown[];
         };
 
@@ -239,6 +255,19 @@ export class AgentSession {
             });
           }
         } else if (e.type === "agent_end") {
+          // End turn span
+          this.activeTurnSpan?.update({
+            output: { role: "assistant", content: this.assistantContent },
+          });
+          this.activeTurnSpan?.end();
+          this.activeTurnSpan = null;
+
+          // End any lingering spans
+          this.activeGenerationSpan?.end();
+          this.activeGenerationSpan = null;
+          this.activeToolSpan?.end();
+          this.activeToolSpan = null;
+
           const content = this.assistantContent;
           const userContent = this.lastUserContent;
           this.assistantContent = "";
@@ -260,6 +289,30 @@ export class AgentSession {
             }
           }
           this.eventBus.emit({ type: "agent:done", payload: { projectId: this.projectId } });
+        } else if (e.type === "message_start") {
+          this.activeGenerationSpan = await this.observabilityService?.startObservation("llm-generation", {
+            asType: "generation",
+            input: e.message?.content,
+            metadata: { model: this.provider.model },
+          }) ?? null;
+        } else if (e.type === "message_end") {
+          this.activeGenerationSpan?.update({
+            output: e.message?.content,
+          });
+          this.activeGenerationSpan?.end();
+          this.activeGenerationSpan = null;
+        } else if (e.type === "tool_execution_start") {
+          this.activeToolSpan = await this.observabilityService?.startObservation(`tool:${e.toolName ?? "unknown"}`, {
+            asType: "tool",
+            input: e.args,
+          }) ?? null;
+        } else if (e.type === "tool_execution_end") {
+          this.activeToolSpan?.update({
+            output: e.result,
+            metadata: { isError: e.isError ?? false },
+          });
+          this.activeToolSpan?.end();
+          this.activeToolSpan = null;
         }
       } catch (err) {
         console.error("[AgentSession] subscriber error:", err);
@@ -274,7 +327,18 @@ export class AgentSession {
     this.processing = true;
     this.currentTurnId++;
     this.savedForTurn = 0;
+
     try {
+      // Get or create trace for this project
+      await this.observabilityService?.getTraceId(this.projectId, this.projectName);
+
+      // Start turn observation
+      this.activeTurnSpan = await this.observabilityService?.startObservation("agent-turn", {
+        asType: "agent",
+        input: { role: "user", content },
+        metadata: { turnNumber: this.currentTurnId, projectId: this.projectId },
+      }) ?? null;
+
       // Refresh system context before each prompt so AGENTS.md updates are picked up
       try {
         if (!this.skillRouterReady) {
@@ -328,6 +392,9 @@ export class AgentSession {
         content,
       });
       await this.agent.prompt(content);
+    } catch (err) {
+      this.activeTurnSpan?.update({ metadata: { error: String(err) } });
+      throw err;
     } finally {
       this.processing = false;
       const pending = this.pendingFollowUp;
@@ -345,6 +412,17 @@ export class AgentSession {
     }
     try {
       this.processing = true;
+      this.currentTurnId++;
+      this.savedForTurn = 0;
+
+      void this.observabilityService?.startObservation("agent-turn", {
+        asType: "agent",
+        input: { role: "user", content },
+        metadata: { turnNumber: this.currentTurnId, projectId: this.projectId, followUp: true },
+      }).then((span) => {
+        this.activeTurnSpan = span ?? null;
+      });
+
       await this.agent.followUp({ role: "user", content, timestamp: Date.now() });
     } catch (err) {
       console.error("[AgentSession] followUp failed:", err);

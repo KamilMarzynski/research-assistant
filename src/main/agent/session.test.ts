@@ -103,6 +103,14 @@ function makeMemoryManager() {
   };
 }
 
+function makeObservabilityService() {
+  return {
+    getTraceId: vi.fn().mockResolvedValue(null),
+    observe: vi.fn().mockImplementation(async (_name, fn) => fn({ update: () => {}, end: () => {} })),
+    startObservation: vi.fn().mockResolvedValue(null),
+  };
+}
+
 describe("AgentSession", () => {
   let messageService: ReturnType<typeof makeMessageService>;
   let eventBus: EventBus;
@@ -127,6 +135,7 @@ describe("AgentSession", () => {
       isFirstRun: false,
       systemContext: "",
       allowlistService: new AllowlistService() as never,
+      observabilityService: makeObservabilityService() as never,
     });
   });
 
@@ -198,6 +207,27 @@ describe("AgentSession", () => {
       expect(eventBus.emit).toHaveBeenCalledWith(
         expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
       );
+    });
+
+    it("works without observabilityService", async () => {
+      const localSession = new AgentSession({
+        eventBus: makeEventBus(),
+        messageService: makeMessageService() as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: makeMemoryManager() as never,
+        initialMemoryContext: { summary: "", recentMessages: [] },
+        projectId: "p-1",
+        projectName: "Test",
+        folderPath: null,
+        provider: { type: "openrouter", apiKey: "sk-test", model: "test" },
+        isFirstRun: false,
+        systemContext: "",
+        allowlistService: new AllowlistService() as never,
+        // no observabilityService
+      });
+      await localSession.send("hello");
+      expect(mockAgent.prompt).toHaveBeenCalledWith("hello");
     });
   });
 

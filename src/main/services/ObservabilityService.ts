@@ -9,6 +9,8 @@ export interface ObservationSpan {
 export interface ObserveOptions {
   asType?: "span" | "generation" | "tool" | "agent";
   parentSpanContext?: { traceId: string; spanId: string };
+  input?: unknown;
+  metadata?: Record<string, unknown>;
 }
 
 @injectable()
@@ -131,9 +133,13 @@ export class ObservabilityService {
         traceId: string;
       };
 
+      const metadata: Record<string, unknown> = {};
+      if (options?.input !== undefined) metadata.input = options.input;
+      if (options?.metadata !== undefined) metadata.metadata = options.metadata;
+
       const span = typedStartObservation(
         name,
-        {},
+        metadata,
         {
           asType: options?.asType ?? "span",
           parentSpanContext: options?.parentSpanContext
