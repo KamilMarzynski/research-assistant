@@ -13,6 +13,7 @@ export interface SessionState {
   processing: boolean;
   pendingFollowUp: string | null;
   pendingSkillDeltas: Array<{ skillName: string; summary: string }>;
+  pendingToolDescriptions: Map<string, string>;
   skillRouterReady: boolean;
   activeTurnSpan: ObservationSpan | null;
   activeGenerationSpan: ObservationSpan | null;
