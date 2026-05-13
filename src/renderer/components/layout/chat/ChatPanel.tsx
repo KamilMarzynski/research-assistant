@@ -78,6 +78,11 @@ export default function ChatPanel() {
     void window.electronAPI.invoke(IPC.SEND_MESSAGE, { projectId: activeProjectId, content });
   };
 
+  const handleAbort = () => {
+    if (!activeProjectId) return;
+    void window.electronAPI.invoke(IPC.ABORT_MESSAGE, { projectId: activeProjectId });
+  };
+
   if (!activeProjectId) {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -125,6 +130,7 @@ export default function ChatPanel() {
       ) : (
         <MessageInput
           onSend={handleSend}
+          onAbort={handleAbort}
           disabled={processing || streamingContent !== null}
           projectId={activeProjectId}
           projectModelOverride={activeProject?.modelOverride ?? null}
