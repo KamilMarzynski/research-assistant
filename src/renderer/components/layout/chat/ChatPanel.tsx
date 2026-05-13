@@ -19,7 +19,7 @@ export default function ChatPanel() {
   const [projects, setProjects] = useState<Project[]>([]);
 
   const projectState = activeProjectId ? states[activeProjectId] : undefined;
-  const streamingContent = projectState?.streamingContent ?? null;
+  const streamingSegments = projectState?.streamingSegments ?? [];
   const processing = projectState?.processing ?? false;
 
   // Check API key once on mount
@@ -110,7 +110,7 @@ export default function ChatPanel() {
       <PendingToolBanner />
       <MessageList
         messages={messages}
-        streamingContent={streamingContent}
+        streamingSegments={streamingSegments}
         processing={processing}
       />
       {hasApiKey === false ? (
@@ -129,7 +129,7 @@ export default function ChatPanel() {
         <MessageInput
           onSend={handleSend}
           onAbort={handleAbort}
-          disabled={processing || streamingContent !== null}
+          disabled={processing || streamingSegments.length > 0}
           projectId={activeProjectId}
           projectModelOverride={activeProject?.modelOverride ?? null}
         />
