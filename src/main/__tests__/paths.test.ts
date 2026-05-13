@@ -23,8 +23,10 @@ describe("paths", () => {
     expect(path).toContain(".scholar");
   });
 
-  it("getWorkspacePath returns a path under scholar home", () => {
-    const path = getWorkspacePath();
+  it("getWorkspacePath returns a path under project workspace", () => {
+    const path = getWorkspacePath("my-project");
+    expect(path).toContain("projects");
+    expect(path).toContain("my-project");
     expect(path).toContain("workspace");
     expect(path).toContain(".scholar");
   });

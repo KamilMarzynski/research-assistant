@@ -18,10 +18,14 @@ export function getSkillsPath(): string {
   return join(getScholarHome(), "skills");
 }
 
-export function getWorkspacePath(): string {
-  return join(getScholarHome(), "workspace");
+export function getProjectPath(slug: string): string {
+  return join(getScholarHome(), "projects", slug);
 }
 
 export function getProjectConfigPath(slug: string): string {
-  return join(getScholarHome(), "projects", slug);
+  return getProjectPath(slug);
+}
+
+export function getWorkspacePath(slug: string): string {
+  return join(getProjectPath(slug), "workspace");
 }

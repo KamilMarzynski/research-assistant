@@ -64,7 +64,6 @@ describe("HomeService", () => {
     const { access } = await import("node:fs/promises");
     await expect(access(join(tmpHome, ".scholar"))).resolves.toBeUndefined();
     await expect(access(join(tmpHome, ".scholar", "skills"))).resolves.toBeUndefined();
-    await expect(access(join(tmpHome, ".scholar", "workspace"))).resolves.toBeUndefined();
     await expect(access(join(tmpHome, ".scholar", "projects"))).resolves.toBeUndefined();
     await expect(access(join(tmpHome, ".scholar", "tasks"))).resolves.toBeUndefined();
   });
@@ -88,7 +87,7 @@ describe("HomeService", () => {
     const dir = await svc.ensureWorkspaceForProject("proj-abc");
     const { access } = await import("node:fs/promises");
     await expect(access(dir)).resolves.toBeUndefined();
-    expect(dir).toContain("proj-abc");
+    expect(dir).toContain(join("projects", "proj-abc", "workspace"));
   });
 
   it("ensureDirectories copies builtin skills when skills dir is empty", async () => {

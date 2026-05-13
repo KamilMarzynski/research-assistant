@@ -31,7 +31,6 @@ export class HomeService {
     const dirs = [
       home,
       join(home, "skills"),
-      join(home, "workspace"),
       join(home, "projects"),
       join(home, "tasks"),
       join(home, "pending-tools"),
@@ -53,8 +52,8 @@ export class HomeService {
     }
   }
 
-  async ensureWorkspaceForProject(projectId: string): Promise<string> {
-    const dir = join(this.getHomePath(), "workspace", projectId);
+  async ensureWorkspaceForProject(slug: string): Promise<string> {
+    const dir = join(this.getHomePath(), "projects", slug, "workspace");
     await mkdir(dir, { recursive: true });
     return dir;
   }
