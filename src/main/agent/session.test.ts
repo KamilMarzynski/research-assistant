@@ -72,6 +72,7 @@ function makeMessageService() {
       createdAt: new Date(),
     }),
     updateMessage: vi.fn().mockResolvedValue(undefined),
+    deleteMessage: vi.fn().mockResolvedValue(undefined),
     getHistory: vi.fn().mockResolvedValue([]),
     getRecentContext: vi.fn().mockResolvedValue([]),
   };
@@ -870,6 +871,46 @@ describe("AgentSession", () => {
 
       expect(messageService.updateMessage).toHaveBeenCalledTimes(1);
       expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "B");
+    });
+  });
+
+  describe("abort()", () => {
+    it("deletes empty placeholder when aborted during thinking", async () => {
+      let resolvePrompt: (() => void) | undefined;
+      mockAgent.prompt.mockImplementationOnce(
+        () => new Promise<void>((resolve) => {
+          resolvePrompt = resolve;
+        }),
+      );
+
+      const sendPromise = session.send("my question");
+      // Yield so send() reaches the prompt and creates the placeholder
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      session.abort();
+      resolvePrompt?.();
+      await sendPromise.catch(() => {});
+
+      expect(messageService.deleteMessage).toHaveBeenCalled();
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
+      );
+    });
+
+    it("finalizes partial content when aborted mid-stream", async () => {
+      await session.send("my question");
+      await triggerEvent({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "Partial" },
+      });
+      session.abort();
+
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "Partial",
+      );
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
+      );
     });
   });
 
