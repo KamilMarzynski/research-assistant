@@ -14,6 +14,7 @@ export interface ResearchTask {
   query: string;
   folderPath: string | null;
   startedAt: string;
+  status?: "pending" | "in_progress" | "complete" | "failed";
 }
 
 const ResearchTaskSchema = z.object({
@@ -23,6 +24,7 @@ const ResearchTaskSchema = z.object({
   query: z.string(),
   folderPath: z.string().nullable(),
   startedAt: z.string(),
+  status: z.enum(["pending", "in_progress", "complete", "failed"]).optional(),
 });
 
 @injectable()
@@ -61,6 +63,7 @@ export class TaskPersistenceService {
       query: r.query,
       folderPath: r.folderPath,
       startedAt: new Date(r.createdAt).toISOString(),
+      status: r.status,
     }));
   }
 
@@ -77,6 +80,7 @@ export class TaskPersistenceService {
       query: r.query,
       folderPath: r.folderPath,
       startedAt: new Date(r.createdAt).toISOString(),
+      status: r.status,
     }));
   }
 

@@ -772,6 +772,8 @@ describe("TaskPersistenceService", () => {
     const result = await taskPersistence.getTasksByProject("proj-a");
     expect(result).toHaveLength(2);
     expect(result[0].taskId).toBe("t2");
+    expect(result[0].status).toBe("in_progress");
     expect(result[1].taskId).toBe("t1");
+    expect(result[1].status).toBe("in_progress");
   });
 });

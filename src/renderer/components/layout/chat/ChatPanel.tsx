@@ -10,7 +10,6 @@ import MessageList from "./MessageList";
 import PendingCommandBanner from "./PendingCommandBanner";
 import PendingPathBanner from "./PendingPathBanner";
 import PendingToolBanner from "./PendingToolBanner";
-import ResearchStatusBar from "./ResearchStatusBar";
 
 export default function ChatPanel() {
   const { activeProjectId } = useProject();
@@ -106,7 +105,6 @@ export default function ChatPanel() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <WindowDragBar />
       <ChatHeader />
-      <ResearchStatusBar />
       <PendingCommandBanner />
       <PendingPathBanner />
       <PendingToolBanner />

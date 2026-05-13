@@ -119,10 +119,13 @@ export class MemoryManager implements IMemoryManager {
   async buildContext(projectId: string): Promise<MemoryContext> {
     try {
       const memory = await this.getMemory();
+      console.log("memory object: ", JSON.stringify(memory, null, 2));
       const ctx = await memory.getContext({
         threadId: projectId,
         memoryConfig: { lastMessages: 25 },
       });
+
+      console.log("CTX: ", JSON.stringify(ctx, null, 2));
 
       const summary = ctx.systemMessage ?? "";
 
@@ -132,6 +135,8 @@ export class MemoryManager implements IMemoryManager {
           role: m.role as "user" | "assistant",
           content: extractTextContent(m.content),
         }));
+
+      console.log("recent messages lenght: ", recentMessages.length);
 
       return { summary, recentMessages };
     } catch (err) {

@@ -385,6 +385,7 @@ export class MessagePipeline {
       this.state.processing = true;
       this.state.currentTurnId++;
       this.state.savedForTurn = 0;
+      this.state.lastUserContent = content;
 
       void this.observabilityService
         ?.startObservation("agent-turn", {
