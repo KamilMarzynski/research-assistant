@@ -25,6 +25,29 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
   const [states, setStates] = useState<Record<string, ProjectStreamState>>({});
   const statesRef = useRef(states);
   statesRef.current = states;
+  const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const STREAM_TIMEOUT_MS = 300_000;
+
+  const clearTimer = (projectId: string) => {
+    const timer = timersRef.current[projectId];
+    if (timer) {
+      clearTimeout(timer);
+      delete timersRef.current[projectId];
+    }
+  };
+
+  const startTimer = (projectId: string) => {
+    clearTimer(projectId);
+    timersRef.current[projectId] = setTimeout(() => {
+      setStates((prev) => {
+        const next = { ...prev };
+        if (next[projectId]) {
+          next[projectId] = { ...next[projectId], streamingContent: null, processing: false };
+        }
+        return next;
+      });
+    }, STREAM_TIMEOUT_MS);
+  };
 
   const startStream = (projectId: string) => {
     setStates((prev) => {
@@ -37,9 +60,11 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
         },
       };
     });
+    startTimer(projectId);
   };
 
   const endStream = (projectId: string) => {
+    clearTimer(projectId);
     setStates((prev) => {
       const next = { ...prev };
       if (next[projectId]) {
@@ -59,7 +84,6 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
       setStates((prev) => {
         const existing = prev[projectId];
         if (!existing) {
-          // Chunk arrived without explicit start — create state on the fly
           return {
             ...prev,
             [projectId]: { streamingContent: delta, processing: true },
@@ -74,6 +98,7 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
           },
         };
       });
+      startTimer(projectId);
     });
 
     const unsubDone = window.electronAPI.on(IPC.MESSAGE_DONE, (data) => {
@@ -81,19 +106,16 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
       if (done === null) return;
       const { projectId } = done;
       if (!projectId) return;
-
-      setStates((prev) => {
-        const next = { ...prev };
-        if (next[projectId]) {
-          next[projectId] = { ...next[projectId], streamingContent: null, processing: false };
-        }
-        return next;
-      });
+      endStream(projectId);
     });
 
     return () => {
       unsubChunk();
       unsubDone();
+      for (const timer of Object.values(timersRef.current)) {
+        clearTimeout(timer);
+      }
+      timersRef.current = {};
     };
   }, []);
 
