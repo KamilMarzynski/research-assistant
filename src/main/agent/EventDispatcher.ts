@@ -39,8 +39,8 @@ export function subscribeEvents(options: EventDispatcherOptions): () => void {
     try {
       await handleStreamChunk(event, ctx);
       await handleTurnCompletion(event, ctx);
-      await handleGenerationSpan(event, state, observabilityService, provider);
-      await handleToolSpan(event, state, observabilityService);
+      await handleGenerationSpan(event, state, observabilityService, provider, agent);
+      await handleToolSpan(event, state, observabilityService, agent);
     } catch (err) {
       console.error("[AgentSession] subscriber error:", err);
     }

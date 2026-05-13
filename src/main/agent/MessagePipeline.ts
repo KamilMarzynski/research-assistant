@@ -291,6 +291,7 @@ export class MessagePipeline {
             turnNumber: this.state.currentTurnId,
             projectId: this.projectId,
             systemPrompt: this.agent.state.systemPrompt,
+            messages: this.agent.state.messages,
           },
         })) ?? null;
 

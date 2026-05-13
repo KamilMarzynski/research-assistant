@@ -1,6 +1,15 @@
-import type { AgentEvent } from "@mariozechner/pi-agent-core";
+import type { Agent, AgentEvent } from "@mariozechner/pi-agent-core";
 import type { ModelProvider } from "../model-provider";
 import type { SessionState } from "./types";
+
+function isAssistantMessage(message: unknown): message is { role: string; content: unknown } {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    "role" in message &&
+    (message as Record<string, unknown>).role === "assistant"
+  );
+}
 
 export async function handleGenerationSpan(
   event: AgentEvent,
@@ -9,8 +18,14 @@ export async function handleGenerationSpan(
     | import("../../services/ObservabilityService").ObservabilityService
     | undefined,
   provider: ModelProvider,
+  agent: Agent,
 ): Promise<void> {
   if (event.type === "message_start") {
+    // Only track real LLM generations (assistant role). Skip passthroughs:
+    // - user prompts, steering messages (role: "user")
+    // - tool results injected back into context (role: "toolResult")
+    if (!isAssistantMessage(event.message)) return;
+
     const parentContext =
       state.turnTraceId && state.turnSpanId
         ? { traceId: state.turnTraceId, spanId: state.turnSpanId }
@@ -19,7 +34,7 @@ export async function handleGenerationSpan(
       (await observabilityService?.startObservation("llm-generation", {
         asType: "generation",
         input: event.message?.content,
-        metadata: { model: provider.model, provider: provider.type },
+        metadata: { model: provider.model, provider: provider.type, messages: agent.state.messages },
         parentSpanContext: parentContext,
       })) ?? null;
   } else if (event.type === "message_end") {

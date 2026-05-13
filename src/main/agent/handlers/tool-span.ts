@@ -1,4 +1,4 @@
-import type { AgentEvent } from "@mariozechner/pi-agent-core";
+import type { Agent, AgentEvent } from "@mariozechner/pi-agent-core";
 import type { SessionState } from "./types";
 
 export async function handleToolSpan(
@@ -7,6 +7,7 @@ export async function handleToolSpan(
   observabilityService:
     | import("../../services/ObservabilityService").ObservabilityService
     | undefined,
+  agent: Agent,
 ): Promise<void> {
   if (event.type === "tool_execution_start") {
     const parentContext =
@@ -17,6 +18,7 @@ export async function handleToolSpan(
       (await observabilityService?.startObservation(`tool:${event.toolName ?? "unknown"}`, {
         asType: "tool",
         input: event.args,
+        metadata: { messages: agent.state.messages },
         parentSpanContext: parentContext,
       })) ?? null;
   } else if (event.type === "tool_execution_end") {
