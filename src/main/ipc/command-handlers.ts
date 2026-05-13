@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { PathApprovalPayload } from "../../shared/ipc-types";
+import { resolvePathApprovalGate } from "../agent/extensions/path-approval";
 import { resolveBlockedCommand } from "../agent/extensions/safe-bash";
 import { ResolveBlockedCommandSchema, ResolvePathApprovalSchema } from "../ipc-validation";
 import type { AllowlistService } from "../services/AllowlistService";
@@ -34,9 +35,11 @@ export function registerCommandHandlers(
     const key = `${projectId}:${path}:${mode}`;
     pendingPathApprovals.delete(key);
 
-    if (action === "approve_once" || action === "approve_session") {
+    const approved = action === "approve_once" || action === "approve_session";
+    if (approved) {
       allowlistService.approveSession(projectId, path);
     }
+    resolvePathApprovalGate(projectId, path, mode as "read" | "write", approved);
   });
 }
 

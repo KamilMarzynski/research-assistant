@@ -3,6 +3,7 @@ import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
+import { enterPathApprovalGate } from "../extensions/path-approval";
 import { ApprovalRequiredError } from "../../services/AllowlistService";
 import type { CompressionService } from "../CompressionService";
 import type { PathJail } from "../path-jail";
@@ -255,17 +256,22 @@ export function createWriteFileTool(
           if (emitApprovalRequired) {
             emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
           }
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Approval required for ${err.mode} on "${err.path}". Waiting for user approval.`,
-              },
-            ],
-            details: null,
-          };
+          const approved = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+          if (!approved) {
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.`,
+                },
+              ],
+              details: null,
+            };
+          }
+          resolved = jail.validate(path, "write");
+        } else {
+          throw err;
         }
-        throw err;
       }
       const fileExists = await access(resolved).then(
         () => true,

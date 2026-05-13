@@ -113,12 +113,7 @@ export class PathJail {
 
     // WRITE MODE: check restrictions
 
-    // 1. Home skills require explicit approval
-    if (this.isInZone(resolved, [this.homeSkills])) {
-      throw new ApprovalRequiredError(resolved, mode);
-    }
-
-    // 2. Cross-project write protection
+    // 1. Cross-project write protection (hard block, no allowlist override)
     if (
       this.isInZone(resolved, [this.allProjectsDir]) &&
       !this.isInZone(resolved, [this.projectsDir])
@@ -128,13 +123,13 @@ export class PathJail {
       );
     }
 
-    // 3. Read-write zones
+    // 2. Read-write zones
     if (this.isInZone(resolved, this.readWriteZones)) {
       this.walkComponents(resolved);
       return resolved;
     }
 
-    // 4. Allowlist fallback
+    // 3. Allowlist — checked before home skills so approved paths are not re-blocked
     const result = this.allowlistService.isAllowed(
       this.projectId,
       resolved,
@@ -145,12 +140,12 @@ export class PathJail {
       this.walkComponents(resolved);
       return resolved;
     }
-    if (result.needsApproval) {
+
+    // 4. Home skills require explicit approval
+    if (this.isInZone(resolved, [this.homeSkills])) {
       throw new ApprovalRequiredError(resolved, mode);
     }
 
-    throw new Error(
-      `Path "${resolved}" is not allowed for writing. Permitted write zones: workspace (${this.workspace}), project folder${this.projectFolder ? ` (${this.projectFolder})` : " (none linked)"}, project directory (${this.projectsDir}), project skills (${this.projectSkills}).`,
-    );
+    throw new ApprovalRequiredError(resolved, mode);
   }
 }
