@@ -5,6 +5,8 @@ import type {
   PendingTool,
   ResearchCompletePayload,
   ResearchStatusUpdatePayload,
+  ToolStartPayload,
+  ToolEndPayload,
 } from "./ipc-types";
 
 const PathApprovalPayloadSchema = z.object({
@@ -112,4 +114,26 @@ export function decodeMessageDone(data: unknown): { projectId: string } | null {
   }
   console.warn("[ipc-guard] Invalid MESSAGE_DONE payload: expected null or { projectId }");
   return null;
+}
+
+const ToolStartPayloadSchema = z.object({
+  projectId: z.string(),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  description: z.string(),
+});
+
+const ToolEndPayloadSchema = z.object({
+  projectId: z.string(),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  isError: z.boolean(),
+});
+
+export function decodeToolStart(data: unknown): ToolStartPayload | null {
+  return tryDecode(ToolStartPayloadSchema, data, "TOOL_START");
+}
+
+export function decodeToolEnd(data: unknown): ToolEndPayload | null {
+  return tryDecode(ToolEndPayloadSchema, data, "TOOL_END");
 }
