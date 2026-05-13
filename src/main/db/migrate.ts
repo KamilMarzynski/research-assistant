@@ -83,6 +83,13 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
     if (!isDuplicateColumnError(err)) throw err;
   }
 
+  // Run 16: add project_path — idempotent
+  try {
+    await db.run(sql`ALTER TABLE projects ADD COLUMN project_path TEXT`);
+  } catch (err) {
+    if (!isDuplicateColumnError(err)) throw err;
+  }
+
   try {
     await db.run(sql`ALTER TABLE artifacts ADD COLUMN acknowledged INTEGER NOT NULL DEFAULT 0`);
   } catch (err) {

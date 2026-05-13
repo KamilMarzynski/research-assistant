@@ -133,6 +133,7 @@ describe("AgentSession", () => {
       projectId: "p-1",
       projectName: "Test Project",
       folderPath: null,
+      projectPath: null,
       provider: { type: "openrouter", apiKey: "sk-or-test", model: "anthropic/claude-sonnet-4-6" },
       isFirstRun: false,
       systemContext: "",
@@ -222,6 +223,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: { type: "openrouter", apiKey: "sk-test", model: "test" },
         isFirstRun: false,
         systemContext: "",
@@ -361,6 +363,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -412,6 +415,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: { type: "ollama", host: "http://localhost:11434", model: "llama3" },
         isFirstRun: false,
         systemContext: "",
@@ -437,6 +441,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -455,6 +460,7 @@ describe("AgentSession", () => {
         "Test",
         "deep query",
         null,
+        null,
       );
     });
   });
@@ -472,6 +478,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -499,6 +506,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -585,6 +593,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -620,6 +629,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -650,6 +660,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -677,6 +688,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -717,6 +729,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -760,6 +773,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -789,6 +803,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -893,6 +908,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -935,6 +951,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",
@@ -978,6 +995,7 @@ describe("AgentSession", () => {
         projectId: "p-1",
         projectName: "Test",
         folderPath: null,
+        projectPath: null,
         provider: {
           type: "openrouter",
           apiKey: "sk-or-test",

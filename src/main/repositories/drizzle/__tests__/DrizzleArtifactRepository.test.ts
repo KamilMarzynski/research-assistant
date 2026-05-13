@@ -16,7 +16,11 @@ describe("DrizzleArtifactRepository", () => {
     db = await createTestDatabase();
     repo = new DrizzleArtifactRepository(db, clock);
     const projectRepo = new DrizzleProjectRepository(db, clock);
-    const project = await projectRepo.create({ name: "Test Project", folderPath: null });
+    const project = await projectRepo.create({
+      name: "Test Project",
+      folderPath: null,
+      projectPath: null,
+    });
     projectId = project.id;
   });
 
@@ -70,7 +74,11 @@ describe("DrizzleArtifactRepository", () => {
 
     it("only returns artifacts belonging to the given project", async () => {
       const projectRepo = new DrizzleProjectRepository(db, clock);
-      const other = await projectRepo.create({ name: "Other", folderPath: null });
+      const other = await projectRepo.create({
+        name: "Other",
+        folderPath: null,
+        projectPath: null,
+      });
 
       await repo.create({ projectId, title: "Mine", filePath: "/mine.md" });
       await repo.create({ projectId: other.id, title: "Theirs", filePath: "/theirs.md" });

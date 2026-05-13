@@ -1,8 +1,7 @@
-import { access, rm } from "node:fs/promises";
+import { access, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import type { Project } from "../../shared/types";
-import { toSlug } from "../agent/context";
 import { resolveProvider } from "../agent/model-provider";
 import { AGENT_HOME_PATH_TOKEN, PROJECT_REPO_TOKEN } from "../di/tokens";
 import type { IProjectRepository } from "../repositories/IProjectRepository";
@@ -26,9 +25,14 @@ export class ProjectService {
       name,
       folderPath: folderPath ?? null,
       modelOverride,
+      projectPath: null,
     });
 
-    return project;
+    const projectPath = join(this.homePath, "projects", project.id);
+    await mkdir(projectPath, { recursive: true });
+    await this.repo.setProjectPath(project.id, projectPath);
+
+    return { ...project, projectPath };
   }
 
   async listProjects(): Promise<Project[]> {
@@ -45,11 +49,11 @@ export class ProjectService {
     const project = await this.getProject(id); // throws NotFoundError if missing
     await this.repo.delete(id);
 
-    const slug = toSlug(project.name);
-
     // Best-effort cleanup of app-managed filesystem artifacts
     await this.safeRm(join(this.homePath, "workspace", id));
-    await this.safeRm(join(this.homePath, "projects", slug));
+    if (project.projectPath) {
+      await this.safeRm(project.projectPath);
+    }
   }
 
   private async safeRm(path: string): Promise<void> {

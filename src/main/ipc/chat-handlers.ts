@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { join } from "node:path";
 import { type BrowserWindow, ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import { buildSystemContext } from "../agent/context";
@@ -109,10 +110,9 @@ export function registerChatHandler(
         }
 
         const isFirstRun = await homeService.isFirstRun();
-        const systemContext = await buildSystemContext(
-          project.name,
-          project.folderPath ?? undefined,
-        );
+        const projectPath =
+          project.projectPath ?? join(homeService.getHomePath(), "projects", projectId);
+        const systemContext = await buildSystemContext(projectPath);
         const initialMemoryContext = await memoryManager.buildContext(projectId);
         const session = new AgentSession({
           messageService,
@@ -123,6 +123,7 @@ export function registerChatHandler(
           initialMemoryContext,
           projectId,
           projectName: project.name,
+          projectPath,
           folderPath: project.folderPath,
           provider,
           isFirstRun,

@@ -16,7 +16,11 @@ describe("DrizzleMessageRepository", () => {
     repo = new DrizzleMessageRepository(db, clock);
     // Messages require an existing project (FK constraint)
     const projectRepo = new DrizzleProjectRepository(db, clock);
-    const project = await projectRepo.create({ name: "Test Project", folderPath: null });
+    const project = await projectRepo.create({
+      name: "Test Project",
+      folderPath: null,
+      projectPath: null,
+    });
     projectId = project.id;
   });
 
@@ -50,7 +54,11 @@ describe("DrizzleMessageRepository", () => {
 
     it("only returns messages belonging to the given project", async () => {
       const projectRepo = new DrizzleProjectRepository(db, clock);
-      const other = await projectRepo.create({ name: "Other", folderPath: null });
+      const other = await projectRepo.create({
+        name: "Other",
+        folderPath: null,
+        projectPath: null,
+      });
 
       await repo.create({ projectId, role: "user", content: "Mine" });
       await repo.create({ projectId: other.id, role: "user", content: "Theirs" });

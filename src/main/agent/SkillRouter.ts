@@ -3,8 +3,6 @@ import { dirname, join } from "node:path";
 import { watch } from "chokidar";
 import { getScholarHome } from "../paths";
 import { parseFrontmatter } from "../utils/frontmatter";
-import { toSlug } from "./context";
-
 export interface SkillMeta {
   name: string;
   description: string;
@@ -184,12 +182,12 @@ export class SkillRouter {
 }
 
 export function createDefaultSkillRouter(
-  projectName: string | undefined,
+  projectPath: string | undefined,
   onChange?: (skillName: string, summary: string) => void,
 ): SkillRouter {
   const dirs = [join(getScholarHome(), "skills")];
-  if (projectName) {
-    dirs.push(join(getScholarHome(), "projects", toSlug(projectName), "skills"));
+  if (projectPath) {
+    dirs.push(join(projectPath, "skills"));
   }
   return new SkillRouter(dirs, onChange);
 }

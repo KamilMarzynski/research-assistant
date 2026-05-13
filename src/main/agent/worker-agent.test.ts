@@ -50,6 +50,7 @@ const BASE_CONFIG = {
   systemPromptAddition: "You are a worker.",
   projectId: "proj-1",
   projectName: "Test",
+  projectPath: null,
   folderPath: null,
   homePath: "/tmp/home",
   provider: {

@@ -6,6 +6,7 @@ import { createAgentTools } from "./tools";
 const BASE = {
   projectId: "p1",
   projectName: "Test",
+  projectPath: null,
   folderPath: null,
   homePath: "/tmp/home",
   allowlistService: new AllowlistService(),

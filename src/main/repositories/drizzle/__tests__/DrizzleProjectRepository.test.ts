@@ -16,7 +16,11 @@ describe("DrizzleProjectRepository", () => {
 
   describe("create", () => {
     it("returns a project with generated id and timestamps", async () => {
-      const project = await repo.create({ name: "My Project", folderPath: null });
+      const project = await repo.create({
+        name: "My Project",
+        folderPath: null,
+        projectPath: null,
+      });
 
       expect(project.id).toBeTypeOf("string");
       expect(project.id).toHaveLength(36); // UUID v4
@@ -26,15 +30,15 @@ describe("DrizzleProjectRepository", () => {
     });
 
     it("persists the project so it appears in list()", async () => {
-      await repo.create({ name: "Alpha", folderPath: null });
-      await repo.create({ name: "Beta", folderPath: null });
+      await repo.create({ name: "Alpha", folderPath: null, projectPath: null });
+      await repo.create({ name: "Beta", folderPath: null, projectPath: null });
 
       const list = await repo.list();
       expect(list).toHaveLength(2);
     });
 
     it("sets maxRecentMessages to default 20 on create", async () => {
-      const project = await repo.create({ name: "Defaults", folderPath: null });
+      const project = await repo.create({ name: "Defaults", folderPath: null, projectPath: null });
       expect(project.maxRecentMessages).toBe(20);
     });
   });
@@ -45,8 +49,8 @@ describe("DrizzleProjectRepository", () => {
     });
 
     it("returns projects ordered by createdAt descending", async () => {
-      await repo.create({ name: "First", folderPath: null });
-      await repo.create({ name: "Second", folderPath: null });
+      await repo.create({ name: "First", folderPath: null, projectPath: null });
+      await repo.create({ name: "Second", folderPath: null, projectPath: null });
 
       const list = await repo.list();
       expect(list[0].name).toBe("Second");
@@ -56,7 +60,7 @@ describe("DrizzleProjectRepository", () => {
 
   describe("get", () => {
     it("returns the project by id", async () => {
-      const created = await repo.create({ name: "Find Me", folderPath: null });
+      const created = await repo.create({ name: "Find Me", folderPath: null, projectPath: null });
       const found = await repo.get(created.id);
 
       expect(found).not.toBeNull();
@@ -71,7 +75,7 @@ describe("DrizzleProjectRepository", () => {
 
   describe("delete", () => {
     it("removes the project from the database", async () => {
-      const project = await repo.create({ name: "Delete Me", folderPath: null });
+      const project = await repo.create({ name: "Delete Me", folderPath: null, projectPath: null });
       await repo.delete(project.id);
 
       expect(await repo.get(project.id)).toBeNull();
@@ -84,18 +88,22 @@ describe("DrizzleProjectRepository", () => {
 
   describe("maxRecentMessages", () => {
     it("returns 20 as default for new projects", async () => {
-      const project = await repo.create({ name: "Default Max", folderPath: null });
+      const project = await repo.create({
+        name: "Default Max",
+        folderPath: null,
+        projectPath: null,
+      });
       expect(project.maxRecentMessages).toBe(20);
     });
 
     it("list() includes maxRecentMessages", async () => {
-      await repo.create({ name: "Listed", folderPath: null });
+      await repo.create({ name: "Listed", folderPath: null, projectPath: null });
       const list = await repo.list();
       expect(list[0].maxRecentMessages).toBe(20);
     });
 
     it("get() includes maxRecentMessages", async () => {
-      const created = await repo.create({ name: "Fetched", folderPath: null });
+      const created = await repo.create({ name: "Fetched", folderPath: null, projectPath: null });
       const found = await repo.get(created.id);
       expect(found?.maxRecentMessages).toBe(20);
     });
@@ -104,6 +112,7 @@ describe("DrizzleProjectRepository", () => {
       const created = await repo.create({
         name: "Custom",
         folderPath: null,
+        projectPath: null,
         maxRecentMessages: 50,
       });
       expect(created.maxRecentMessages).toBe(50);
@@ -114,7 +123,7 @@ describe("DrizzleProjectRepository", () => {
 
   describe("linkFolder", () => {
     it("persists folderPath to the project row", async () => {
-      const project = await repo.create({ name: "Linked", folderPath: null });
+      const project = await repo.create({ name: "Linked", folderPath: null, projectPath: null });
       await repo.linkFolder(project.id, "/Users/me/myproject");
 
       const found = await repo.get(project.id);
@@ -122,12 +131,12 @@ describe("DrizzleProjectRepository", () => {
     });
 
     it("returns null folderPath for newly created projects", async () => {
-      const project = await repo.create({ name: "Fresh", folderPath: null });
+      const project = await repo.create({ name: "Fresh", folderPath: null, projectPath: null });
       expect(project.folderPath).toBeNull();
     });
 
     it("list() includes folderPath", async () => {
-      const project = await repo.create({ name: "Listed", folderPath: null });
+      const project = await repo.create({ name: "Listed", folderPath: null, projectPath: null });
       await repo.linkFolder(project.id, "/some/path");
       const list = await repo.list();
       expect(list[0].folderPath).toBe("/some/path");
@@ -142,7 +151,7 @@ describe("DrizzleProjectRepository", () => {
 
   describe("rename", () => {
     it("updates project name and updatedAt", async () => {
-      const project = await repo.create({ name: "Old Name", folderPath: null });
+      const project = await repo.create({ name: "Old Name", folderPath: null, projectPath: null });
       await repo.rename(project.id, "New Name");
 
       const found = await repo.get(project.id);
@@ -156,7 +165,7 @@ describe("DrizzleProjectRepository", () => {
 
   describe("setModelOverride", () => {
     it("persists modelOverride and get() returns it", async () => {
-      const project = await repo.create({ name: "Model Me", folderPath: null });
+      const project = await repo.create({ name: "Model Me", folderPath: null, projectPath: null });
       await repo.setModelOverride(project.id, "ollama:llama3.1");
 
       const found = await repo.get(project.id);
@@ -164,7 +173,7 @@ describe("DrizzleProjectRepository", () => {
     });
 
     it("clears modelOverride when set to null", async () => {
-      const project = await repo.create({ name: "Clear Me", folderPath: null });
+      const project = await repo.create({ name: "Clear Me", folderPath: null, projectPath: null });
       await repo.setModelOverride(project.id, "openrouter:anthropic/claude-3.5-sonnet");
       await repo.setModelOverride(project.id, null);
 

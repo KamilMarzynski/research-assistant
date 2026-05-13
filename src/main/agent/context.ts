@@ -4,10 +4,10 @@ import { getScholarHome } from "../paths";
 import { createDefaultSkillRouter, type SkillRouter } from "./SkillRouter";
 
 export async function loadSkillIndexXml(
-  projectName: string | undefined,
+  projectPath: string | undefined,
   router?: SkillRouter,
 ): Promise<string> {
-  const r = router ?? createDefaultSkillRouter(projectName);
+  const r = router ?? createDefaultSkillRouter(projectPath);
   if (!router) await r.buildIndex();
   return r.toXml();
 }
@@ -43,11 +43,10 @@ export async function loadSkillsByContent(
 }
 
 export async function buildSystemContext(
-  projectName: string,
+  projectPath: string,
   skillIndexXml?: string,
 ): Promise<string> {
   const scholarHome = getScholarHome();
-  const slug = toSlug(projectName);
   const parts: string[] = [];
 
   // 1. config.md
@@ -61,13 +60,13 @@ export async function buildSystemContext(
   }
 
   // 2. skills
-  const skillIndex = skillIndexXml ?? (await loadSkillIndexXml(projectName));
+  const skillIndex = skillIndexXml ?? (await loadSkillIndexXml(projectPath));
   if (skillIndex) parts.push(skillIndex);
 
   // 3. GOAL.md
   let goalFile: string | undefined;
   try {
-    goalFile = await readFile(join(scholarHome, "projects", slug, "GOAL.md"), "utf-8");
+    goalFile = await readFile(join(projectPath, "GOAL.md"), "utf-8");
   } catch {
     // not yet discovered
   }
@@ -75,7 +74,7 @@ export async function buildSystemContext(
   // 4. FILES.md
   let filesFile: string | undefined;
   try {
-    filesFile = await readFile(join(scholarHome, "projects", slug, "FILES.md"), "utf-8");
+    filesFile = await readFile(join(projectPath, "FILES.md"), "utf-8");
   } catch {
     // not yet discovered
   }
@@ -88,8 +87,8 @@ export async function buildSystemContext(
   }
 
   if (!goalFile?.trim() || !filesFile?.trim()) {
-    const goalPath = `~/.scholar/projects/${slug}/GOAL.md`;
-    const filesPath = `~/.scholar/projects/${slug}/FILES.md`;
+    const goalPath = join(projectPath, "GOAL.md");
+    const filesPath = join(projectPath, "FILES.md");
     parts.push(
       "This project has no GOAL.md or FILES.md yet. If the user already described their project in their first message, use the `write_file` tool to create both files directly.",
       "If they have not yet described it, ask them one question at a time:",
@@ -114,7 +113,7 @@ export async function buildSystemContext(
   // 6. Project-level MEMORY.md
   let projectMemory: string | undefined;
   try {
-    projectMemory = await readFile(join(scholarHome, "projects", slug, "MEMORY.md"), "utf-8");
+    projectMemory = await readFile(join(projectPath, "MEMORY.md"), "utf-8");
   } catch {
     // not yet discovered
   }

@@ -7,6 +7,7 @@ import { ProjectService } from "../ProjectService";
 
 vi.mock("node:fs/promises", () => ({
   access: vi.fn().mockResolvedValue(undefined),
+  mkdir: vi.fn().mockResolvedValue(undefined),
   rm: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -14,9 +15,10 @@ function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     id: "proj-1",
     name: "Test Project",
+    folderPath: null,
+    projectPath: null,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
-    folderPath: null,
     modelOverride: null,
     maxRecentMessages: 20,
     ...overrides,
@@ -33,6 +35,7 @@ function makeMockRepo(overrides: Partial<IProjectRepository> = {}): IProjectRepo
     rename: vi.fn().mockResolvedValue(undefined),
     unlinkFolder: vi.fn().mockResolvedValue(undefined),
     setModelOverride: vi.fn().mockResolvedValue(undefined),
+    setProjectPath: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -73,8 +76,9 @@ describe("ProjectService", () => {
         name: "New",
         folderPath: null,
         modelOverride: "openrouter:anthropic/claude_sonnet-4-5",
+        projectPath: null,
       });
-      expect(result).toEqual(project);
+      expect(result).toEqual({ ...project, projectPath: "/tmp/.scholar/projects/proj-1" });
     });
   });
 
@@ -126,7 +130,9 @@ describe("ProjectService", () => {
     });
 
     it("cleans up workspace and home project dir after DB delete", async () => {
-      vi.mocked(repo.get).mockResolvedValue(makeProject({ id: "p1", name: "My Project" }));
+      vi.mocked(repo.get).mockResolvedValue(
+        makeProject({ id: "p1", name: "My Project", projectPath: "/tmp/.scholar/projects/p1" }),
+      );
 
       await service.deleteProject("p1");
 
@@ -136,7 +142,7 @@ describe("ProjectService", () => {
         recursive: true,
         force: true,
       });
-      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.scholar/projects/my-project", {
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.scholar/projects/p1", {
         recursive: true,
         force: true,
       });

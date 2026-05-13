@@ -30,6 +30,7 @@ describe("tool registration", () => {
     const tools = createAgentTools({
       projectId: "test",
       projectName: "Test",
+      projectPath: null,
       folderPath: null,
       homePath: "/tmp",
       webAccessEnabled: true,
@@ -44,6 +45,7 @@ describe("tool registration", () => {
     const tools = createAgentTools({
       projectId: "test",
       projectName: "Test",
+      projectPath: null,
       folderPath: null,
       homePath: "/tmp",
       webAccessEnabled: false,
@@ -58,6 +60,7 @@ describe("tool registration", () => {
     const tools = createAgentTools({
       projectId: "test",
       projectName: "Test",
+      projectPath: null,
       folderPath: null,
       homePath: "/tmp",
       allowlistService,
@@ -75,6 +78,7 @@ describe("researcher preset", () => {
       systemPromptAddition: "You are a researcher.",
       projectId: "proj-1",
       projectName: "Test",
+      projectPath: null,
       folderPath: null,
       homePath: "/tmp/home",
       provider: { type: "openrouter", apiKey: "test", model: "test-model" },

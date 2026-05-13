@@ -29,6 +29,12 @@ export function registerResearchHandlers(
     } catch {
       throw new Error(`Project not found: ${projectId}`);
     }
-    return researchService.startResearch(projectId, project.name, query, project.folderPath);
+    return researchService.startResearch(
+      projectId,
+      project.name,
+      query,
+      project.folderPath,
+      project.projectPath,
+    );
   });
 }

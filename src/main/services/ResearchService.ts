@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
-import { toSlug } from "../agent/context";
 import { resolveProvider } from "../agent/model-provider";
 import { OutputRouter } from "../agent/OutputRouter";
 import { PathJail } from "../agent/path-jail";
@@ -19,6 +18,7 @@ import { SettingsService } from "./SettingsService";
 interface RunResearchConfig {
   projectId: string;
   projectName: string;
+  projectPath: string | null;
   query: string;
   folderPath: string | null;
 }
@@ -43,22 +43,27 @@ export class ResearchService {
     projectName: string,
     query: string,
     folderPath: string | null,
+    projectPath?: string | null,
   ): Promise<{ taskId: string }> {
-    return this._runResearch({ projectId, projectName, query, folderPath }, (_workspacePath) => ({
-      toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "request_evaluation"],
-      systemPromptAddition: [
-        "You are a background researcher. Investigate the given query thoroughly using the available tools.",
-        "Create final output files in the project folder using write_file, not in the workspace.",
-        "Name files meaningfully (no task IDs in filenames).",
-        "Be thorough. When done, respond with a final summary of your findings.",
-      ].join(" "),
-      projectId,
-      projectName,
-      folderPath,
-      homePath: this.homeService.getHomePath(),
-      remainingDepth: 0,
-      allowlistService: this.allowlistService,
-    }));
+    return this._runResearch(
+      { projectId, projectName, projectPath: projectPath ?? null, query, folderPath },
+      (_workspacePath) => ({
+        toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "request_evaluation"],
+        systemPromptAddition: [
+          "You are a background researcher. Investigate the given query thoroughly using the available tools.",
+          "Create final output files in the project folder using write_file, not in the workspace.",
+          "Name files meaningfully (no task IDs in filenames).",
+          "Be thorough. When done, respond with a final summary of your findings.",
+        ].join(" "),
+        projectId,
+        projectName,
+        projectPath: projectPath ?? null,
+        folderPath,
+        homePath: this.homeService.getHomePath(),
+        remainingDepth: 0,
+        allowlistService: this.allowlistService,
+      }),
+    );
   }
 
   async startOrchestratedResearch(
@@ -66,25 +71,30 @@ export class ResearchService {
     projectName: string,
     query: string,
     folderPath: string | null,
+    projectPath?: string | null,
   ): Promise<{ taskId: string }> {
     const homePath = this.homeService.getHomePath();
 
-    return this._runResearch({ projectId, projectName, query, folderPath }, (workspacePath) => ({
-      toolNames: [...ORCHESTRATOR_TOOL_NAMES],
-      systemPromptAddition: [
-        "You are a top-level research orchestrator. Plan and execute a thorough research strategy for the given query.",
-        `Your workspace root: ${workspacePath}`,
-        "Write intermediate results to subdirectories within your workspace root.",
-        "Create final output files in the project folder using write_file, not in the workspace.",
-        "Name files meaningfully (no task IDs in filenames).",
-      ].join("\n"),
-      projectId,
-      projectName,
-      folderPath,
-      homePath,
-      remainingDepth: 3,
-      allowlistService: this.allowlistService,
-    }));
+    return this._runResearch(
+      { projectId, projectName, projectPath: projectPath ?? null, query, folderPath },
+      (workspacePath) => ({
+        toolNames: [...ORCHESTRATOR_TOOL_NAMES],
+        systemPromptAddition: [
+          "You are a top-level research orchestrator. Plan and execute a thorough research strategy for the given query.",
+          `Your workspace root: ${workspacePath}`,
+          "Write intermediate results to subdirectories within your workspace root.",
+          "Create final output files in the project folder using write_file, not in the workspace.",
+          "Name files meaningfully (no task IDs in filenames).",
+        ].join("\n"),
+        projectId,
+        projectName,
+        projectPath: projectPath ?? null,
+        folderPath,
+        homePath,
+        remainingDepth: 3,
+        allowlistService: this.allowlistService,
+      }),
+    );
   }
 
   /** Remove workspace directories older than WORKSPACE_MAX_AGE_MS. Fire-and-forget. */
@@ -206,14 +216,11 @@ export class ResearchService {
           let filePaths: string[] = [];
           try {
             const homePath = this.homeService.getHomePath();
-            const slug = toSlug(config.projectName);
+            const projectPath = config.projectPath ?? join(homePath, "projects", config.projectId);
             let filesMdContent = "";
 
             try {
-              filesMdContent = await readFile(
-                join(homePath, "projects", slug, "FILES.md"),
-                "utf-8",
-              );
+              filesMdContent = await readFile(join(projectPath, "FILES.md"), "utf-8");
             } catch {
               /* not found */
             }
@@ -223,7 +230,7 @@ export class ResearchService {
               const jail = new PathJail(
                 config.projectId,
                 config.folderPath,
-                config.projectName,
+                projectPath,
                 this.allowlistService,
               );
               const router = new OutputRouter(jail, this.artifactService);
@@ -236,7 +243,7 @@ export class ResearchService {
               const jail = new PathJail(
                 config.projectId,
                 config.folderPath,
-                config.projectName,
+                projectPath,
                 this.allowlistService,
               );
               const router = new OutputRouter(jail, this.artifactService);

@@ -7,13 +7,14 @@ import { PathJail } from "./path-jail";
 
 const HOME = join(homedir(), ".scholar");
 const PROJECT_ID = "proj-123";
-const PROJECT_NAME = "Test Project";
+const _PROJECT_NAME = "Test Project";
+const PROJECT_PATH = join(HOME, "projects", "test-project");
 const FOLDER_PATH = "/Users/test/myproject";
 const allowlistService = new AllowlistService();
 
 describe("PathJail", () => {
   describe("with folderPath", () => {
-    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_NAME, allowlistService);
+    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_PATH, allowlistService);
 
     it("allows read inside workspace", () => {
       const p = join(HOME, "workspace", PROJECT_ID, "output.md");
@@ -76,7 +77,7 @@ describe("PathJail", () => {
   });
 
   describe("without folderPath", () => {
-    const jail = new PathJail(PROJECT_ID, null, PROJECT_NAME, allowlistService);
+    const jail = new PathJail(PROJECT_ID, null, PROJECT_PATH, allowlistService);
 
     it("allows workspace access", () => {
       const p = join(HOME, "workspace", PROJECT_ID, "file.md");
@@ -91,7 +92,7 @@ describe("PathJail", () => {
   });
 
   describe("returns resolved absolute path", () => {
-    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_NAME, allowlistService);
+    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_PATH, allowlistService);
 
     it("resolves and returns the path", () => {
       const p = join(HOME, "workspace", PROJECT_ID, "output.md");
@@ -114,7 +115,7 @@ describe("PathJail", () => {
       mkdirSync(join(realZone, "subdir"), { recursive: true });
       symlinkSync(realZone, symlinkZone);
 
-      jail = new PathJail(PROJECT_ID, symlinkZone, PROJECT_NAME, allowlistService);
+      jail = new PathJail(PROJECT_ID, symlinkZone, PROJECT_PATH, allowlistService);
     });
 
     afterAll(() => {
@@ -154,7 +155,7 @@ describe("PathJail", () => {
       symlinkSync(outsideDir, join(realZone, "escape_link"));
       symlinkSync(join(realZone, "subdir"), join(realZone, "internal_link"));
 
-      jail = new PathJail(PROJECT_ID, realZone, PROJECT_NAME, allowlistService);
+      jail = new PathJail(PROJECT_ID, realZone, PROJECT_PATH, allowlistService);
     });
 
     afterAll(() => {

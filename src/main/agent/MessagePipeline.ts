@@ -73,6 +73,7 @@ function createTransformContext(modelId: string) {
 export interface MessagePipelineOptions {
   projectId: string;
   projectName: string;
+  projectPath: string | null;
   folderPath: string | null;
   provider: ModelProvider;
   messageService: MessageService;
@@ -95,12 +96,14 @@ export class MessagePipeline {
   readonly agent: Agent;
   private readonly projectId: string;
   private readonly projectName: string;
+  private readonly projectPath: string | null;
   private readonly provider: ModelProvider;
   private readonly messageService: MessageService;
   private readonly memoryManager: IMemoryManager;
   private readonly eventBus: EventBus;
   private readonly observabilityService?: ObservabilityService;
   private readonly skillRouter: ReturnType<typeof createDefaultSkillRouter>;
+  private readonly homePath: string;
 
   constructor(
     options: MessagePipelineOptions,
@@ -108,17 +111,21 @@ export class MessagePipeline {
   ) {
     this.projectId = options.projectId;
     this.projectName = options.projectName;
+    this.projectPath = options.projectPath;
     this.provider = options.provider;
     this.messageService = options.messageService;
     this.memoryManager = options.memoryManager;
     this.eventBus = options.eventBus;
     this.observabilityService = options.observabilityService;
 
-    this.skillRouter = createDefaultSkillRouter(options.projectName, (skillName, summary) => {
-      this.state.pendingSkillDeltas.push({ skillName, summary });
-    });
+    this.skillRouter = createDefaultSkillRouter(
+      options.projectPath ?? undefined,
+      (skillName, summary) => {
+        this.state.pendingSkillDeltas.push({ skillName, summary });
+      },
+    );
 
-    const homePath = options.homeService.getHomePath();
+    this.homePath = options.homeService.getHomePath();
 
     const systemPrompt = [
       options.isFirstRun ? FIRST_RUN_SKILL : BASE_SYSTEM_PROMPT,
@@ -135,14 +142,15 @@ export class MessagePipeline {
     })) as import("@mariozechner/pi-agent-core").AgentMessage[];
 
     const compressionService = new CompressionService(
-      join(homePath, "workspace", options.projectId, ".compressed"),
+      join(this.homePath, "workspace", options.projectId, ".compressed"),
     );
 
     const tools = createAgentTools({
       projectId: options.projectId,
       projectName: options.projectName,
+      projectPath: options.projectPath,
       folderPath: options.folderPath,
-      homePath,
+      homePath: this.homePath,
       apiKey: options.provider.type === "ollama" ? "ollama" : options.provider.apiKey,
       model: options.provider.model,
       webAccessEnabled: options.webAccessEnabled,
@@ -159,18 +167,21 @@ export class MessagePipeline {
               options.projectName,
               query,
               options.folderPath,
+              options.projectPath,
             )
           : options.researchService.startResearch(
               options.projectId,
               options.projectName,
               query,
               options.folderPath,
+              options.projectPath,
             ),
       requestEvaluationFn: makeEvaluatorFn({
         projectId: options.projectId,
         projectName: options.projectName,
+        projectPath: options.projectPath,
         folderPath: options.folderPath,
-        homePath,
+        homePath: this.homePath,
         provider: options.provider,
         webAccessEnabled: options.webAccessEnabled,
         allowlistService: options.allowlistService,
@@ -258,7 +269,10 @@ export class MessagePipeline {
         }
 
         const memoryContext = await this.memoryManager.buildContext(this.projectId);
-        const systemContext = await buildSystemContext(this.projectName, this.skillRouter.toXml());
+        const systemContext = await buildSystemContext(
+          this.projectPath ?? join(this.homePath, "projects", this.projectId),
+          this.skillRouter.toXml(),
+        );
 
         const newSystemPrompt = [BASE_SYSTEM_PROMPT, memoryContext.summary, systemContext]
           .filter(Boolean)

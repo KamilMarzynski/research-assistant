@@ -28,6 +28,7 @@ export interface WorkerAgentConfig {
   skills?: string[];
   projectId: string;
   projectName: string;
+  projectPath: string | null;
   folderPath: string | null;
   homePath: string;
   provider: ModelProvider;
@@ -47,6 +48,7 @@ export interface WorkerAgent {
 export interface EvaluatorBaseConfig {
   projectId: string;
   projectName: string;
+  projectPath: string | null;
   folderPath: string | null;
   homePath: string;
   provider: ModelProvider;
@@ -181,6 +183,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     skills = [],
     projectId,
     projectName,
+    projectPath,
     folderPath,
     homePath,
     provider,
@@ -209,6 +212,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     const base: WorkerAgentBase = {
       projectId,
       projectName,
+      projectPath,
       folderPath,
       homePath,
       provider,
@@ -253,6 +257,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
   const tools = createAgentTools({
     projectId,
     projectName,
+    projectPath,
     folderPath,
     homePath,
     apiKey: provider.type === "ollama" ? "ollama" : provider.apiKey,
@@ -266,6 +271,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     requestEvaluationFn: makeEvaluatorFn({
       projectId,
       projectName,
+      projectPath,
       folderPath,
       homePath,
       provider,

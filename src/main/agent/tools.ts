@@ -44,6 +44,7 @@ export interface EvaluationVerdict {
 export interface AgentToolsOptions {
   projectId: string;
   projectName: string;
+  projectPath: string | null;
   folderPath: string | null;
   homePath: string;
   toolNames?: readonly AgentToolName[];
@@ -89,8 +90,8 @@ export interface AgentToolsOptions {
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
-  const { projectId, projectName, folderPath, homePath, startResearchFn, onFileWrite } = opts;
-  const jail = new PathJail(projectId, folderPath, projectName, opts.allowlistService);
+  const { projectId, projectPath, folderPath, homePath, startResearchFn, onFileWrite } = opts;
+  const jail = new PathJail(projectId, folderPath, projectPath, opts.allowlistService);
   const workspacePath = join(homePath, "workspace", projectId);
   const auditLogPath = join(homePath, "audit.log");
 

@@ -20,6 +20,7 @@ export interface AgentSessionOptions {
   initialMemoryContext: MemoryContext;
   projectId: string;
   projectName: string;
+  projectPath: string | null;
   folderPath: string | null;
   provider: ModelProvider;
   isFirstRun: boolean;

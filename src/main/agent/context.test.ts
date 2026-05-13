@@ -65,7 +65,7 @@ describe("loadSkillIndexXml", () => {
       `---\nname: shared-skill\ndescription: Project version.\n---`,
     );
 
-    const result = await loadSkillIndexXml("my-project");
+    const result = await loadSkillIndexXml(join(tmpHome, ".scholar", "projects", "my-project"));
     expect(result).toContain("Project version.");
     expect(result).not.toContain("Global version.");
   });
@@ -139,7 +139,8 @@ describe("buildSystemContext", () => {
   });
 
   it("returns onboarding prompt when no context files exist", async () => {
-    const result = await buildSystemContext("my project");
+    const home = join(tmpHome, ".scholar");
+    const result = await buildSystemContext(join(home, "projects", "my-project"));
     expect(result).toContain("no GOAL.md or FILES.md yet");
     expect(result).toContain("If the user already described");
   });
@@ -149,24 +150,22 @@ describe("buildSystemContext", () => {
     await mkdir(home, { recursive: true });
     await writeFile(join(home, "config.md"), "# My working style\nI prefer folders.");
 
-    const result = await buildSystemContext("my project");
+    const result = await buildSystemContext(join(home, "projects", "my-project"));
     expect(result).toContain("I prefer folders.");
   });
 
   it("includes GOAL.md and FILES.md content when present", async () => {
     const home = join(tmpHome, ".scholar");
     const slug = "my-project";
-    await mkdir(join(home, "projects", slug), { recursive: true });
+    const projectPath = join(home, "projects", slug);
+    await mkdir(projectPath, { recursive: true });
     await writeFile(
-      join(home, "projects", slug, "GOAL.md"),
+      join(projectPath, "GOAL.md"),
       "# My Project goal\nBuild a TypeScript monorepo.",
     );
-    await writeFile(
-      join(home, "projects", slug, "FILES.md"),
-      "# File structure\nsrc/main and src/renderer.",
-    );
+    await writeFile(join(projectPath, "FILES.md"), "# File structure\nsrc/main and src/renderer.");
 
-    const result = await buildSystemContext("my project");
+    const result = await buildSystemContext(projectPath);
     expect(result).toContain("Build a TypeScript monorepo.");
     expect(result).toContain("src/main and src/renderer.");
   });
@@ -176,18 +175,19 @@ describe("buildSystemContext", () => {
     await mkdir(home, { recursive: true });
     await writeFile(join(home, "config.md"), "   ");
 
-    const result = await buildSystemContext("my project");
+    const result = await buildSystemContext(join(home, "projects", "my-project"));
     expect(result).not.toContain("config.md");
   });
 
   it("skips empty GOAL.md and FILES.md", async () => {
     const home = join(tmpHome, ".scholar");
     const slug = "my-project";
-    await mkdir(join(home, "projects", slug), { recursive: true });
-    await writeFile(join(home, "projects", slug, "GOAL.md"), "   ");
-    await writeFile(join(home, "projects", slug, "FILES.md"), "   ");
+    const projectPath = join(home, "projects", slug);
+    await mkdir(projectPath, { recursive: true });
+    await writeFile(join(projectPath, "GOAL.md"), "   ");
+    await writeFile(join(projectPath, "FILES.md"), "   ");
 
-    const result = await buildSystemContext("my project");
+    const result = await buildSystemContext(projectPath);
     expect(result).not.toContain("Project goal");
     expect(result).not.toContain("Project files");
   });
@@ -195,10 +195,11 @@ describe("buildSystemContext", () => {
   it("generates correct slug from project name", async () => {
     const home = join(tmpHome, ".scholar");
     const slug = "my-cool-project";
-    await mkdir(join(home, "projects", slug), { recursive: true });
-    await writeFile(join(home, "projects", slug, "GOAL.md"), "# Context for cool project.");
+    const projectPath = join(home, "projects", slug);
+    await mkdir(projectPath, { recursive: true });
+    await writeFile(join(projectPath, "GOAL.md"), "# Context for cool project.");
 
-    const result = await buildSystemContext("My Cool Project!");
+    const result = await buildSystemContext(projectPath);
     expect(result).toContain("Context for cool project.");
   });
 
@@ -211,13 +212,14 @@ describe("buildSystemContext", () => {
       "---\nname: my-skill\ndescription: Does something.\n---\n# Content",
     );
 
-    const result = await buildSystemContext("my project");
+    const result = await buildSystemContext(join(home, "projects", "my-project"));
     expect(result).toContain("<available_skills>");
     expect(result).toContain('name="my-skill"');
   });
 
   it("injects onboarding prompt when GOAL.md or FILES.md is missing", async () => {
-    const result = await buildSystemContext("Test Project");
+    const home = join(tmpHome, ".scholar");
+    const result = await buildSystemContext(join(home, "projects", "test-project"));
     expect(result).toContain("no GOAL.md or FILES.md yet");
     expect(result).toContain("If they have not yet described it");
   });
@@ -225,17 +227,12 @@ describe("buildSystemContext", () => {
   it("loads existing GOAL.md and FILES.md when present", async () => {
     const home = join(tmpHome, ".scholar");
     const slug = "test-project";
-    await mkdir(join(home, "projects", slug), { recursive: true });
-    await writeFile(
-      join(home, "projects", slug, "GOAL.md"),
-      "# Test Project\nThis is the project goal.",
-    );
-    await writeFile(
-      join(home, "projects", slug, "FILES.md"),
-      "# Files\nThese are the project files.",
-    );
+    const projectPath = join(home, "projects", slug);
+    await mkdir(projectPath, { recursive: true });
+    await writeFile(join(projectPath, "GOAL.md"), "# Test Project\nThis is the project goal.");
+    await writeFile(join(projectPath, "FILES.md"), "# Files\nThese are the project files.");
 
-    const result = await buildSystemContext("Test Project");
+    const result = await buildSystemContext(projectPath);
     expect(result).toContain("This is the project goal.");
     expect(result).toContain("These are the project files.");
     expect(result).not.toContain("no GOAL.md or FILES.md yet");
@@ -246,7 +243,7 @@ describe("buildSystemContext", () => {
     await mkdir(join(home, "app-memory"), { recursive: true });
     await writeFile(join(home, "app-memory", "MEMORY.md"), "# App Memory\nI remember things.");
 
-    const result = await buildSystemContext("my project");
+    const result = await buildSystemContext(join(home, "projects", "my-project"));
     expect(result).toContain("App Memory");
     expect(result).toContain("I remember things.");
   });
@@ -254,13 +251,11 @@ describe("buildSystemContext", () => {
   it("includes project-level MEMORY.md when present", async () => {
     const home = join(tmpHome, ".scholar");
     const slug = "my-project";
-    await mkdir(join(home, "projects", slug), { recursive: true });
-    await writeFile(
-      join(home, "projects", slug, "MEMORY.md"),
-      "# Project Memory\nThis project uses Bun.",
-    );
+    const projectPath = join(home, "projects", slug);
+    await mkdir(projectPath, { recursive: true });
+    await writeFile(join(projectPath, "MEMORY.md"), "# Project Memory\nThis project uses Bun.");
 
-    const result = await buildSystemContext("my project");
+    const result = await buildSystemContext(projectPath);
     expect(result).toContain("Project Memory");
     expect(result).toContain("This project uses Bun.");
   });
@@ -326,7 +321,10 @@ describe("loadSkillsByContent", () => {
       "---\nname: proj-skill\ndescription: project version\n---\n# project",
     );
 
-    const result = await loadSkillsByContent(["proj-skill"], "my-project");
+    const result = await loadSkillsByContent(
+      ["proj-skill"],
+      join(tmpHome, ".scholar", "projects", projectSlug),
+    );
     expect(result).toContain("# project");
     expect(result).not.toContain("# global");
   });

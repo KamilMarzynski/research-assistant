@@ -17,4 +17,5 @@ export interface IProjectRepository {
   rename(id: string, name: string): Promise<void>;
   unlinkFolder(id: string): Promise<void>;
   setModelOverride(id: string, modelOverride: string | null): Promise<void>;
+  setProjectPath(id: string, projectPath: string): Promise<void>;
 }

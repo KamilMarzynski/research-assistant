@@ -35,6 +35,7 @@ export class CrystallizationService {
       skills: ["evaluate-research"],
       projectId,
       projectName,
+      projectPath: null,
       folderPath,
       homePath: this.homeService.getHomePath(),
       provider,

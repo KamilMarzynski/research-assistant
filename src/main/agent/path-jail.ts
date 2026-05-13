@@ -2,7 +2,6 @@ import { realpathSync } from "node:fs";
 import { join, normalize, relative, resolve } from "node:path";
 import { getScholarHome } from "../paths";
 import { type AllowlistService, ApprovalRequiredError } from "../services/AllowlistService";
-import { toSlug } from "./context";
 
 export class PathJail {
   private readonly workspace: string;
@@ -19,7 +18,7 @@ export class PathJail {
   constructor(
     readonly projectId: string,
     folderPath: string | null,
-    projectName: string,
+    projectPath: string | null,
     private readonly allowlistService: AllowlistService,
   ) {
     this.home = getScholarHome();
@@ -27,8 +26,8 @@ export class PathJail {
     this.homeSkills = join(this.home, "skills");
     this.projectFolder = folderPath ? resolve(normalize(folderPath)) : null;
     this.allProjectsDir = join(this.home, "projects");
-    this.projectSkills = join(this.home, "projects", toSlug(projectName), "skills");
-    this.projectsDir = join(this.home, "projects", toSlug(projectName));
+    this.projectSkills = projectPath ? join(projectPath, "skills") : this.allProjectsDir;
+    this.projectsDir = projectPath ?? this.allProjectsDir;
 
     this.readWriteZones = [
       this.allProjectsDir,
