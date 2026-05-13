@@ -15,6 +15,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     id: "proj-1",
     name: "Test Project",
+    slug: null,
     folderPath: null,
     projectPath: null,
     createdAt: new Date("2026-01-01"),
@@ -74,6 +75,7 @@ describe("ProjectService", () => {
 
       expect(repo.create).toHaveBeenCalledWith({
         name: "New",
+        slug: null,
         folderPath: null,
         modelOverride: "openrouter:anthropic/claude_sonnet-4-5",
         projectPath: null,

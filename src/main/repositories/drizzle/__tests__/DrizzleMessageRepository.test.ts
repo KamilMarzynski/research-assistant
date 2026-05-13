@@ -18,6 +18,7 @@ describe("DrizzleMessageRepository", () => {
     const projectRepo = new DrizzleProjectRepository(db, clock);
     const project = await projectRepo.create({
       name: "Test Project",
+      slug: null,
       folderPath: null,
       projectPath: null,
     });
@@ -56,6 +57,7 @@ describe("DrizzleMessageRepository", () => {
       const projectRepo = new DrizzleProjectRepository(db, clock);
       const other = await projectRepo.create({
         name: "Other",
+        slug: null,
         folderPath: null,
         projectPath: null,
       });

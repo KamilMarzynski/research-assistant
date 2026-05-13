@@ -23,6 +23,7 @@ export class ProjectService {
 
     const project = await this.repo.create({
       name,
+      slug: null,
       folderPath: folderPath ?? null,
       modelOverride,
       projectPath: null,

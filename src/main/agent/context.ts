@@ -12,15 +12,6 @@ export async function loadSkillIndexXml(
   return r.toXml();
 }
 
-export function toSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 export async function loadSkillsByContent(
   skillNames: string[],
   projectName: string | undefined,
@@ -154,3 +145,5 @@ export async function buildSystemContext(
 
   return parts.join("\n\n");
 }
+
+export { toSlug } from "../utils/slug";

@@ -1,6 +1,7 @@
 export type Project = {
   id: string;
   name: string;
+  slug: string | null;
   folderPath: string | null;
   projectPath: string | null;
   modelOverride: string | null;

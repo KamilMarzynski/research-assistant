@@ -22,6 +22,7 @@ export class DrizzleProjectRepository
     const project: Project = {
       id: this.id(),
       name: data.name,
+      slug: data.slug ?? null,
       folderPath: data.folderPath ?? null,
       projectPath: data.projectPath ?? null,
       modelOverride: data.modelOverride ?? null,
@@ -32,6 +33,7 @@ export class DrizzleProjectRepository
     await this.db.insert(projects).values({
       id: project.id,
       name: project.name,
+      slug: project.slug,
       folderPath: project.folderPath,
       projectPath: project.projectPath,
       modelOverride: project.modelOverride,
@@ -101,6 +103,7 @@ export class DrizzleProjectRepository
   protected rowToEntity = (row: typeof projects.$inferSelect): Project => ({
     id: row.id,
     name: row.name,
+    slug: row.slug ?? null,
     folderPath: row.folderPath ?? null,
     projectPath: row.projectPath ?? null,
     modelOverride: row.modelOverride ?? null,
