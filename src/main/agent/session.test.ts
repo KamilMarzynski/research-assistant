@@ -878,9 +878,10 @@ describe("AgentSession", () => {
     it("deletes empty placeholder when aborted during thinking", async () => {
       let resolvePrompt: (() => void) | undefined;
       mockAgent.prompt.mockImplementationOnce(
-        () => new Promise<void>((resolve) => {
-          resolvePrompt = resolve;
-        }),
+        () =>
+          new Promise<void>((resolve) => {
+            resolvePrompt = resolve;
+          }),
       );
 
       const sendPromise = session.send("my question");
@@ -904,10 +905,7 @@ describe("AgentSession", () => {
       });
       session.abort();
 
-      expect(messageService.updateMessage).toHaveBeenCalledWith(
-        expect.any(String),
-        "Partial",
-      );
+      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Partial");
       expect(eventBus.emit).toHaveBeenCalledWith(
         expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
       );

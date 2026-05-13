@@ -41,12 +41,52 @@ export async function handleGenerationSpan(
         parentSpanContext: parentContext,
       })) ?? null;
   } else if (event.type === "message_end") {
-    // TODO: add token usage when pi-agent exposes it on the event
-    state.activeGenerationSpan?.update({
+    if (!state.activeGenerationSpan) return;
+
+    const msg = event.message as unknown as {
+      usage?: {
+        input: number;
+        output: number;
+        totalTokens: number;
+        cacheRead: number;
+        cacheWrite: number;
+        cost: {
+          input: number;
+          output: number;
+          total: number;
+          cacheRead: number;
+          cacheWrite: number;
+        };
+      };
+    };
+    const usage = msg.usage;
+
+    state.activeGenerationSpan.update({
       output: event.message?.content,
-      metadata: { model: provider.model, provider: provider.type },
+      metadata: {
+        model: provider.model,
+        provider: provider.type,
+        ...(usage
+          ? {
+              usageDetails: {
+                promptTokens: usage.input,
+                completionTokens: usage.output,
+                totalTokens: usage.totalTokens,
+                cacheReadTokens: usage.cacheRead,
+                cacheWriteTokens: usage.cacheWrite,
+              },
+              costDetails: {
+                input: usage.cost.input,
+                output: usage.cost.output,
+                total: usage.cost.total,
+                cacheRead: usage.cost.cacheRead,
+                cacheWrite: usage.cost.cacheWrite,
+              },
+            }
+          : {}),
+      },
     });
-    state.activeGenerationSpan?.end();
+    state.activeGenerationSpan.end();
     state.activeGenerationSpan = null;
   }
 }

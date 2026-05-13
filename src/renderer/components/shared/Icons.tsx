@@ -82,7 +82,9 @@ export const IconSend = (p: IconProps) => (
     }
   />
 );
-export const IconStop = (p: IconProps) => <Ic {...p} d={<rect x="6" y="6" width="12" height="12" rx="2" />} />;
+export const IconStop = (p: IconProps) => (
+  <Ic {...p} d={<rect x="6" y="6" width="12" height="12" rx="2" />} />
+);
 export const IconChevD = (p: IconProps) => <Ic {...p} d={<polyline points="6 9 12 15 18 9" />} />;
 export const IconChevR = (p: IconProps) => <Ic {...p} d={<polyline points="9 6 15 12 9 18" />} />;
 export const IconArrowL = (p: IconProps) => (
