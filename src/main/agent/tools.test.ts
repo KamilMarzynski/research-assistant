@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { Type } from "@sinclair/typebox";
 import { AllowlistService } from "../services/AllowlistService";
 import { CompressionService } from "./CompressionService";
-import { createAgentTools } from "./tools";
+import { createAgentTools, withDescription } from "./tools";
 
 const BASE = {
   projectId: "p1",
@@ -254,5 +255,51 @@ describe("createAgentTools – compression", () => {
       compressionService,
     });
     expect(tools.map((t) => t.name)).toEqual(["read_file"]);
+  });
+});
+
+describe("withDescription", () => {
+  it("adds optional _description to tool parameters", () => {
+    const tool = {
+      name: "test_tool",
+      label: "Test tool",
+      description: "Does a thing",
+      parameters: Type.Object({ query: Type.String() }),
+      execute: async () => ({ content: [], details: {} }),
+    };
+    const wrapped = withDescription(tool);
+    expect(wrapped.parameters.properties).toHaveProperty("_description");
+    expect(wrapped.parameters.properties._description[Symbol.for("TypeBox.Optional")]).toBeTruthy();
+  });
+
+  it("strips _description before calling original execute", async () => {
+    const received: unknown[] = [];
+    const tool = {
+      name: "test_tool",
+      label: "Test tool",
+      description: "Does a thing",
+      parameters: Type.Object({ query: Type.String() }),
+      execute: async (_id: string, params: unknown) => {
+        received.push(params);
+        return { content: [], details: {} };
+      },
+    };
+    const wrapped = withDescription(tool);
+    await wrapped.execute("id-1", { query: "hello", _description: "Testing" });
+    expect(received[0]).toEqual({ query: "hello" });
+    expect(received[0]).not.toHaveProperty("_description");
+  });
+
+  it("preserves tool name and label", () => {
+    const tool = {
+      name: "my_tool",
+      label: "My tool",
+      description: "desc",
+      parameters: Type.Object({}),
+      execute: async () => ({ content: [], details: {} }),
+    };
+    const wrapped = withDescription(tool);
+    expect(wrapped.name).toBe("my_tool");
+    expect(wrapped.label).toBe("My tool");
   });
 });

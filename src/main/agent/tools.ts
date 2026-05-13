@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import { Type, type TObject } from "@sinclair/typebox";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { CompressionService } from "./CompressionService";
 import { PathJail } from "./path-jail";
@@ -89,6 +90,28 @@ export interface AgentToolsOptions {
   allowlistService: AllowlistService;
 }
 
+export function withDescription(tool: AgentTool): AgentTool {
+  const base = tool.parameters as TObject;
+  // biome-ignore lint/suspicious/noExplicitAny: wrapping heterogeneous tools
+  const originalExecute = tool.execute.bind(tool) as (...args: any[]) => any;
+  return {
+    ...tool,
+    parameters: Type.Object({
+      ...base.properties,
+      _description: Type.Optional(
+        Type.String({
+          description:
+            "Short user-facing sentence describing what you are doing — e.g. 'Searching for papers on prompt caching' or 'Writing summary to research/output.md'",
+        }),
+      ),
+    }),
+    execute: async (toolCallId, params, signal, onUpdate) => {
+      const { _description: _desc, ...rest } = params as Record<string, unknown>;
+      return originalExecute(toolCallId, rest, signal, onUpdate);
+    },
+  };
+}
+
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
   const { projectId, projectPath, folderPath, homePath, startResearchFn, onFileWrite } = opts;
   const jail = new PathJail(projectId, folderPath, projectPath, opts.allowlistService);
@@ -153,7 +176,7 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
 
   if (opts.toolNames) {
     const allowed = new Set<AgentToolName>(opts.toolNames);
-    return tools.filter((t) => allowed.has(t.name as AgentToolName));
+    return tools.filter((t) => allowed.has(t.name as AgentToolName)).map(withDescription);
   }
-  return tools;
+  return tools.map(withDescription);
 }
