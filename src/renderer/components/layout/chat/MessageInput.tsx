@@ -1,7 +1,7 @@
 import { MenuItem, Select } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
-import { IconChevD, IconCpu, IconSend } from "../../shared/Icons";
+import { IconChevD, IconCpu, IconSend, IconStop } from "../../shared/Icons";
 
 interface ModelInfo {
   id: string;
@@ -10,6 +10,7 @@ interface ModelInfo {
 
 interface MessageInputProps {
   onSend: (content: string) => void;
+  onAbort?: () => void;
   disabled?: boolean;
   projectId: string;
   projectModelOverride: string | null;
@@ -17,6 +18,7 @@ interface MessageInputProps {
 
 export default function MessageInput({
   onSend,
+  onAbort,
   disabled,
   projectId,
   projectModelOverride,
@@ -231,15 +233,26 @@ export default function MessageInput({
               <span className="t-tertiary t-mono" style={{ fontSize: 10 }}>
                 Return send · Shift+Return newline
               </span>
-              <button
-                type="button"
-                className="btn btn--primary btn--sm"
-                onClick={handleSend}
-                disabled={!content.trim() || disabled}
-                data-testid="send-btn"
-              >
-                <IconSend size={13} /> Send
-              </button>
+              {disabled ? (
+                <button
+                  type="button"
+                  className="btn btn--danger btn--sm"
+                  onClick={onAbort}
+                  data-testid="stop-btn"
+                >
+                  <IconStop size={13} /> Stop
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn--primary btn--sm"
+                  onClick={handleSend}
+                  disabled={!content.trim() || disabled}
+                  data-testid="send-btn"
+                >
+                  <IconSend size={13} /> Send
+                </button>
+              )}
             </div>
           </div>
         </div>
