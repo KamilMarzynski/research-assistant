@@ -33,8 +33,11 @@ export async function handleGenerationSpan(
     state.activeGenerationSpan =
       (await observabilityService?.startObservation("llm-generation", {
         asType: "generation",
-        input: event.message?.content,
-        metadata: { model: provider.model, provider: provider.type, messages: agent.state.messages },
+        input: {
+          messages: agent.state.messages,
+          systemPrompt: agent.state.systemPrompt,
+        },
+        metadata: { model: provider.model, provider: provider.type },
         parentSpanContext: parentContext,
       })) ?? null;
   } else if (event.type === "message_end") {
