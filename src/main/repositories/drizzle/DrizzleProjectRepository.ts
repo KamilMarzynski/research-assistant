@@ -100,6 +100,14 @@ export class DrizzleProjectRepository
     if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
   }
 
+  async setSlug(id: string, slug: string): Promise<void> {
+    const result = await this.db
+      .update(projects)
+      .set({ slug, updatedAt: this.now() })
+      .where(eq(projects.id, id));
+    if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
+  }
+
   protected rowToEntity = (row: typeof projects.$inferSelect): Project => ({
     id: row.id,
     name: row.name,

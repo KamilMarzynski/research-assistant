@@ -5,6 +5,7 @@ import type { Project } from "../../shared/types";
 import { resolveProvider } from "../agent/model-provider";
 import { AGENT_HOME_PATH_TOKEN, PROJECT_REPO_TOKEN } from "../di/tokens";
 import type { IProjectRepository } from "../repositories/IProjectRepository";
+import { generateProjectSlug } from "../utils/slug";
 import { NotFoundError } from "./errors";
 import { SettingsService } from "./SettingsService";
 
@@ -29,11 +30,16 @@ export class ProjectService {
       projectPath: null,
     });
 
-    const projectPath = join(this.homePath, "projects", project.id);
+    const slug = generateProjectSlug(project.name, project.id);
+    const projectPath = join(this.homePath, "projects", slug);
     await mkdir(projectPath, { recursive: true });
-    await this.repo.setProjectPath(project.id, projectPath);
 
-    return { ...project, projectPath };
+    await Promise.all([
+      this.repo.setProjectPath(project.id, projectPath),
+      this.repo.setSlug(project.id, slug),
+    ]);
+
+    return { ...project, slug, projectPath };
   }
 
   async listProjects(): Promise<Project[]> {
@@ -47,11 +53,9 @@ export class ProjectService {
   }
 
   async deleteProject(id: string): Promise<void> {
-    const project = await this.getProject(id); // throws NotFoundError if missing
+    const project = await this.getProject(id);
     await this.repo.delete(id);
 
-    // Best-effort cleanup of app-managed filesystem artifacts
-    await this.safeRm(join(this.homePath, "workspace", id));
     if (project.projectPath) {
       await this.safeRm(project.projectPath);
     }

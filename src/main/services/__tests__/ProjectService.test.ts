@@ -37,6 +37,7 @@ function makeMockRepo(overrides: Partial<IProjectRepository> = {}): IProjectRepo
     unlinkFolder: vi.fn().mockResolvedValue(undefined),
     setModelOverride: vi.fn().mockResolvedValue(undefined),
     setProjectPath: vi.fn().mockResolvedValue(undefined),
+    setSlug: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -80,7 +81,10 @@ describe("ProjectService", () => {
         modelOverride: "openrouter:anthropic/claude_sonnet-4-5",
         projectPath: null,
       });
-      expect(result).toEqual({ ...project, projectPath: "/tmp/.scholar/projects/proj-1" });
+      expect(repo.setSlug).toHaveBeenCalledWith("proj-1", "new-proj1");
+      expect(repo.setProjectPath).toHaveBeenCalledWith("proj-1", "/tmp/.scholar/projects/new-proj1");
+      expect(result.projectPath).toBe("/tmp/.scholar/projects/new-proj1");
+      expect(result.slug).toBe("new-proj1");
     });
   });
 
@@ -131,20 +135,16 @@ describe("ProjectService", () => {
       expect(repo.delete).not.toHaveBeenCalled();
     });
 
-    it("cleans up workspace and home project dir after DB delete", async () => {
+    it("cleans up projectPath after DB delete", async () => {
       vi.mocked(repo.get).mockResolvedValue(
-        makeProject({ id: "p1", name: "My Project", projectPath: "/tmp/.scholar/projects/p1" }),
+        makeProject({ id: "p1", name: "My Project", projectPath: "/tmp/.scholar/projects/my-project-p1" }),
       );
 
       await service.deleteProject("p1");
 
       expect(repo.delete).toHaveBeenCalledWith("p1");
       const { rm } = await import("node:fs/promises");
-      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.scholar/workspace/p1", {
-        recursive: true,
-        force: true,
-      });
-      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.scholar/projects/p1", {
+      expect(vi.mocked(rm)).toHaveBeenCalledWith("/tmp/.scholar/projects/my-project-p1", {
         recursive: true,
         force: true,
       });
