@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ObservabilityService, ObservationSpan } from "../services/ObservabilityService";
 import { AgentTracer } from "./AgentTracer";
 
+const DEFAULT_PROVIDER = { type: "openrouter" as const, apiKey: "key", model: "gpt-4" };
+
 function createMockSpan(overrides: Partial<ObservationSpan> = {}): ObservationSpan {
   return {
     update: vi.fn(),
@@ -31,6 +33,19 @@ function createMockAgent(): Agent {
   } as unknown as Agent;
 }
 
+function captureSubscribe(agent: Agent): (event: AgentEvent) => Promise<void> {
+  let capturedSubscriber: ((event: AgentEvent) => Promise<void>) | null = null;
+  agent.subscribe = vi.fn((cb: (event: AgentEvent) => Promise<void>) => {
+    capturedSubscriber = cb;
+    return () => {};
+  });
+  return async (event: AgentEvent) => {
+    if (capturedSubscriber) {
+      await capturedSubscriber(event);
+    }
+  };
+}
+
 describe("AgentTracer", () => {
   let observabilityService: ObservabilityService;
   let agent: Agent;
@@ -43,28 +58,31 @@ describe("AgentTracer", () => {
   it("getSpanContext returns null when no turn started", () => {
     const tracer = new AgentTracer({
       observabilityService,
-      provider: { type: "openrouter", apiKey: "key", model: "gpt-4" },
+      provider: DEFAULT_PROVIDER,
     });
     expect(tracer.getSpanContext()).toBeNull();
   });
 
   it("is a no-op when observabilityService is undefined", () => {
     const tracer = new AgentTracer({
-      provider: { type: "openrouter", apiKey: "key", model: "gpt-4" },
+      provider: DEFAULT_PROVIDER,
     });
 
-    // startTurn should not throw
     expect(() => tracer.startTurn("hello")).not.toThrow();
-
-    // endTurn should not throw
     expect(() => tracer.endTurn("done")).not.toThrow();
-
-    // subscribeToAgent should not register a listener
     const unsubscribe = tracer.subscribeToAgent(agent);
     expect(agent.subscribe).not.toHaveBeenCalled();
     expect(() => unsubscribe()).not.toThrow();
-
     expect(tracer.getSpanContext()).toBeNull();
+  });
+
+  it("subscribeToAgent is a no-op when observabilityService is undefined", () => {
+    const tracer = new AgentTracer({
+      provider: DEFAULT_PROVIDER,
+    });
+    const unsubscribe = tracer.subscribeToAgent(agent);
+    expect(agent.subscribe).not.toHaveBeenCalled();
+    expect(() => unsubscribe()).not.toThrow();
   });
 
   it("startTurn creates a turn span and stores context", async () => {
@@ -73,7 +91,7 @@ describe("AgentTracer", () => {
 
     const tracer = new AgentTracer({
       observabilityService,
-      provider: { type: "openrouter", apiKey: "key", model: "gpt-4" },
+      provider: DEFAULT_PROVIDER,
     });
 
     await tracer.startTurn("hello");
@@ -94,7 +112,7 @@ describe("AgentTracer", () => {
 
     const tracer = new AgentTracer({
       observabilityService,
-      provider: { type: "openrouter", apiKey: "key", model: "gpt-4" },
+      provider: DEFAULT_PROVIDER,
       parentSpanContext: { traceId: "parent-trace", spanId: "parent-span" },
     });
 
@@ -114,7 +132,7 @@ describe("AgentTracer", () => {
 
     const tracer = new AgentTracer({
       observabilityService,
-      provider: { type: "openrouter", apiKey: "key", model: "gpt-4" },
+      provider: DEFAULT_PROVIDER,
     });
 
     await tracer.startTurn("hello");
@@ -136,26 +154,18 @@ describe("AgentTracer", () => {
 
     const tracer = new AgentTracer({
       observabilityService,
-      provider: { type: "openrouter", apiKey: "key", model: "gpt-4" },
+      provider: DEFAULT_PROVIDER,
     });
 
     await tracer.startTurn("hello");
 
-    let capturedSubscriber: ((event: AgentEvent) => Promise<void>) | null = null;
-    agent.subscribe = vi.fn((cb: (event: AgentEvent) => Promise<void>) => {
-      capturedSubscriber = cb;
-      return () => {};
-    });
-
+    const subscriber = captureSubscribe(agent);
     tracer.subscribeToAgent(agent);
 
-    const subscriber = capturedSubscriber as unknown as (event: AgentEvent) => Promise<void>;
-
-    const messageStartEvent = {
+    await subscriber({
       type: "message_start",
       message: { role: "assistant", content: [{ type: "text", text: "hi" }] },
-    } as unknown as AgentEvent;
-    await subscriber(messageStartEvent);
+    } as unknown as AgentEvent);
 
     expect(observabilityService.startObservation).toHaveBeenCalledWith(
       "llm-generation",
@@ -177,27 +187,20 @@ describe("AgentTracer", () => {
 
     const tracer = new AgentTracer({
       observabilityService,
-      provider: { type: "openrouter", apiKey: "key", model: "gpt-4" },
+      provider: DEFAULT_PROVIDER,
     });
 
     await tracer.startTurn("hello");
 
-    let capturedSubscriber: ((event: AgentEvent) => Promise<void>) | null = null;
-    agent.subscribe = vi.fn((cb: (event: AgentEvent) => Promise<void>) => {
-      capturedSubscriber = cb;
-      return () => {};
-    });
-
+    const subscriber = captureSubscribe(agent);
     tracer.subscribeToAgent(agent);
 
-    const toolStartEvent: AgentEvent = {
+    await subscriber({
       type: "tool_execution_start",
       toolCallId: "tc-1",
       toolName: "read_file",
       args: { path: "/tmp/test.txt" },
-    };
-    const subscriber = capturedSubscriber as unknown as (event: AgentEvent) => Promise<void>;
-    await subscriber(toolStartEvent);
+    } as AgentEvent);
 
     expect(observabilityService.startObservation).toHaveBeenCalledWith(
       "tool:read_file",
@@ -223,20 +226,14 @@ describe("AgentTracer", () => {
 
     const tracer = new AgentTracer({
       observabilityService,
-      provider: { type: "openrouter", apiKey: "key", model: "gpt-4" },
+      provider: DEFAULT_PROVIDER,
     });
 
     await tracer.startTurn("hello");
 
-    let capturedSubscriber: ((event: AgentEvent) => Promise<void>) | null = null;
-    agent.subscribe = vi.fn((cb: (event: AgentEvent) => Promise<void>) => {
-      capturedSubscriber = cb;
-      return () => {};
-    });
-
+    const subscriber = captureSubscribe(agent);
     tracer.subscribeToAgent(agent);
 
-    const subscriber = capturedSubscriber as unknown as (event: AgentEvent) => Promise<void>;
     await subscriber({
       type: "message_start",
       message: { role: "assistant", content: [{ type: "text", text: "hi" }] },
@@ -246,7 +243,7 @@ describe("AgentTracer", () => {
       toolCallId: "tc-1",
       toolName: "read_file",
       args: { path: "/tmp/test.txt" },
-    });
+    } as AgentEvent);
 
     // End turn without message_end / tool_execution_end
     await tracer.endTurn();
@@ -254,5 +251,142 @@ describe("AgentTracer", () => {
     expect(genSpan.end).toHaveBeenCalled();
     expect(toolSpan.end).toHaveBeenCalled();
     expect(turnSpan.end).toHaveBeenCalled();
+  });
+
+  it("handles generation span message_end with usage and cost", async () => {
+    const turnSpan = createMockSpan({ traceId: "trace-turn", spanId: "span-turn" });
+    const genSpan = createMockSpan({ traceId: "trace-gen", spanId: "span-gen" });
+    observabilityService.startObservation = vi.fn().mockImplementation((name) => {
+      if (name === "agent-turn") return Promise.resolve(turnSpan);
+      if (name === "llm-generation") return Promise.resolve(genSpan);
+      return Promise.resolve(null);
+    });
+
+    const tracer = new AgentTracer({
+      observabilityService,
+      provider: DEFAULT_PROVIDER,
+    });
+
+    await tracer.startTurn("hello");
+
+    const subscriber = captureSubscribe(agent);
+    tracer.subscribeToAgent(agent);
+
+    await subscriber({
+      type: "message_start",
+      message: { role: "assistant", content: [{ type: "text", text: "hi" }] },
+    } as unknown as AgentEvent);
+
+    await subscriber({
+      type: "message_end",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "done" }],
+        usage: {
+          input: 10,
+          output: 20,
+          totalTokens: 30,
+          cacheRead: 5,
+          cacheWrite: 2,
+          cost: {
+            input: 0.01,
+            output: 0.02,
+            total: 0.03,
+            cacheRead: 0.005,
+            cacheWrite: 0.002,
+          },
+        },
+      },
+    } as unknown as AgentEvent);
+
+    expect(genSpan.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        output: [{ type: "text", text: "done" }],
+        metadata: expect.objectContaining({
+          model: "gpt-4",
+          provider: "openrouter",
+          usageDetails: {
+            promptTokens: 10,
+            completionTokens: 20,
+            totalTokens: 30,
+            cacheReadTokens: 5,
+            cacheWriteTokens: 2,
+          },
+          costDetails: {
+            input: 0.01,
+            output: 0.02,
+            total: 0.03,
+            cacheRead: 0.005,
+            cacheWrite: 0.002,
+          },
+        }),
+      }),
+    );
+    expect(genSpan.end).toHaveBeenCalled();
+  });
+
+  it("handles tool span tool_execution_end with error", async () => {
+    const turnSpan = createMockSpan({ traceId: "trace-turn", spanId: "span-turn" });
+    const toolSpan = createMockSpan({ traceId: "trace-tool", spanId: "span-tool" });
+    observabilityService.startObservation = vi.fn().mockImplementation((name) => {
+      if (name === "agent-turn") return Promise.resolve(turnSpan);
+      if (name === "tool:read_file") return Promise.resolve(toolSpan);
+      return Promise.resolve(null);
+    });
+
+    const tracer = new AgentTracer({
+      observabilityService,
+      provider: DEFAULT_PROVIDER,
+    });
+
+    await tracer.startTurn("hello");
+
+    const subscriber = captureSubscribe(agent);
+    tracer.subscribeToAgent(agent);
+
+    await subscriber({
+      type: "tool_execution_start",
+      toolCallId: "tc-1",
+      toolName: "read_file",
+      args: { path: "/tmp/test.txt" },
+    } as AgentEvent);
+
+    await subscriber({
+      type: "tool_execution_end",
+      toolCallId: "tc-1",
+      toolName: "read_file",
+      result: "file not found",
+      isError: true,
+    } as AgentEvent);
+
+    expect(toolSpan.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        output: "file not found",
+        metadata: { isError: true },
+        level: "ERROR",
+        statusMessage: "file not found",
+      }),
+    );
+    expect(toolSpan.end).toHaveBeenCalled();
+  });
+
+  it("prevents span leaks on overlapping startTurn calls", async () => {
+    const turnSpan1 = createMockSpan({ traceId: "trace-1", spanId: "span-1" });
+    const turnSpan2 = createMockSpan({ traceId: "trace-2", spanId: "span-2" });
+    observabilityService.startObservation = vi
+      .fn()
+      .mockResolvedValueOnce(turnSpan1)
+      .mockResolvedValueOnce(turnSpan2);
+
+    const tracer = new AgentTracer({
+      observabilityService,
+      provider: DEFAULT_PROVIDER,
+    });
+
+    await tracer.startTurn("first");
+    await tracer.startTurn("second");
+
+    expect(turnSpan1.end).toHaveBeenCalled();
+    expect(tracer.getSpanContext()).toEqual({ traceId: "trace-2", spanId: "span-2" });
   });
 });

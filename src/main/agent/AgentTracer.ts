@@ -43,6 +43,11 @@ export class AgentTracer {
   async startTurn(input: unknown): Promise<void> {
     if (!this.observabilityService) return;
 
+    // End any lingering previous turn to prevent span leaks
+    if (this.turnSpan) {
+      await this.endTurn();
+    }
+
     const span = await this.observabilityService.startObservation("agent-turn", {
       asType: "agent",
       input,
@@ -95,8 +100,12 @@ export class AgentTracer {
     }
 
     return agent.subscribe(async (event: AgentEvent) => {
-      await this.handleGenerationSpan(event, agent);
-      await this.handleToolSpan(event, agent);
+      try {
+        await this.handleGenerationSpan(event, agent);
+        await this.handleToolSpan(event, agent);
+      } catch (err) {
+        console.error("[AgentTracer] event handler error:", err);
+      }
     });
   }
 
@@ -107,6 +116,12 @@ export class AgentTracer {
     if (event.type === "message_start") {
       if (!isAssistantMessage(event.message)) return;
       if (!this.turnTraceId || !this.turnSpanId) return;
+
+      // End any lingering previous generation span to prevent leaks
+      if (this.activeGenerationSpan) {
+        this.activeGenerationSpan.end();
+        this.activeGenerationSpan = null;
+      }
 
       this.activeGenerationSpan =
         (await service.startObservation("llm-generation", {
@@ -176,6 +191,12 @@ export class AgentTracer {
     if (event.type === "tool_execution_start") {
       if (!this.turnTraceId || !this.turnSpanId) return;
 
+      // End any lingering previous tool span to prevent leaks
+      if (this.activeToolSpan) {
+        this.activeToolSpan.end();
+        this.activeToolSpan = null;
+      }
+
       this.activeToolSpan =
         (await service.startObservation(`tool:${event.toolName ?? "unknown"}`, {
           asType: "tool",
@@ -190,7 +211,7 @@ export class AgentTracer {
         output: event.result,
         metadata: { isError: event.isError ?? false },
         level: event.isError ? "ERROR" : "DEFAULT",
-        statusMessage: event.isError ? String(event.result) : undefined,
+        statusMessage: event.isError && event.result != null ? String(event.result) : undefined,
       });
       this.activeToolSpan.end();
       this.activeToolSpan = null;
