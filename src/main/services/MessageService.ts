@@ -22,6 +22,10 @@ export class MessageService {
     return this.repo.updateContent(id, content);
   }
 
+  async deleteMessage(id: string): Promise<void> {
+    return this.repo.deleteMessage(id);
+  }
+
   async getHistory(projectId: string): Promise<Message[]> {
     return this.repo.listByProject(projectId);
   }

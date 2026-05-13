@@ -18,6 +18,7 @@ function makeMockRepo(overrides: Partial<IMessageRepository> = {}): IMessageRepo
   return {
     create: vi.fn().mockResolvedValue(makeMessage()),
     updateContent: vi.fn().mockResolvedValue(undefined),
+    deleteMessage: vi.fn().mockResolvedValue(undefined),
     listByProject: vi.fn().mockResolvedValue([]),
     getRecent: vi.fn().mockResolvedValue([]),
     ...overrides,
@@ -74,6 +75,13 @@ describe("MessageService", () => {
 
       expect(repo.getRecent).toHaveBeenCalledWith("proj-1", 5);
       expect(result).toEqual(msgs);
+    });
+  });
+
+  describe("deleteMessage", () => {
+    it("delegates to repo.deleteMessage", async () => {
+      await service.deleteMessage("msg-123");
+      expect(repo.deleteMessage).toHaveBeenCalledWith("msg-123");
     });
   });
 });
