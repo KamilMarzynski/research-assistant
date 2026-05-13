@@ -87,4 +87,17 @@ describe("DrizzleMessageRepository", () => {
       expect(await repo.getRecent(projectId, 10)).toHaveLength(1);
     });
   });
+
+  describe("deleteMessage", () => {
+    it("removes the message from the database", async () => {
+      const msg = await repo.create({ projectId, role: "user", content: "Delete me" });
+      await repo.deleteMessage(msg.id);
+      const remaining = await repo.listByProject(projectId);
+      expect(remaining).toHaveLength(0);
+    });
+
+    it("does not throw when id does not exist", async () => {
+      await expect(repo.deleteMessage("non-existent-id")).resolves.toBeUndefined();
+    });
+  });
 });

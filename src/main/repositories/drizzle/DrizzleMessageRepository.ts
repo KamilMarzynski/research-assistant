@@ -39,6 +39,10 @@ export class DrizzleMessageRepository
     await this.db.update(messages).set({ content }).where(eq(messages.id, id));
   }
 
+  async deleteMessage(id: string): Promise<void> {
+    await this.db.delete(messages).where(eq(messages.id, id));
+  }
+
   async listByProject(projectId: string): Promise<Message[]> {
     const rows = await this.db
       .select()
