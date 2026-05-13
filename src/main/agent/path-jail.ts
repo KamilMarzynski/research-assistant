@@ -12,8 +12,7 @@ export class PathJail {
   private readonly projectSkills: string;
   private readonly projectsDir: string;
   private readonly readWriteZones: string[];
-  private readonly readOnlyZones: string[];
-  private readonly allZones: string[];
+  private readonly protectedZones: string[];
 
   constructor(
     readonly projectId: string,
@@ -30,17 +29,20 @@ export class PathJail {
     this.projectsDir = projectPath ?? this.allProjectsDir;
 
     this.readWriteZones = [
-      this.allProjectsDir,
       this.workspace,
-      this.homeSkills,
-      this.projectSkills,
       this.projectsDir,
+      this.projectSkills,
       ...(this.projectFolder ? [this.projectFolder] : []),
     ];
 
-    this.readOnlyZones = [];
-
-    this.allZones = [...this.readWriteZones, ...this.readOnlyZones];
+    this.protectedZones = [
+      this.workspace,
+      this.projectsDir,
+      this.projectSkills,
+      this.homeSkills,
+      this.allProjectsDir,
+      ...(this.projectFolder ? [this.projectFolder] : []),
+    ];
   }
 
   private isInZone(target: string, zones: string[]): boolean {
@@ -53,12 +55,10 @@ export class PathJail {
    * If any intermediate component resolves outside allowed zones, reject.
    */
   private walkComponents(target: string): void {
-    // Find which zone contains the target
-    const containingZone = this.allZones.find((z) => this.isInZone(target, [z]));
+    const containingZone = this.protectedZones.find((z) => this.isInZone(target, [z]));
 
     if (!containingZone) {
-      // Path is not in any zone at the string level — already rejected by earlier checks.
-      // This branch handles the case where walkComponents is called defensively.
+      // Path is not in any protected zone — no symlink check needed.
       return;
     }
 
@@ -103,22 +103,44 @@ export class PathJail {
   validate(inputPath: string, mode: "read" | "write"): string {
     const resolved = resolve(normalize(inputPath));
 
-    if (this.isInZone(resolved, this.readOnlyZones)) {
-      if (mode === "write") {
-        throw new Error(
-          `Path "${resolved}" is in a read-only zone (skills directory). Use a workspace or project folder path instead.`,
-        );
+    // READ MODE: allow everywhere, with symlink checks inside protected zones
+    if (mode === "read") {
+      if (this.isInZone(resolved, this.protectedZones)) {
+        this.walkComponents(resolved);
       }
-      this.walkComponents(resolved);
       return resolved;
     }
 
+    // WRITE MODE: check restrictions
+
+    // 1. Home skills require explicit approval
+    if (this.isInZone(resolved, [this.homeSkills])) {
+      throw new ApprovalRequiredError(resolved, mode);
+    }
+
+    // 2. Cross-project write protection
+    if (
+      this.isInZone(resolved, [this.allProjectsDir]) &&
+      !this.isInZone(resolved, [this.projectsDir])
+    ) {
+      throw new Error(
+        `Path "${resolved}" is outside the current project. Write to your own project directory or workspace instead.`,
+      );
+    }
+
+    // 3. Read-write zones
     if (this.isInZone(resolved, this.readWriteZones)) {
       this.walkComponents(resolved);
       return resolved;
     }
 
-    const result = this.allowlistService.isAllowed(this.projectId, resolved, mode, this.allZones);
+    // 4. Allowlist fallback
+    const result = this.allowlistService.isAllowed(
+      this.projectId,
+      resolved,
+      mode,
+      this.readWriteZones,
+    );
     if (result.allowed) {
       this.walkComponents(resolved);
       return resolved;
@@ -128,7 +150,7 @@ export class PathJail {
     }
 
     throw new Error(
-      `Path "${resolved}" is not allowed. Permitted zones: workspace (${this.workspace}), project folder${this.projectFolder ? ` (${this.projectFolder})` : " (none linked)"}, projects dir (${this.projectsDir}), skills directories (${this.homeSkills}, ${this.projectSkills}).`,
+      `Path "${resolved}" is not allowed for writing. Permitted write zones: workspace (${this.workspace}), project folder${this.projectFolder ? ` (${this.projectFolder})` : " (none linked)"}, project directory (${this.projectsDir}), project skills (${this.projectSkills}).`,
     );
   }
 }

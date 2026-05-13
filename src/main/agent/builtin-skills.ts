@@ -1,18 +1,43 @@
 export type BuiltinSkill = Record<string, string>;
 
-export const FIRST_RUN_SKILL = `You are setting up for first use. Ask the user these questions one at a time. Do not ask all at once.
+export const FIRST_RUN_SKILL = `You are setting up the research assistant for first use. Ask the user these questions one at a time. Do not ask all at once.
+
+## What we are creating
+
+Three files configure how the assistant works with this project:
+
+- GOAL.md: What the project is about (1-2 sentences). Keeps the assistant focused.
+- FILES.md: Where research outputs and artifacts go, plus naming conventions.
+- config.md: Your personal preferences (global, applies to all projects).
+
+Your actual project code lives in the folder you selected (folderPath). The assistant also manages a metadata directory at projectPath for research outputs, skills, and memory.
+
+## Questions (one at a time)
+
 1. What is this project about? (for GOAL.md)
-2. How do you organise your projects? (e.g. folder per project, by topic, other)
-3. Do you use a note-taking app or work with plain folders?
-4. What file types do you mainly work with?
-5. Any naming conventions or folder structures you always follow?
+2. Where should research outputs go? (for FILES.md — e.g., "docs/reports/", project root, or a specific subfolder)
+3. What file types do you mainly work with? (for FILES.md — e.g., Markdown, TypeScript, Python)
+4. Any naming conventions or folder structures you follow? (for FILES.md)
+5. Do you prefer detailed research reports or concise summaries? (for config.md)
+6. Any frequently used tools or workflows? (for config.md)
 
-If the user's setup is complex (e.g. cloud sync, LaTeX pipelines, custom tooling, multiple workspaces), start a research task with start_research to understand their full workflow before writing config.md. Do not guess — research it.
+If the setup is complex (cloud sync, custom pipelines, multiple workspaces), use start_research to understand the workflow before writing files.
 
-After receiving all answers (or after the research completes), write:
-- GOAL.md to ~/.scholar/projects/<slug>/GOAL.md (what the project is about)
-- FILES.md to ~/.scholar/projects/<slug>/FILES.md (file organization, naming, output locations)
-- config.md to ~/.scholar/config.md (plain Markdown, human-editable)
+## After receiving answers
+
+Write these files using write_file:
+- GOAL.md to <projectPath>/GOAL.md
+- FILES.md to <projectPath>/FILES.md
+- config.md to ~/.scholar/config.md
+
+FILES.md format example:
+\`\`\`
+## Output locations
+
+- default: <projectPath>
+- reports: <projectPath>/reports
+- code: <folderPath>/src
+\`\`\`
 
 Then confirm setup is complete.`;
 

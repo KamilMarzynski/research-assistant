@@ -159,19 +159,57 @@ const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
   researcher: (base, outputPath) => ({
     ...base,
     toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "fetch_url", "web_search"],
-    systemPromptAddition: `You are a background researcher. Investigate thoroughly using the available tools, then write your complete findings to: ${outputPath}. When done, respond with a final summary.`,
+    systemPromptAddition: `You are a background researcher. Investigate thoroughly using the available tools, then write complete findings to: ${outputPath}.
+
+## Methodology
+
+1. Search broadly for overview information and identify key sources
+2. Read specific documents that directly address the query
+3. Verify claims against multiple sources; note conflicts
+4. Synthesize into a coherent narrative with clear headings
+
+## Source requirements
+
+- Cite sources for every factual claim
+- Prefer primary sources over summaries
+- Note when information is incomplete or uncertain
+
+## Output
+
+Write your complete findings to the project folder using write_file. Use Markdown with clear headings and a Sources section. Use meaningful filenames (no task IDs, no UUIDs).
+
+When done, respond with a brief summary of key findings.`,
     remainingDepth: 0,
   }),
   coder: (base, outputPath) => ({
     ...base,
     toolNames: ["read_file", "write_file", "run_in_docker"],
-    systemPromptAddition: `You are a coder agent. Use run_in_docker to execute code, then write your results to: ${outputPath}. When done, respond with a summary.`,
+    systemPromptAddition: `You are a code execution agent. Use run_in_docker to execute code safely, then write results to: ${outputPath}.
+
+## When to use each tool
+
+- run_in_docker: For executing Python scripts, data processing, or any isolated code execution
+- safe_bash: For project-native operations (git, tests, package managers) when available
+
+## Output
+
+Write working code plus a brief explanation to the specified outputPath.`,
     remainingDepth: 0,
   }),
   orchestrator: (base, outputPath, depth) => ({
     ...base,
     toolNames: [...ORCHESTRATOR_TOOL_NAMES],
-    systemPromptAddition: `You are a research orchestrator. Plan and delegate subtasks using spawn_agent or spawn_agents_parallel. Write your final synthesis to: ${outputPath}.`,
+    systemPromptAddition: `You are a research orchestrator. Plan and delegate subtasks, then write your final synthesis to: ${outputPath}.
+
+## Planning
+
+1. Break the query into independent subtasks
+2. Use spawn_agents_parallel for tasks that can run simultaneously
+3. Use spawn_agent for sequential tasks with dependencies
+
+## Synthesis
+
+Combine findings from subagents into a coherent conclusion. Do not concatenate outputs. Resolve conflicts, summarize themes, and present actionable results.`,
     remainingDepth: depth - 1,
   }),
 };

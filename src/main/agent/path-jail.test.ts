@@ -7,7 +7,6 @@ import { PathJail } from "./path-jail";
 
 const HOME = join(homedir(), ".scholar");
 const PROJECT_ID = "proj-123";
-const _PROJECT_NAME = "Test Project";
 const PROJECT_PATH = join(HOME, "projects", "test-project");
 const FOLDER_PATH = "/Users/test/myproject";
 const allowlistService = new AllowlistService();
@@ -41,9 +40,9 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("allows write inside ~/.scholar/skills", () => {
+    it("requires approval for write inside ~/.scholar/skills", () => {
       const p = join(HOME, "skills", "start_research", "SKILL.md");
-      expect(() => jail.validate(p, "write")).not.toThrow();
+      expect(() => jail.validate(p, "write")).toThrow(ApprovalRequiredError);
     });
 
     it("allows read inside ~/.scholar/projects/<slug>/skills", () => {
@@ -66,13 +65,22 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("blocks access outside all allowed zones with ApprovalRequiredError", () => {
-      expect(() => jail.validate("/etc/passwd", "read")).toThrow(ApprovalRequiredError);
+    it("allows read outside all zones", () => {
+      expect(() => jail.validate("/etc/passwd", "read")).not.toThrow();
     });
 
-    it("blocks path traversal attempts with ApprovalRequiredError", () => {
+    it("allows read through path traversal from workspace", () => {
       const p = join(HOME, "workspace", PROJECT_ID, "../../etc/passwd");
-      expect(() => jail.validate(p, "read")).toThrow(ApprovalRequiredError);
+      expect(() => jail.validate(p, "read")).not.toThrow();
+    });
+
+    it("blocks write outside all zones with ApprovalRequiredError", () => {
+      expect(() => jail.validate("/etc/passwd", "write")).toThrow(ApprovalRequiredError);
+    });
+
+    it("blocks cross-project writes", () => {
+      const p = join(HOME, "projects", "other-project", "file.md");
+      expect(() => jail.validate(p, "write")).toThrow(/outside the current project/);
     });
   });
 
@@ -84,8 +92,12 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("blocks project folder access when no folder linked with ApprovalRequiredError", () => {
-      expect(() => jail.validate("/Users/test/myproject/src/index.ts", "read")).toThrow(
+    it("allows read to arbitrary path when no folder linked", () => {
+      expect(() => jail.validate("/Users/test/myproject/src/index.ts", "read")).not.toThrow();
+    });
+
+    it("blocks write outside zones when no folder linked with ApprovalRequiredError", () => {
+      expect(() => jail.validate("/Users/test/myproject/src/index.ts", "write")).toThrow(
         ApprovalRequiredError,
       );
     });

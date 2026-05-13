@@ -53,7 +53,10 @@ export async function buildSystemContext(
   try {
     const config = await readFile(join(scholarHome, "config.md"), "utf-8");
     if (config.trim()) {
-      parts.push("<!-- User working style (config.md) -->", config.trim());
+      parts.push(
+        "<!-- User Preferences (config.md) — Honor these in all responses -->",
+        config.trim(),
+      );
     }
   } catch {
     // not present yet
@@ -61,7 +64,12 @@ export async function buildSystemContext(
 
   // 2. skills
   const skillIndex = skillIndexXml ?? (await loadSkillIndexXml(projectPath));
-  if (skillIndex) parts.push(skillIndex);
+  if (skillIndex) {
+    parts.push(
+      "<!-- Available Skills — When a task matches a description, use read_file to load the full SKILL.md before applying it -->",
+      skillIndex,
+    );
+  }
 
   // 3. GOAL.md
   let goalFile: string | undefined;
@@ -80,23 +88,30 @@ export async function buildSystemContext(
   }
 
   if (goalFile?.trim()) {
-    parts.push("<!-- Project goal (GOAL.md) -->", goalFile.trim());
+    parts.push(
+      "<!-- Project Goal (GOAL.md) — Keep all work aligned with this purpose -->",
+      goalFile.trim(),
+    );
   }
   if (filesFile?.trim()) {
-    parts.push("<!-- Project files (FILES.md) -->", filesFile.trim());
+    parts.push(
+      "<!-- File Conventions (FILES.md) — Follow these when writing files -->",
+      filesFile.trim(),
+    );
   }
 
   if (!goalFile?.trim() || !filesFile?.trim()) {
     const goalPath = join(projectPath, "GOAL.md");
     const filesPath = join(projectPath, "FILES.md");
     parts.push(
+      "<!-- Missing project configuration — Create GOAL.md and FILES.md to guide the assistant -->",
       "This project has no GOAL.md or FILES.md yet. If the user already described their project in their first message, use the `write_file` tool to create both files directly.",
-      "If they have not yet described it, ask them one question at a time:",
+      "If they have not yet described it, ask one question at a time:",
       "1. What is this project about? (write answer to GOAL.md)",
       "2. How are files organized? (write answer to FILES.md)",
       "3. Where should research outputs go? (add to FILES.md)",
       "4. Any naming conventions or folder structures? (add to FILES.md)",
-      `After gathering answers, write the GOAL.md file to ${goalPath} and the FILES.md file to ${filesPath} using the write_file tool.`,
+      `After gathering answers, write GOAL.md to ${goalPath} and FILES.md to ${filesPath} using the write_file tool.`,
     );
   }
 
@@ -104,7 +119,10 @@ export async function buildSystemContext(
   try {
     const appMemory = await readFile(join(scholarHome, "app-memory", "MEMORY.md"), "utf-8");
     if (appMemory.trim()) {
-      parts.push("<!-- App-level memory (MEMORY.md) -->", appMemory.trim());
+      parts.push(
+        "<!-- App Memory — Past observations worth remembering across all projects -->",
+        appMemory.trim(),
+      );
     }
   } catch {
     // not present yet
@@ -118,7 +136,10 @@ export async function buildSystemContext(
     // not yet discovered
   }
   if (projectMemory?.trim()) {
-    parts.push("<!-- Project memory (MEMORY.md) -->", projectMemory.trim());
+    parts.push(
+      "<!-- Project Memory — Past observations specific to this project -->",
+      projectMemory.trim(),
+    );
   }
 
   return parts.join("\n\n");

@@ -491,7 +491,7 @@ describe("AgentSession", () => {
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
         ?.systemPrompt;
-      expect(prompt).toContain("How do you organise your projects");
+      expect(prompt).toContain("What we are creating");
     });
 
     it("does not include first-run instructions when isFirstRun=false", async () => {
