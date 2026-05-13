@@ -43,6 +43,7 @@ export interface EvaluationVerdict {
 
 export interface AgentToolsOptions {
   projectId: string;
+  slug: string;
   projectName: string;
   projectPath: string | null;
   folderPath: string | null;
@@ -90,9 +91,9 @@ export interface AgentToolsOptions {
 }
 
 export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
-  const { projectId, projectPath, folderPath, homePath, startResearchFn, onFileWrite } = opts;
-  const jail = new PathJail(projectId, projectId, folderPath, projectPath, opts.allowlistService);
-  const workspacePath = join(homePath, "workspace", projectId);
+  const { projectId, slug, projectPath, folderPath, homePath, startResearchFn, onFileWrite } = opts;
+  const jail = new PathJail(projectId, slug, folderPath, projectPath, opts.allowlistService);
+  const workspacePath = join(homePath, "projects", slug, "workspace");
   const auditLogPath = join(homePath, "audit.log");
 
   // biome-ignore lint/suspicious/noExplicitAny: AgentTool generic is covariant in TDetails but contravariant in TParams; any is the correct erasure for a heterogeneous collection

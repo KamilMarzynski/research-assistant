@@ -108,6 +108,7 @@ function createTransformContext(modelId: string) {
 
 export interface MessagePipelineOptions {
   projectId: string;
+  slug: string;
   projectName: string;
   projectPath: string | null;
   folderPath: string | null;
@@ -132,6 +133,7 @@ export class MessagePipeline {
   readonly agent: Agent;
   private readonly projectId: string;
   private readonly projectName: string;
+  private readonly slug: string;
   private readonly projectPath: string | null;
   private readonly folderPath: string | null;
   private readonly provider: ModelProvider;
@@ -147,6 +149,7 @@ export class MessagePipeline {
     private readonly state: SessionState,
   ) {
     this.projectId = options.projectId;
+    this.slug = options.slug;
     this.projectName = options.projectName;
     this.projectPath = options.projectPath;
     this.folderPath = options.folderPath;
@@ -180,11 +183,12 @@ export class MessagePipeline {
     })) as import("@mariozechner/pi-agent-core").AgentMessage[];
 
     const compressionService = new CompressionService(
-      join(this.homePath, "workspace", options.projectId, ".compressed"),
+      join(this.homePath, "projects", options.slug, "workspace", ".compressed"),
     );
 
     const tools = createAgentTools({
       projectId: options.projectId,
+      slug: options.slug,
       projectName: options.projectName,
       projectPath: options.projectPath,
       folderPath: options.folderPath,
@@ -216,6 +220,7 @@ export class MessagePipeline {
             ),
       requestEvaluationFn: makeEvaluatorFn({
         projectId: options.projectId,
+        slug: options.slug,
         projectName: options.projectName,
         projectPath: options.projectPath,
         folderPath: options.folderPath,
@@ -229,7 +234,7 @@ export class MessagePipeline {
             const svc = options.memoryFileService;
             if (!svc) return Promise.resolve({ path: "" });
             const scholarProjectPath =
-              options.projectPath ?? join(this.homePath, "projects", options.projectId);
+              options.projectPath ?? join(this.homePath, "projects", options.slug);
             return svc.saveMemory(
               options.projectId,
               category,
@@ -245,7 +250,7 @@ export class MessagePipeline {
             const svc = options.memoryFileService;
             if (!svc) return Promise.resolve("");
             const scholarProjectPath =
-              options.projectPath ?? join(this.homePath, "projects", options.projectId);
+              options.projectPath ?? join(this.homePath, "projects", options.slug);
             return svc.readMemory({
               ...readOptions,
               scholarProjectPath,
@@ -314,7 +319,7 @@ export class MessagePipeline {
         const memoryContext = await this.memoryManager.buildContext(this.projectId);
         console.log(JSON.stringify(memoryContext.summary, null, 2));
         const systemContext = await buildSystemContext(
-          this.projectPath ?? join(this.homePath, "projects", this.projectId),
+          this.projectPath ?? join(this.homePath, "projects", this.slug),
           this.folderPath,
           this.skillRouter.toXml(),
         );

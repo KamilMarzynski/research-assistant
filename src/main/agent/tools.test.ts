@@ -5,6 +5,7 @@ import { createAgentTools } from "./tools";
 
 const BASE = {
   projectId: "p1",
+  slug: "p1",
   projectName: "Test",
   projectPath: null,
   folderPath: null,

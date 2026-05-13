@@ -49,6 +49,7 @@ const BASE_CONFIG = {
   toolNames: ["read_file", "safe_bash"] as const,
   systemPromptAddition: "You are a worker.",
   projectId: "proj-1",
+  slug: "proj-1",
   projectName: "Test",
   projectPath: null,
   folderPath: null,

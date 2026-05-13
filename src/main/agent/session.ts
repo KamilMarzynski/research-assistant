@@ -19,6 +19,7 @@ export interface AgentSessionOptions {
   eventBus: EventBus;
   initialMemoryContext: MemoryContext;
   projectId: string;
+  slug: string;
   projectName: string;
   projectPath: string | null;
   folderPath: string | null;

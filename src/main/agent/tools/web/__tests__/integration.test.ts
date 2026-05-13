@@ -29,6 +29,7 @@ describe("tool registration", () => {
   it("includes fetch_url and web_search when webAccessEnabled is true", () => {
     const tools = createAgentTools({
       projectId: "test",
+      slug: "test",
       projectName: "Test",
       projectPath: null,
       folderPath: null,
@@ -44,6 +45,7 @@ describe("tool registration", () => {
   it("excludes fetch_url and web_search when webAccessEnabled is false", () => {
     const tools = createAgentTools({
       projectId: "test",
+      slug: "test",
       projectName: "Test",
       projectPath: null,
       folderPath: null,
@@ -59,6 +61,7 @@ describe("tool registration", () => {
   it("includes fetch_url and web_search when webAccessEnabled is undefined", () => {
     const tools = createAgentTools({
       projectId: "test",
+      slug: "test",
       projectName: "Test",
       projectPath: null,
       folderPath: null,
@@ -77,6 +80,7 @@ describe("researcher preset", () => {
       toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "fetch_url", "web_search"],
       systemPromptAddition: "You are a researcher.",
       projectId: "proj-1",
+      slug: "proj-1",
       projectName: "Test",
       projectPath: null,
       folderPath: null,

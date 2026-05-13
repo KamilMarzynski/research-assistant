@@ -34,6 +34,7 @@ export class CrystallizationService {
         "You are a skill evaluator. Assess whether a completed research task produced a novel, reusable workflow. Respond with JSON only.",
       skills: ["evaluate-research"],
       projectId,
+      slug: projectId,
       projectName,
       projectPath: null,
       folderPath,

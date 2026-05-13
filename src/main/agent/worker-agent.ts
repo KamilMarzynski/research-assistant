@@ -27,6 +27,7 @@ export interface WorkerAgentConfig {
   systemPromptAddition: string;
   skills?: string[];
   projectId: string;
+  slug: string;
   projectName: string;
   projectPath: string | null;
   folderPath: string | null;
@@ -47,6 +48,7 @@ export interface WorkerAgent {
 
 export interface EvaluatorBaseConfig {
   projectId: string;
+  slug: string;
   projectName: string;
   projectPath: string | null;
   folderPath: string | null;
@@ -249,6 +251,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
   if (remainingDepth > 0) {
     const base: WorkerAgentBase = {
       projectId,
+      slug: config.slug,
       projectName,
       projectPath,
       folderPath,
@@ -294,6 +297,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
 
   const tools = createAgentTools({
     projectId,
+    slug: config.slug,
     projectName,
     projectPath,
     folderPath,
@@ -308,6 +312,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     // they will never receive the request_evaluation tool — preventing infinite recursion.
     requestEvaluationFn: makeEvaluatorFn({
       projectId,
+      slug: config.slug,
       projectName,
       projectPath,
       folderPath,
