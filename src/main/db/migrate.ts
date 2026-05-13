@@ -95,4 +95,11 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   } catch (err) {
     if (!isDuplicateColumnError(err)) throw err;
   }
+
+  // Run 17: add slug — idempotent
+  try {
+    await db.run(sql`ALTER TABLE projects ADD COLUMN slug TEXT`);
+  } catch (err) {
+    if (!isDuplicateColumnError(err)) throw err;
+  }
 }

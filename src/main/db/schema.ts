@@ -3,6 +3,7 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  slug: text("slug"),
   folderPath: text("folder_path"),
   projectPath: text("project_path"),
   modelOverride: text("model_override"),
