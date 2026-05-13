@@ -62,7 +62,7 @@ export function registerArtifactHandlers(
       throw new Error("Project not found");
     }
 
-    const jail = new PathJail(project.id, project.folderPath, project.name, allowlistService);
+    const jail = new PathJail(project.id, project.slug ?? project.id, project.folderPath, project.name, allowlistService);
     let count = 0;
 
     async function walk(dirPath: string, depth: number): Promise<FileNode[]> {
@@ -163,7 +163,7 @@ export function registerArtifactHandlers(
       throw new Error("Project not found");
     }
 
-    const jail = new PathJail(projectId, project.folderPath, project.name, allowlistService);
+    const jail = new PathJail(projectId, project.slug ?? project.id, project.folderPath, project.name, allowlistService);
 
     // PathJail validates the path is within allowed zones
     const resolvedPath = jail.validate(filePath, "read");
@@ -208,7 +208,7 @@ export function registerArtifactHandlers(
       throw new Error("Project not found");
     }
 
-    const jail = new PathJail(projectId, project.folderPath, project.name, allowlistService);
+    const jail = new PathJail(projectId, project.slug ?? project.id, project.folderPath, project.name, allowlistService);
     const resolvedPath = jail.validate(filePath, "read");
 
     shell.showItemInFolder(resolvedPath);

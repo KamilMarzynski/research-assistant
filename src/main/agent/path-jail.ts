@@ -16,12 +16,13 @@ export class PathJail {
 
   constructor(
     readonly projectId: string,
+    slug: string,
     folderPath: string | null,
     projectPath: string | null,
     private readonly allowlistService: AllowlistService,
   ) {
     this.home = getScholarHome();
-    this.workspace = join(this.home, "workspace", projectId);
+    this.workspace = join(this.home, "projects", slug, "workspace");
     this.homeSkills = join(this.home, "skills");
     this.projectFolder = folderPath ? resolve(normalize(folderPath)) : null;
     this.allProjectsDir = join(this.home, "projects");

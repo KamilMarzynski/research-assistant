@@ -7,21 +7,22 @@ import { PathJail } from "./path-jail";
 
 const HOME = join(homedir(), ".scholar");
 const PROJECT_ID = "proj-123";
+const PROJECT_SLUG = "test-project";
 const PROJECT_PATH = join(HOME, "projects", "test-project");
 const FOLDER_PATH = "/Users/test/myproject";
 const allowlistService = new AllowlistService();
 
 describe("PathJail", () => {
   describe("with folderPath", () => {
-    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_PATH, allowlistService);
+    const jail = new PathJail(PROJECT_ID, PROJECT_SLUG, FOLDER_PATH, PROJECT_PATH, allowlistService);
 
     it("allows read inside workspace", () => {
-      const p = join(HOME, "workspace", PROJECT_ID, "output.md");
+      const p = join(HOME, "projects", PROJECT_SLUG, "workspace", "output.md");
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
     it("allows write inside workspace", () => {
-      const p = join(HOME, "workspace", PROJECT_ID, "output.md");
+      const p = join(HOME, "projects", PROJECT_SLUG, "workspace", "output.md");
       expect(() => jail.validate(p, "write")).not.toThrow();
     });
 
@@ -70,7 +71,7 @@ describe("PathJail", () => {
     });
 
     it("allows read through path traversal from workspace", () => {
-      const p = join(HOME, "workspace", PROJECT_ID, "../../etc/passwd");
+      const p = join(HOME, "projects", PROJECT_SLUG, "workspace", "../../etc/passwd");
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
@@ -85,10 +86,10 @@ describe("PathJail", () => {
   });
 
   describe("without folderPath", () => {
-    const jail = new PathJail(PROJECT_ID, null, PROJECT_PATH, allowlistService);
+    const jail = new PathJail(PROJECT_ID, PROJECT_SLUG, null, PROJECT_PATH, allowlistService);
 
     it("allows workspace access", () => {
-      const p = join(HOME, "workspace", PROJECT_ID, "file.md");
+      const p = join(HOME, "projects", PROJECT_SLUG, "workspace", "file.md");
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
@@ -104,10 +105,10 @@ describe("PathJail", () => {
   });
 
   describe("returns resolved absolute path", () => {
-    const jail = new PathJail(PROJECT_ID, FOLDER_PATH, PROJECT_PATH, allowlistService);
+    const jail = new PathJail(PROJECT_ID, PROJECT_SLUG, FOLDER_PATH, PROJECT_PATH, allowlistService);
 
     it("resolves and returns the path", () => {
-      const p = join(HOME, "workspace", PROJECT_ID, "output.md");
+      const p = join(HOME, "projects", PROJECT_SLUG, "workspace", "output.md");
       const result = jail.validate(p, "read");
       expect(result).toBe(p);
     });
@@ -127,7 +128,7 @@ describe("PathJail", () => {
       mkdirSync(join(realZone, "subdir"), { recursive: true });
       symlinkSync(realZone, symlinkZone);
 
-      jail = new PathJail(PROJECT_ID, symlinkZone, PROJECT_PATH, allowlistService);
+      jail = new PathJail(PROJECT_ID, PROJECT_SLUG, symlinkZone, PROJECT_PATH, allowlistService);
     });
 
     afterAll(() => {
@@ -167,7 +168,7 @@ describe("PathJail", () => {
       symlinkSync(outsideDir, join(realZone, "escape_link"));
       symlinkSync(join(realZone, "subdir"), join(realZone, "internal_link"));
 
-      jail = new PathJail(PROJECT_ID, realZone, PROJECT_PATH, allowlistService);
+      jail = new PathJail(PROJECT_ID, PROJECT_SLUG, realZone, PROJECT_PATH, allowlistService);
     });
 
     afterAll(() => {

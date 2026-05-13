@@ -14,7 +14,7 @@ describe("OutputRouter", () => {
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), "output-router-test-"));
-    jail = new PathJail("test-project", tempDir, "Test Project", new AllowlistService());
+    jail = new PathJail("test-project", "test-project", tempDir, "Test Project", new AllowlistService());
     router = new OutputRouter(jail);
   });
 

@@ -233,6 +233,7 @@ export class ResearchService {
             if (filesMdContent) {
               const jail = new PathJail(
                 config.projectId,
+                project.slug ?? config.projectId,
                 config.folderPath,
                 projectPath,
                 this.allowlistService,
@@ -246,6 +247,7 @@ export class ResearchService {
             if (conventions) {
               const jail = new PathJail(
                 config.projectId,
+                project.slug ?? config.projectId,
                 config.folderPath,
                 projectPath,
                 this.allowlistService,
