@@ -81,6 +81,6 @@ export class AgentSession {
   }
 
   abort(): void {
-    this.pipeline.agent.abort();
+    this.pipeline.abort();
   }
 }

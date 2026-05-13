@@ -418,4 +418,31 @@ export class MessagePipeline {
       }
     }
   }
+
+  abort(): void {
+    this.agent.abort();
+
+    const content = this.state.assistantContent;
+    const streamingId = this.state.streamingMessageId;
+
+    if (streamingId) {
+      if (content === "") {
+        void this.messageService.deleteMessage(streamingId).catch((err) => {
+          console.error("[AgentSession] failed to delete empty placeholder:", err);
+        });
+      } else {
+        void this.messageService.updateMessage(streamingId, content).catch((err) => {
+          console.error("[AgentSession] failed to finalize partial message:", err);
+        });
+      }
+      this.state.streamingMessageId = null;
+    }
+
+    this.state.assistantContent = "";
+    this.state.lastUserContent = "";
+    this.state.streamChunkCount = 0;
+    this.state.processing = false;
+
+    this.eventBus.emit({ type: "agent:done", payload: { projectId: this.projectId } });
+  }
 }
