@@ -178,7 +178,7 @@ export class MessagePipeline {
       saveMemoryFn: options.memoryFileService
         ? (category, title, content, scope) => {
             const svc = options.memoryFileService;
-            if (!svc) return Promise.resolve();
+            if (!svc) return Promise.resolve({ path: "" });
             return svc.saveMemory(
               options.projectId,
               category,
@@ -192,7 +192,7 @@ export class MessagePipeline {
       readMemoryFn: options.memoryFileService
         ? (readOptions) => {
             const svc = options.memoryFileService;
-            if (!svc) return Promise.resolve([]);
+            if (!svc) return Promise.resolve("");
             return svc.readMemory({
               ...readOptions,
               projectFolderPath: options.folderPath ?? undefined,
@@ -233,14 +233,22 @@ export class MessagePipeline {
     this.state.savedForTurn = 0;
 
     try {
-      await this.observabilityService?.getTraceId(this.projectId, this.projectName);
-
       this.state.activeTurnSpan =
         (await this.observabilityService?.startObservation("agent-turn", {
           asType: "agent",
           input: { role: "user", content },
-          metadata: { turnNumber: this.state.currentTurnId, projectId: this.projectId },
+          sessionId: this.state.sessionId,
+          metadata: {
+            turnNumber: this.state.currentTurnId,
+            projectId: this.projectId,
+            systemPrompt: this.agent.state.systemPrompt,
+          },
         })) ?? null;
+
+      if (this.state.activeTurnSpan) {
+        this.state.turnTraceId = this.state.activeTurnSpan.traceId;
+        this.state.turnSpanId = this.state.activeTurnSpan.spanId;
+      }
 
       try {
         if (!this.state.skillRouterReady) {
@@ -319,14 +327,20 @@ export class MessagePipeline {
         ?.startObservation("agent-turn", {
           asType: "agent",
           input: { role: "user", content },
+          sessionId: this.state.sessionId,
           metadata: {
             turnNumber: this.state.currentTurnId,
             projectId: this.projectId,
             followUp: true,
+            systemPrompt: this.agent.state.systemPrompt,
           },
         })
         .then((span) => {
           this.state.activeTurnSpan = span ?? null;
+          if (span) {
+            this.state.turnTraceId = span.traceId;
+            this.state.turnSpanId = span.spanId;
+          }
         });
 
       await this.agent.followUp({ role: "user", content, timestamp: Date.now() });

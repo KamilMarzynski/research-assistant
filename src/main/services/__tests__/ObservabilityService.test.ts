@@ -14,7 +14,6 @@ vi.mock("electron", () => ({
 }));
 
 vi.mock("@langfuse/tracing", () => ({
-  createTraceId: vi.fn(() => "trace-123"),
   startObservation: vi.fn((_name, _attrs, _options) => ({
     update: vi.fn(),
     end: vi.fn(),
@@ -71,37 +70,6 @@ describe("ObservabilityService", () => {
     it("returns true when settings enabled", async () => {
       const service = new ObservabilityService(createMockSettings(true));
       expect(await service.isEnabled()).toBe(true);
-    });
-  });
-
-  describe("getTraceId", () => {
-    it("returns null when disabled", async () => {
-      const service = new ObservabilityService(createMockSettings(false));
-      const result = await service.getTraceId("p1", "Project 1");
-      expect(result).toBeNull();
-    });
-
-    it("returns null when env vars missing", async () => {
-      const service = new ObservabilityService(createMockSettings(true));
-      const result = await service.getTraceId("p1", "Project 1");
-      expect(result).toBeNull();
-    });
-
-    it("caches trace ID per project", async () => {
-      process.env.LANGFUSE_PUBLIC_KEY = "pk";
-      process.env.LANGFUSE_SECRET_KEY = "sk";
-      const service = new ObservabilityService(createMockSettings(true));
-
-      const traceId1 = await service.getTraceId("p1", "Project 1");
-      const traceId2 = await service.getTraceId("p1", "Project 1");
-      const traceId3 = await service.getTraceId("p2", "Project 2");
-
-      expect(traceId1).toBe("trace-123");
-      expect(traceId2).toBe(traceId1);
-      expect(traceId3).toBe("trace-123");
-
-      const { createTraceId } = await import("@langfuse/tracing");
-      expect(createTraceId).toHaveBeenCalledTimes(2);
     });
   });
 

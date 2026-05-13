@@ -5,6 +5,8 @@ import { SettingsService } from "./SettingsService";
 export interface ObservationSpan {
   update(payload: Record<string, unknown>): void;
   end(): void;
+  traceId: string;
+  spanId: string;
 }
 
 export interface ObserveOptions {
@@ -12,11 +14,12 @@ export interface ObserveOptions {
   parentSpanContext?: { traceId: string; spanId: string };
   input?: unknown;
   metadata?: Record<string, unknown>;
+  traceId?: string;
+  sessionId?: string;
 }
 
 @injectable()
 export class ObservabilityService {
-  private traceCache = new Map<string, string>();
   private failed = false;
   private enabled = false;
   private initAttempted = false;
@@ -76,30 +79,13 @@ export class ObservabilityService {
     return !this.failed;
   }
 
-  async getTraceId(projectId: string, _projectName: string): Promise<string | null> {
-    if (!(await this.ensureProvider())) return null;
-
-    const cached = this.traceCache.get(projectId);
-    if (cached) return cached;
-
-    try {
-      const { createTraceId } = await import("@langfuse/tracing");
-      const traceId = await createTraceId();
-      this.traceCache.set(projectId, traceId);
-      return traceId;
-    } catch (err) {
-      this.markFailed(err);
-      return null;
-    }
-  }
-
   async observe<T>(
     name: string,
     fn: (span: ObservationSpan) => Promise<T>,
     options?: ObserveOptions,
   ): Promise<T> {
     if (!(await this.ensureProvider())) {
-      return fn({ update: () => {}, end: () => {} });
+      return fn({ update: () => {}, end: () => {}, traceId: "", spanId: "" });
     }
 
     try {
@@ -107,7 +93,12 @@ export class ObservabilityService {
 
       const typedStartActiveObservation = startActiveObservation as unknown as <R>(
         n: string,
-        f: (span: { update: (p: Record<string, unknown>) => void; end: () => void }) => Promise<R>,
+        f: (span: {
+          update: (p: Record<string, unknown>) => void;
+          end: () => void;
+          traceId: string;
+          id: string;
+        }) => Promise<R>,
         o?: Record<string, unknown>,
       ) => Promise<R>;
 
@@ -119,6 +110,8 @@ export class ObservabilityService {
             const wrapper: ObservationSpan = {
               update: (payload) => span.update(payload),
               end: () => span.end(),
+              traceId: span.traceId,
+              spanId: span.id,
             };
             return fn(wrapper);
           },
@@ -131,6 +124,8 @@ export class ObservabilityService {
                   traceFlags: 1,
                 }
               : undefined,
+            traceId: options?.traceId,
+            sessionId: options?.sessionId,
           },
         ),
         new Promise<T>((_, reject) =>
@@ -142,7 +137,7 @@ export class ObservabilityService {
       if (String(err).includes("observability timeout")) {
         this.markFailed(err);
       }
-      return fn({ update: () => {}, end: () => {} });
+      return fn({ update: () => {}, end: () => {}, traceId: "", spanId: "" });
     }
   }
 
@@ -163,11 +158,11 @@ export class ObservabilityService {
         traceId: string;
       };
 
-      const metadata: Record<string, unknown> = {};
-      if (options?.input !== undefined) metadata.input = options.input;
-      if (options?.metadata !== undefined) metadata.metadata = options.metadata;
+      const attributes: Record<string, unknown> = {};
+      if (options?.input !== undefined) attributes.input = options.input;
+      if (options?.metadata !== undefined) attributes.metadata = options.metadata;
 
-      const span = typedStartObservation(name, metadata, {
+      const span = typedStartObservation(name, attributes, {
         asType: options?.asType ?? "span",
         parentSpanContext: options?.parentSpanContext
           ? {
@@ -176,10 +171,14 @@ export class ObservabilityService {
               traceFlags: 1,
             }
           : undefined,
+        traceId: options?.traceId,
+        sessionId: options?.sessionId,
       });
       return {
         update: (payload) => span.update(payload),
         end: () => span.end(),
+        traceId: span.traceId,
+        spanId: span.id,
       };
     } catch (err) {
       this.markFailed(err);

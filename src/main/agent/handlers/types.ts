@@ -17,6 +17,9 @@ export interface SessionState {
   activeTurnSpan: ObservationSpan | null;
   activeGenerationSpan: ObservationSpan | null;
   activeToolSpan: ObservationSpan | null;
+  sessionId: string;
+  turnTraceId: string | null;
+  turnSpanId: string | null;
 }
 
 /** Dependencies injected into every event handler. */

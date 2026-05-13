@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { EventBus } from "../event-bus";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { HomeService } from "../services/HomeService";
@@ -49,6 +50,9 @@ export class AgentSession {
         | import("../services/ObservabilityService").ObservationSpan
         | null,
       activeToolSpan: null as import("../services/ObservabilityService").ObservationSpan | null,
+      sessionId: randomUUID(),
+      turnTraceId: null as string | null,
+      turnSpanId: null as string | null,
     };
 
     this.pipeline = new MessagePipeline(options, state);

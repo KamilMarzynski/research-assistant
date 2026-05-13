@@ -12,7 +12,6 @@ import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
 import { ArtifactService } from "./ArtifactService";
 import { HomeService } from "./HomeService";
-import type { ObservationSpan } from "./ObservabilityService";
 import { ObservabilityService } from "./ObservabilityService";
 import { ProjectService } from "./ProjectService";
 import { SettingsService } from "./SettingsService";
@@ -125,12 +124,6 @@ export class ResearchService {
     const taskId = randomUUID();
     const settings = await this.settingsService.getSettings();
 
-    // Get trace for observability
-    const traceId = await this.observabilityService.getTraceId(
-      config.projectId,
-      config.projectName,
-    );
-
     const homePath = this.homeService.getHomePath();
     const workspacePath = join(homePath, "workspace", config.projectId, taskId);
 
@@ -150,14 +143,11 @@ export class ResearchService {
       startedAt: new Date().toISOString(),
     });
 
-    let researchSpan: ObservationSpan | null = null;
-    if (traceId) {
-      researchSpan = await this.observabilityService.startObservation("research", {
-        asType: "agent",
-        input: { query: config.query },
-        metadata: { taskId, projectId: config.projectId, projectName: config.projectName },
-      });
-    }
+    const researchSpan = await this.observabilityService.startObservation("research", {
+      asType: "agent",
+      input: { query: config.query },
+      metadata: { taskId, projectId: config.projectId, projectName: config.projectName },
+    });
 
     const onProgress = (label: string, delta: string) => {
       if (label) {

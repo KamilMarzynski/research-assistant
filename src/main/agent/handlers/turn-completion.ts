@@ -10,6 +10,8 @@ export async function handleTurnCompletion(event: AgentEvent, ctx: HandlerContex
   });
   ctx.state.activeTurnSpan?.end();
   ctx.state.activeTurnSpan = null;
+  ctx.state.turnTraceId = null;
+  ctx.state.turnSpanId = null;
 
   // End any lingering spans
   ctx.state.activeGenerationSpan?.end();
