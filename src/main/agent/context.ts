@@ -56,7 +56,7 @@ export async function buildSystemContext(
     `## userProjectDir: ${folderPath ?? "not linked yet"}`,
     "This is the user's actual project directory — where their notes, documents, research materials, source files, drafts, and any work they do lives. When the user asks you to explore the project, read files, or write artifacts, use this path.",
     `## assistantDir: ${projectPath}`,
-    "This is the assistant's workspace — where the assistant stores its own work: research outputs, generated reports, skills, project configuration (GOAL.md, FILES.md, MEMORY.md), and temporary workspace files.",
+    "This is the assistant's workspace — where the assistant stores its own work: research outputs, generated reports, skills, project configuration (GOAL.md, FILES.md), and temporary workspace files.",
   );
 
   // 1. config.md
