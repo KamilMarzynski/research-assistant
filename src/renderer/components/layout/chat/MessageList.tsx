@@ -16,6 +16,26 @@ export default function MessageList({ messages, streamingContent, processing }: 
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
 
+  // Hide empty assistant placeholders after the last user message.
+  // Also hide all post-user assistant messages during active streaming
+  // to avoid showing both the DB partial and the live stream overlay.
+  let lastUserIndex = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user") {
+      lastUserIndex = i;
+      break;
+    }
+  }
+  const displayMessages =
+    lastUserIndex >= 0
+      ? messages.filter((m, i) => {
+          if (i <= lastUserIndex) return true;
+          if (m.role === "assistant" && m.content.trim() === "") return false;
+          if (streamingContent !== null && m.role === "assistant") return false;
+          return true;
+        })
+      : messages;
+
   return (
     <div
       className="thin-scroll"
@@ -40,7 +60,7 @@ export default function MessageList({ messages, streamingContent, processing }: 
           gap: 18,
         }}
       >
-        {messages.map((msg) => (
+        {displayMessages.map((msg) => (
           <div
             key={msg.id}
             style={{
@@ -136,7 +156,7 @@ export default function MessageList({ messages, streamingContent, processing }: 
         )}
 
         {/* empty state */}
-        {messages.length === 0 && !streamingContent && !processing && (
+        {displayMessages.length === 0 && !streamingContent && !processing && (
           <div
             style={{
               display: "flex",

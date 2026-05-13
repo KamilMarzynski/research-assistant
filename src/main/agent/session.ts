@@ -54,6 +54,8 @@ export class AgentSession {
       sessionId: randomUUID(),
       turnTraceId: null as string | null,
       turnSpanId: null as string | null,
+      streamingMessageId: null,
+      streamChunkCount: 0,
     };
 
     this.pipeline = new MessagePipeline(options, state);

@@ -71,6 +71,7 @@ function makeMessageService() {
       content: "hi",
       createdAt: new Date(),
     }),
+    updateMessage: vi.fn().mockResolvedValue(undefined),
     getHistory: vi.fn().mockResolvedValue([]),
     getRecentContext: vi.fn().mockResolvedValue([]),
   };
@@ -157,13 +158,19 @@ describe("AgentSession", () => {
       const order: string[] = [];
       messageService.addMessage.mockImplementation(async () => {
         order.push("addMessage");
-        return {} as never;
+        return {
+          id: "msg-" + order.length,
+          projectId: "p-1",
+          role: "user",
+          content: "",
+          createdAt: new Date(),
+        } as never;
       });
       mockAgent.prompt.mockImplementation(async () => {
         order.push("prompt");
       });
       await session.send("hello");
-      expect(order).toEqual(["addMessage", "prompt"]);
+      expect(order).toEqual(["addMessage", "addMessage", "prompt"]);
     });
 
     it("rejects concurrent send() calls while processing", async () => {
@@ -261,11 +268,7 @@ describe("AgentSession", () => {
       });
       await triggerEvent({ type: "agent_end", messages: [] });
 
-      expect(messageService.addMessage).toHaveBeenCalledWith({
-        projectId: "p-1",
-        role: "assistant",
-        content: "Hello world",
-      });
+      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Hello world");
     });
 
     it("sends MESSAGE_DONE on agent_end", async () => {
@@ -277,11 +280,8 @@ describe("AgentSession", () => {
 
     it("does not persist empty assistant content on agent_end", async () => {
       await triggerEvent({ type: "agent_end", messages: [] });
-      // addMessage should only have been called for user messages — not with assistant role
-      const assistantCalls = messageService.addMessage.mock.calls.filter(
-        ([arg]) => (arg as { role: string }).role === "assistant",
-      );
-      expect(assistantCalls).toHaveLength(0);
+      // updateMessage should NOT be called when content is empty
+      expect(messageService.updateMessage).not.toHaveBeenCalled();
     });
 
     it("resets accumulated content after agent_end so next prompt starts fresh", async () => {
@@ -301,10 +301,7 @@ describe("AgentSession", () => {
       });
       await triggerEvent({ type: "agent_end", messages: [] });
 
-      const assistantCalls = messageService.addMessage.mock.calls.filter(
-        ([arg]) => (arg as { role: string }).role === "assistant",
-      );
-      expect(assistantCalls[0][0].content).toBe("Second");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Second");
     });
 
     it("ignores non-text_delta message_update events", async () => {
@@ -849,12 +846,9 @@ describe("AgentSession", () => {
       await triggerEvent({ type: "agent_end", messages: [] });
       await triggerEvent({ type: "agent_end", messages: [] });
 
-      expect(messageService.addMessage).toHaveBeenCalledTimes(2); // 1 user + 1 assistant
-      const assistantCalls = messageService.addMessage.mock.calls.filter(
-        ([arg]) => (arg as { role: string }).role === "assistant",
-      );
-      expect(assistantCalls).toHaveLength(1);
-      expect(assistantCalls[0][0].content).toBe("answer");
+      expect(messageService.addMessage).toHaveBeenCalledTimes(2); // 1 user + 1 assistant placeholder
+      expect(messageService.updateMessage).toHaveBeenCalledTimes(1);
+      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "answer");
     });
 
     it("resets dedup guard for the next turn", async () => {
@@ -874,11 +868,8 @@ describe("AgentSession", () => {
       });
       await triggerEvent({ type: "agent_end", messages: [] });
 
-      const assistantCalls = messageService.addMessage.mock.calls.filter(
-        ([arg]) => (arg as { role: string }).role === "assistant",
-      );
-      expect(assistantCalls).toHaveLength(1);
-      expect(assistantCalls[0][0].content).toBe("B");
+      expect(messageService.updateMessage).toHaveBeenCalledTimes(1);
+      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "B");
     });
   });
 

@@ -23,15 +23,20 @@ export async function handleTurnCompletion(event: AgentEvent, ctx: HandlerContex
   const userContent = ctx.state.lastUserContent;
   ctx.state.assistantContent = "";
   ctx.state.lastUserContent = "";
+  ctx.state.streamChunkCount = 0;
 
   if (content && userContent && ctx.state.savedForTurn !== ctx.state.currentTurnId) {
     ctx.state.savedForTurn = ctx.state.currentTurnId;
     try {
-      await ctx.messageService.addMessage({
-        projectId: ctx.projectId,
-        role: "assistant",
-        content,
-      });
+      if (ctx.state.streamingMessageId) {
+        await ctx.messageService.updateMessage(ctx.state.streamingMessageId, content);
+      } else {
+        await ctx.messageService.addMessage({
+          projectId: ctx.projectId,
+          role: "assistant",
+          content,
+        });
+      }
       await ctx.memoryManager.save(ctx.projectId, [
         { role: "user", content: userContent },
         { role: "assistant", content },
@@ -41,5 +46,6 @@ export async function handleTurnCompletion(event: AgentEvent, ctx: HandlerContex
     }
   }
 
+  ctx.state.streamingMessageId = null;
   ctx.eventBus.emit({ type: "agent:done", payload: { projectId: ctx.projectId } });
 }

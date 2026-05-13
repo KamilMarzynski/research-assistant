@@ -352,6 +352,14 @@ export class MessagePipeline {
         role: "user",
         content,
       });
+
+      const streamingMsg = await this.messageService.addMessage({
+        projectId: this.projectId,
+        role: "assistant",
+        content: "",
+      });
+      this.state.streamingMessageId = streamingMsg.id;
+
       await this.agent.prompt(content);
     } catch (err) {
       this.state.activeTurnSpan?.update({ metadata: { error: String(err) } });

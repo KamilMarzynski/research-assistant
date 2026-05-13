@@ -20,6 +20,8 @@ export interface SessionState {
   sessionId: string;
   turnTraceId: string | null;
   turnSpanId: string | null;
+  streamingMessageId: string | null;
+  streamChunkCount: number;
 }
 
 /** Dependencies injected into every event handler. */

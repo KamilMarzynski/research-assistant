@@ -17,6 +17,7 @@ function makeMessage(overrides: Partial<Message> = {}): Message {
 function makeMockRepo(overrides: Partial<IMessageRepository> = {}): IMessageRepository {
   return {
     create: vi.fn().mockResolvedValue(makeMessage()),
+    updateContent: vi.fn().mockResolvedValue(undefined),
     listByProject: vi.fn().mockResolvedValue([]),
     getRecent: vi.fn().mockResolvedValue([]),
     ...overrides,

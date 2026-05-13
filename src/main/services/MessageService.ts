@@ -18,6 +18,10 @@ export class MessageService {
     return this.repo.create(data);
   }
 
+  async updateMessage(id: string, content: string): Promise<void> {
+    return this.repo.updateContent(id, content);
+  }
+
   async getHistory(projectId: string): Promise<Message[]> {
     return this.repo.listByProject(projectId);
   }

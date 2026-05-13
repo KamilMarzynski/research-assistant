@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
-import { decodeMessageChunk, decodeMessageDone } from "../../../../shared/ipc-guards";
 import type { Message, Project } from "../../../../shared/types";
 import { useProject } from "../../../contexts/ProjectContext";
+import { useStreamState } from "../../../contexts/StreamStateContext";
 import WindowDragBar from "../../layout/WindowDragBar";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -14,11 +14,14 @@ import ResearchStatusBar from "./ResearchStatusBar";
 
 export default function ChatPanel() {
   const { activeProjectId } = useProject();
+  const { states, startStream } = useStreamState();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
-  const [processing, setProcessing] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+
+  const projectState = activeProjectId ? states[activeProjectId] : undefined;
+  const streamingContent = projectState?.streamingContent ?? null;
+  const processing = projectState?.processing ?? false;
 
   // Check API key once on mount
   useEffect(() => {
@@ -32,63 +35,36 @@ export default function ChatPanel() {
   useEffect(() => {
     if (!activeProjectId) {
       setMessages([]);
-      setStreamingContent(null);
-      setProcessing(false);
       return;
     }
-    setStreamingContent(null);
-    setProcessing(false);
     window.electronAPI
       .invoke(IPC.GET_MESSAGES, { projectId: activeProjectId })
       .then((msgs) => setMessages(msgs));
     window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
   }, [activeProjectId]);
 
-  const activeProject = projects.find((p) => p.id === activeProjectId);
-
-  // Subscribe to streaming events
+  // Reload messages from DB when the active project finishes streaming
+  const prevProcessingRef = useRef(false);
   useEffect(() => {
-    const unsubChunk = window.electronAPI.on(IPC.MESSAGE_CHUNK, (data) => {
-      const chunk = decodeMessageChunk(data);
-      if (chunk === null) return;
-      // Ignore chunks for other projects
-      if (chunk.projectId && chunk.projectId !== activeProjectId) return;
-      setStreamingContent((prev) => (prev ?? "") + chunk.delta);
-    });
-
-    const unsubDone = window.electronAPI.on(IPC.MESSAGE_DONE, (data) => {
-      const done = decodeMessageDone(data);
-      if (done === null) return;
-      // Ignore done events for other projects
-      if (done.projectId && done.projectId !== activeProjectId) return;
-      setProcessing(false);
-      setStreamingContent((prev) => {
-        if (prev?.startsWith("⚠️ No API key configured")) {
-          setHasApiKey(false);
-        }
-        return null;
-      });
+    if (!activeProjectId) return;
+    const wasProcessing = prevProcessingRef.current;
+    prevProcessingRef.current = processing;
+    if (wasProcessing && !processing) {
+      window.electronAPI
+        .invoke(IPC.GET_MESSAGES, { projectId: activeProjectId })
+        .then((msgs) => setMessages(msgs));
       // Re-check API key state from settings after each message
       window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
         setHasApiKey(settings.hasApiKey);
       });
-      // Reload messages from DB to get canonical state (prevents duplicates)
-      if (activeProjectId) {
-        window.electronAPI
-          .invoke(IPC.GET_MESSAGES, { projectId: activeProjectId })
-          .then((msgs) => setMessages(msgs));
-      }
-    });
+    }
+  }, [processing, activeProjectId]);
 
-    return () => {
-      unsubChunk();
-      unsubDone();
-    };
-  }, [activeProjectId]);
+  const activeProject = projects.find((p) => p.id === activeProjectId);
 
   const handleSend = (content: string) => {
     if (!activeProjectId || processing) return;
-    setProcessing(true);
+    startStream(activeProjectId);
     setMessages((prev) => [
       ...prev,
       {

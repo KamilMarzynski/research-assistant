@@ -23,6 +23,7 @@ import {
   IconX,
 } from "../../components/shared/Icons";
 import { useProject } from "../../contexts/ProjectContext";
+import { useStreamState } from "../../contexts/StreamStateContext";
 import WindowDragBar from "./WindowDragBar";
 
 interface LeftSidebarProps {
@@ -61,6 +62,7 @@ function ProviderIcon({ provider, size = 18 }: { provider: string; size?: number
 
 export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const { activeProjectId, setActiveProjectId } = useProject();
+  const { states } = useStreamState();
   const [projects, setProjects] = useState<Project[]>([]);
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [creating, setCreating] = useState(false);
@@ -243,7 +245,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
               style={itemStyle}
             >
               <span
-                className={`dot ${isActive ? "dot--accent" : "dot--idle"}`}
+                className={`dot ${isActive ? "dot--accent" : "dot--idle"} ${states[p.id]?.processing ? "dot--pulse" : ""}`}
                 style={{ flexShrink: 0 }}
               />
               <span
