@@ -25,7 +25,7 @@ export interface ReadMemoryOptions {
   category?: string;
   query?: string;
   scope: "app" | "project" | "both";
-  projectFolderPath?: string;
+  scholarProjectPath?: string;
 }
 
 @injectable()
@@ -43,7 +43,7 @@ export class MemoryFileService {
     title: string,
     content: string,
     scope: "app" | "project",
-    projectFolderPath?: string,
+    scholarProjectPath?: string,
   ): Promise<SaveMemoryResult> {
     const safeCategory = VALID_CATEGORIES.includes(category as MemoryCategory)
       ? category
@@ -54,9 +54,9 @@ export class MemoryFileService {
     const targetDir =
       scope === "app"
         ? join(this.appMemoryPath, safeCategory)
-        : projectFolderPath
-          ? join(projectFolderPath, ".agents", "memory", safeCategory)
-          : join(this.projectMemoryPath, ".agents", "memory", safeCategory);
+        : scholarProjectPath
+          ? join(scholarProjectPath, "memories", safeCategory)
+          : join(this.projectMemoryPath, "memories", safeCategory);
 
     // Attempt to write; fall back to app dir on failure
     let actualDir = targetDir;
@@ -72,7 +72,7 @@ export class MemoryFileService {
     const zones = [
       this.appMemoryPath,
       this.projectMemoryPath,
-      ...(projectFolderPath ? [resolve(normalize(projectFolderPath))] : []),
+      ...(scholarProjectPath ? [resolve(normalize(scholarProjectPath))] : []),
     ];
     const result = this.allowlistService.isAllowed(projectId, resolvedPath, "write", zones);
     if (!result.allowed) {
@@ -109,9 +109,10 @@ export class MemoryFileService {
       dirs.push(this.appMemoryPath);
     }
     if (options.scope === "project" || options.scope === "both") {
-      dirs.push(join(this.projectMemoryPath, ".agents", "memory"));
-      if (options.projectFolderPath) {
-        dirs.push(join(options.projectFolderPath, ".agents", "memory"));
+      if (options.scholarProjectPath) {
+        dirs.push(join(options.scholarProjectPath, "memories"));
+      } else {
+        dirs.push(join(this.projectMemoryPath, "memories"));
       }
     }
 

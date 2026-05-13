@@ -78,7 +78,7 @@ describe("MemoryFileService", () => {
     await rm(readOnlyProjectDir, { recursive: true, force: true });
   });
 
-  it("uses projectFolderPath when provided for saveMemory", async () => {
+  it("uses scholarProjectPath when provided for saveMemory", async () => {
     const projectDir = join(tmpdir(), `proj-${Date.now()}`);
     await mkdir(projectDir, { recursive: true });
     const result = await service.saveMemory(
@@ -89,16 +89,16 @@ describe("MemoryFileService", () => {
       "project",
       projectDir,
     );
-    expect(result.path.startsWith(join(projectDir, ".agents", "memory"))).toBe(true);
+    expect(result.path.startsWith(join(projectDir, "memories"))).toBe(true);
     await rm(projectDir, { recursive: true, force: true });
   });
 
-  it("uses projectFolderPath when provided for readMemory", async () => {
+  it("uses scholarProjectPath when provided for readMemory", async () => {
     const projectDir = join(tmpdir(), `proj-${Date.now()}`);
     await mkdir(projectDir, { recursive: true });
     await service.saveMemory("proj-1", "philosophy", "H", "project content", "project", projectDir);
 
-    const result = await service.readMemory({ scope: "project", projectFolderPath: projectDir });
+    const result = await service.readMemory({ scope: "project", scholarProjectPath: projectDir });
     expect(result).toContain("H");
     expect(result).toContain("project content");
     await rm(projectDir, { recursive: true, force: true });

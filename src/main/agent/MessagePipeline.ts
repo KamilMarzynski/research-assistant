@@ -228,13 +228,15 @@ export class MessagePipeline {
         ? (category, title, content, scope) => {
             const svc = options.memoryFileService;
             if (!svc) return Promise.resolve({ path: "" });
+            const scholarProjectPath =
+              options.projectPath ?? join(this.homePath, "projects", options.projectId);
             return svc.saveMemory(
               options.projectId,
               category,
               title,
               content,
               scope,
-              options.folderPath ?? undefined,
+              scholarProjectPath,
             );
           }
         : undefined,
@@ -242,9 +244,11 @@ export class MessagePipeline {
         ? (readOptions) => {
             const svc = options.memoryFileService;
             if (!svc) return Promise.resolve("");
+            const scholarProjectPath =
+              options.projectPath ?? join(this.homePath, "projects", options.projectId);
             return svc.readMemory({
               ...readOptions,
-              projectFolderPath: options.folderPath ?? undefined,
+              scholarProjectPath,
             });
           }
         : undefined,
