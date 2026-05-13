@@ -40,7 +40,7 @@ export class AgentTracer {
     this.metadata = options.metadata;
   }
 
-  async startTurn(input: unknown): Promise<void> {
+  async startTurn(input: unknown, extraMetadata?: Record<string, unknown>): Promise<void> {
     if (!this.observabilityService) return;
 
     // End any lingering previous turn to prevent span leaks
@@ -53,7 +53,10 @@ export class AgentTracer {
       input,
       parentSpanContext: this.parentSpanContext,
       sessionId: this.sessionId,
-      metadata: this.metadata,
+      metadata: {
+        ...this.metadata,
+        ...extraMetadata,
+      },
     });
 
     if (span) {

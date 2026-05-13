@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "../services/AllowlistService";
 
-// Capture the subscriber so tests can trigger Pi events manually
-let capturedSubscriber: ((event: unknown) => Promise<void>) | null = null;
+// Capture subscribers so tests can trigger Pi events manually
+const subscribers: Array<(event: unknown) => Promise<void>> = [];
 
 const mockAgent = {
   subscribe: vi.fn((cb: (event: unknown) => Promise<void>) => {
-    capturedSubscriber = cb;
+    subscribers.push(cb);
   }),
   prompt: vi.fn().mockResolvedValue(undefined),
   abort: vi.fn(),
@@ -51,10 +51,11 @@ vi.mock("./context", () => ({
 
 const { AgentSession } = await import("./session");
 
-function triggerEvent(event: unknown) {
-  expect(capturedSubscriber).not.toBeNull();
-  // biome-ignore lint/style/noNonNullAssertion: expect() above narrowed the type
-  return capturedSubscriber!(event);
+async function triggerEvent(event: unknown) {
+  expect(subscribers.length).toBeGreaterThan(0);
+  for (const subscriber of subscribers) {
+    await subscriber(event);
+  }
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: vitest 4 does not export vi.mocked
@@ -122,7 +123,7 @@ describe("AgentSession", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    capturedSubscriber = null;
+    subscribers.length = 0;
     messageService = makeMessageService();
     eventBus = makeEventBus();
     session = new AgentSession({

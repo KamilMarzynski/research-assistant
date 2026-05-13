@@ -9,6 +9,7 @@ import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ObservabilityService } from "../services/ObservabilityService";
 import type { ResearchService } from "../services/ResearchService";
+import { AgentTracer } from "./AgentTracer";
 import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { CompressionService } from "./CompressionService";
 import { buildSystemContext } from "./context";
@@ -130,6 +131,7 @@ export interface MessagePipelineOptions {
 
 export class MessagePipeline {
   readonly agent: Agent;
+  readonly tracer: AgentTracer;
   private readonly projectId: string;
   private readonly projectName: string;
   private readonly projectPath: string | null;
@@ -155,6 +157,12 @@ export class MessagePipeline {
     this.memoryManager = options.memoryManager;
     this.eventBus = options.eventBus;
     this.observabilityService = options.observabilityService;
+
+    this.tracer = new AgentTracer({
+      observabilityService: options.observabilityService,
+      provider: options.provider,
+      sessionId: this.state.sessionId,
+    });
 
     this.skillRouter = createDefaultSkillRouter(
       options.projectPath ?? undefined,
@@ -282,23 +290,15 @@ export class MessagePipeline {
     this.state.savedForTurn = 0;
 
     try {
-      this.state.activeTurnSpan =
-        (await this.observabilityService?.startObservation("agent-turn", {
-          asType: "agent",
-          input: { role: "user", content },
-          sessionId: this.state.sessionId,
-          metadata: {
-            turnNumber: this.state.currentTurnId,
-            projectId: this.projectId,
-            systemPrompt: this.agent.state.systemPrompt,
-            messages: this.agent.state.messages,
-          },
-        })) ?? null;
-
-      if (this.state.activeTurnSpan) {
-        this.state.turnTraceId = this.state.activeTurnSpan.traceId;
-        this.state.turnSpanId = this.state.activeTurnSpan.spanId;
-      }
+      await this.tracer.startTurn(
+        { role: "user", content },
+        {
+          turnNumber: this.state.currentTurnId,
+          projectId: this.projectId,
+          systemPrompt: this.agent.state.systemPrompt,
+          messages: this.agent.state.messages,
+        },
+      );
 
       try {
         if (!this.state.skillRouterReady) {
@@ -364,7 +364,7 @@ export class MessagePipeline {
 
       await this.agent.prompt(content);
     } catch (err) {
-      this.state.activeTurnSpan?.update({ metadata: { error: String(err) } });
+      this.tracer.endTurn({ error: String(err) });
       throw err;
     } finally {
       this.state.processing = false;
@@ -386,25 +386,14 @@ export class MessagePipeline {
       this.state.currentTurnId++;
       this.state.savedForTurn = 0;
 
-      void this.observabilityService
-        ?.startObservation("agent-turn", {
-          asType: "agent",
-          input: { role: "user", content },
-          sessionId: this.state.sessionId,
-          metadata: {
-            turnNumber: this.state.currentTurnId,
-            projectId: this.projectId,
-            followUp: true,
-            systemPrompt: this.agent.state.systemPrompt,
-          },
-        })
-        .then((span) => {
-          this.state.activeTurnSpan = span ?? null;
-          if (span) {
-            this.state.turnTraceId = span.traceId;
-            this.state.turnSpanId = span.spanId;
-          }
-        });
+      void this.tracer.startTurn(
+        { role: "user", content },
+        {
+          turnNumber: this.state.currentTurnId,
+          projectId: this.projectId,
+          followUp: true,
+        },
+      );
 
       await this.agent.followUp({ role: "user", content, timestamp: Date.now() });
     } catch (err) {
