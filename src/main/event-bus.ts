@@ -42,7 +42,25 @@ type AppEvent =
       payload: { path: string; mode: "read" | "write"; projectId: string };
     }
   | { type: "agent:chunk"; payload: { projectId: string; delta: string } }
-  | { type: "agent:done"; payload: { projectId: string } };
+  | { type: "agent:done"; payload: { projectId: string } }
+  | {
+      type: "agent:tool_start";
+      payload: {
+        projectId: string;
+        toolCallId: string;
+        toolName: string;
+        description: string;
+      };
+    }
+  | {
+      type: "agent:tool_end";
+      payload: {
+        projectId: string;
+        toolCallId: string;
+        toolName: string;
+        isError: boolean;
+      };
+    };
 
 @injectable()
 export class EventBus {

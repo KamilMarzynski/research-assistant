@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { AgentEvent } from "@mariozechner/pi-agent-core";
 import { handleStreamChunk } from "./stream-chunk";
 import type { HandlerContext } from "./types";
 
@@ -121,9 +122,14 @@ describe("handleStreamChunk — tool events", () => {
     await handleStreamChunk(
       {
         type: "message_update",
-        message: {},
-        assistantMessageEvent: { type: "text_delta", delta: "Hello" },
-      },
+        message: { content: [] },
+        assistantMessageEvent: {
+          type: "text_delta",
+          delta: "Hello",
+          contentIndex: 0,
+          partial: { content: [] },
+        },
+      } as any,
       ctx,
     );
     expect(ctx.state.assistantContent).toBe("Hello");
