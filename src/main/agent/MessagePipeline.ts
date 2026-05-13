@@ -308,6 +308,7 @@ export class MessagePipeline {
         }
 
         const memoryContext = await this.memoryManager.buildContext(this.projectId);
+        console.log(JSON.stringify(memoryContext.summary, null, 2));
         const systemContext = await buildSystemContext(
           this.projectPath ?? join(this.homePath, "projects", this.projectId),
           this.folderPath,

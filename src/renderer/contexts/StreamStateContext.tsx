@@ -1,4 +1,12 @@
-import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { IPC } from "../../shared/ipc-channels";
 import { decodeMessageChunk, decodeMessageDone } from "../../shared/ipc-guards";
 
@@ -28,17 +36,50 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
   const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const STREAM_TIMEOUT_MS = 300_000;
 
-  const clearTimer = (projectId: string) => {
+  const clearTimer = useCallback((projectId: string) => {
     const timer = timersRef.current[projectId];
     if (timer) {
       clearTimeout(timer);
       delete timersRef.current[projectId];
     }
-  };
+  }, []);
 
-  const startTimer = (projectId: string) => {
-    clearTimer(projectId);
-    timersRef.current[projectId] = setTimeout(() => {
+  const startTimer = useCallback(
+    (projectId: string) => {
+      clearTimer(projectId);
+      timersRef.current[projectId] = setTimeout(() => {
+        setStates((prev) => {
+          const next = { ...prev };
+          if (next[projectId]) {
+            next[projectId] = { ...next[projectId], streamingContent: null, processing: false };
+          }
+          return next;
+        });
+      }, STREAM_TIMEOUT_MS);
+    },
+    [clearTimer],
+  );
+
+  const startStream = useCallback(
+    (projectId: string) => {
+      setStates((prev) => {
+        const existing = prev[projectId];
+        return {
+          ...prev,
+          [projectId]: {
+            streamingContent: existing?.streamingContent ?? null,
+            processing: true,
+          },
+        };
+      });
+      startTimer(projectId);
+    },
+    [startTimer],
+  );
+
+  const endStream = useCallback(
+    (projectId: string) => {
+      clearTimer(projectId);
       setStates((prev) => {
         const next = { ...prev };
         if (next[projectId]) {
@@ -46,33 +87,9 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
         }
         return next;
       });
-    }, STREAM_TIMEOUT_MS);
-  };
-
-  const startStream = (projectId: string) => {
-    setStates((prev) => {
-      const existing = prev[projectId];
-      return {
-        ...prev,
-        [projectId]: {
-          streamingContent: existing?.streamingContent ?? null,
-          processing: true,
-        },
-      };
-    });
-    startTimer(projectId);
-  };
-
-  const endStream = (projectId: string) => {
-    clearTimer(projectId);
-    setStates((prev) => {
-      const next = { ...prev };
-      if (next[projectId]) {
-        next[projectId] = { ...next[projectId], streamingContent: null, processing: false };
-      }
-      return next;
-    });
-  };
+    },
+    [clearTimer],
+  );
 
   useEffect(() => {
     const unsubChunk = window.electronAPI.on(IPC.MESSAGE_CHUNK, (data) => {
@@ -117,7 +134,7 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
       }
       timersRef.current = {};
     };
-  }, []);
+  }, [endStream, startTimer]);
 
   return (
     <StreamStateContext.Provider value={{ states, startStream, endStream }}>
