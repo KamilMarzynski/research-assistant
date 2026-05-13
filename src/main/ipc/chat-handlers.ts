@@ -6,7 +6,7 @@ import { buildSystemContext } from "../agent/context";
 import { resolveProvider } from "../agent/model-provider";
 import { AgentSession } from "../agent/session";
 import type { EventBus } from "../event-bus";
-import { ProjectIdSchema, SendMessageSchema } from "../ipc-validation";
+import { AbortMessageSchema, ProjectIdSchema, SendMessageSchema } from "../ipc-validation";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
@@ -193,5 +193,11 @@ export function registerChatHandler(
       releaseLock?.();
       sendLocks.delete(projectId);
     }
+  });
+
+  ipcMain.handle(IPC.ABORT_MESSAGE, async (_event, payload: unknown) => {
+    const parsed = parseOrThrow(AbortMessageSchema, payload, "ABORT_MESSAGE");
+    const session = sessionManager.get(parsed.projectId);
+    session?.abort();
   });
 }
