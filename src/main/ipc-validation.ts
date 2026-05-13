@@ -93,3 +93,7 @@ export const ToggleSkillSchema = z.object({
 export const DeleteSkillSchema = z.object({
   name: z.string(),
 });
+
+export const AbortMessageSchema = z.object({
+  projectId: z.string(),
+});
