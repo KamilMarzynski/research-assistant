@@ -1,6 +1,8 @@
 import { Agent } from "@mariozechner/pi-agent-core";
 import { z } from "zod/v4";
 import type { AllowlistService } from "../services/AllowlistService";
+import type { ObservabilityService } from "../services/ObservabilityService";
+import { AgentTracer } from "./AgentTracer";
 import { loadSkillsByContent } from "./context";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
@@ -38,6 +40,8 @@ export interface WorkerAgentConfig {
   onProgress?: (label: string, delta: string) => void;
   webAccessEnabled?: boolean;
   allowlistService: AllowlistService;
+  observabilityService?: ObservabilityService;
+  parentSpanContext?: { traceId: string; spanId: string };
 }
 
 export interface WorkerAgent {
@@ -232,6 +236,13 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     allowlistService,
   } = config;
 
+  const tracer = new AgentTracer({
+    observabilityService: config.observabilityService,
+    provider: config.provider,
+    parentSpanContext: config.parentSpanContext,
+    metadata: { agentLabel: config.agentLabel },
+  });
+
   // Depth-guard: remove orchestrator-only tools when at leaf depth
   const effectiveToolNames =
     remainingDepth === 0 ? toolNames.filter((t) => !ORCHESTRATOR_ONLY_TOOLS.has(t)) : toolNames;
@@ -268,7 +279,12 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     ): Promise<SpawnResult> => {
       const effectiveLabel = label ?? `[${type}]`;
       const childConfig = AGENT_TYPE_PRESETS[type](base, outputPath, remainingDepth);
-      const { run } = await createWorkerAgent({ ...childConfig, agentLabel: effectiveLabel });
+      const { run } = await createWorkerAgent({
+        ...childConfig,
+        agentLabel: effectiveLabel,
+        observabilityService: config.observabilityService,
+        parentSpanContext: tracer.getSpanContext() ?? undefined,
+      });
       const summary = await run(query);
       return { outputPath, summary };
     };
@@ -334,25 +350,35 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
   const run = (input: string): Promise<string> =>
     new Promise<string>((resolve, reject) => {
       let output = "";
-      const unsubscribe = agent.subscribe(async (event) => {
-        const e = event as {
-          type: string;
-          assistantMessageEvent?: { type: string; delta: string };
-        };
-        if (e.type === "message_update") {
-          const ae = e.assistantMessageEvent;
-          if (ae?.type === "text_delta") {
-            output += ae.delta;
-            config.onProgress?.(config.agentLabel ?? "", ae.delta);
+
+      tracer.startTurn({ query: input }).then(() => {
+        const unsubscribe = agent.subscribe(async (event) => {
+          const e = event as {
+            type: string;
+            assistantMessageEvent?: { type: string; delta: string };
+          };
+          if (e.type === "message_update") {
+            const ae = e.assistantMessageEvent;
+            if (ae?.type === "text_delta") {
+              output += ae.delta;
+              config.onProgress?.(config.agentLabel ?? "", ae.delta);
+            }
+          } else if (e.type === "agent_end") {
+            unsubscribe();
+            tracer.endTurn({ summary: output });
+            resolve(output);
           }
-        } else if (e.type === "agent_end") {
+        });
+
+        // Also subscribe tracer for generation/tool spans
+        const unsubscribeTracer = tracer.subscribeToAgent(agent);
+
+        agent.prompt(input).catch((err) => {
           unsubscribe();
-          resolve(output);
-        }
-      });
-      agent.prompt(input).catch((err) => {
-        unsubscribe();
-        reject(err);
+          unsubscribeTracer();
+          tracer.endTurn({ error: String(err) });
+          reject(err);
+        });
       });
     });
 

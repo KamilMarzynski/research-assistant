@@ -1,14 +1,21 @@
+import "reflect-metadata";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AllowlistService } from "../services/AllowlistService";
 
-// Captured subscriber so tests can fire Pi events manually
-let capturedSubscriber: ((event: unknown) => Promise<void>) | null = null;
+// Captured subscribers so tests can fire Pi events manually
+const subscribers: Array<(event: unknown) => Promise<void>> = [];
 const mockUnsubscribe = vi.fn();
+
+async function broadcastEvent(event: unknown): Promise<void> {
+  for (const sub of subscribers) {
+    await sub(event);
+  }
+}
 
 const mockAgent = {
   state: { tools: [] as never[], systemPrompt: "" },
   subscribe: vi.fn((cb: (event: unknown) => Promise<void>) => {
-    capturedSubscriber = cb;
+    subscribers.push(cb);
     return mockUnsubscribe;
   }),
   prompt: vi.fn().mockResolvedValue(undefined),
@@ -63,11 +70,11 @@ const BASE_CONFIG = {
 
 describe("createWorkerAgent", () => {
   beforeEach(() => {
-    capturedSubscriber = null;
+    subscribers.length = 0;
     vi.clearAllMocks();
     mockAgent.state.tools = [];
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
-      capturedSubscriber = cb;
+      subscribers.push(cb);
       return mockUnsubscribe;
     });
     mockAgent.prompt.mockResolvedValue(undefined);
@@ -87,15 +94,15 @@ describe("createWorkerAgent", () => {
 
   it("run() resolves with accumulated text_delta chunks", async () => {
     mockAgent.prompt.mockImplementation(async () => {
-      await capturedSubscriber?.({
+      await broadcastEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "Hello " },
       });
-      await capturedSubscriber?.({
+      await broadcastEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "world" },
       });
-      await capturedSubscriber?.({ type: "agent_end" });
+      await broadcastEvent({ type: "agent_end" });
     });
 
     const { run } = await createWorkerAgent(BASE_CONFIG);
@@ -108,15 +115,45 @@ describe("createWorkerAgent", () => {
     const { run } = await createWorkerAgent(BASE_CONFIG);
     await expect(run("test")).rejects.toThrow("network error");
   });
+
+  it("creates AgentTracer with parentSpanContext when provided", async () => {
+    const startObservation = vi.fn().mockResolvedValue({
+      update: vi.fn(),
+      end: vi.fn(),
+      traceId: "child-trace",
+      spanId: "child-span",
+    });
+
+    mockAgent.prompt.mockImplementation(async () => {
+      await broadcastEvent({ type: "agent_end" });
+    });
+
+    const { run } = await createWorkerAgent({
+      ...BASE_CONFIG,
+      observabilityService: {
+        startObservation,
+      } as unknown as import("../services/ObservabilityService").ObservabilityService,
+      parentSpanContext: { traceId: "parent-t", spanId: "parent-s" },
+    });
+
+    await run("query");
+
+    expect(startObservation).toHaveBeenCalledWith(
+      "agent-turn",
+      expect.objectContaining({
+        parentSpanContext: { traceId: "parent-t", spanId: "parent-s" },
+      }),
+    );
+  });
 });
 
 describe("createWorkerAgent – depth limit", () => {
   beforeEach(() => {
-    capturedSubscriber = null;
+    subscribers.length = 0;
     vi.clearAllMocks();
     mockAgent.state.tools = [];
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
-      capturedSubscriber = cb;
+      subscribers.push(cb);
       return mockUnsubscribe;
     });
     mockAgent.prompt.mockResolvedValue(undefined);
@@ -152,7 +189,7 @@ describe("createWorkerAgent – depth limit", () => {
 
 describe("createWorkerAgent – AGENT_TYPE_PRESETS (spawn label propagation)", () => {
   beforeEach(async () => {
-    capturedSubscriber = null;
+    subscribers.length = 0;
     vi.clearAllMocks();
     mockAgent.state.tools = [];
     const { Agent } = await import("@mariozechner/pi-agent-core");
@@ -160,11 +197,11 @@ describe("createWorkerAgent – AGENT_TYPE_PRESETS (spawn label propagation)", (
       return mockAgent;
     } as never);
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
-      capturedSubscriber = cb;
+      subscribers.push(cb);
       return mockUnsubscribe;
     });
     mockAgent.prompt.mockImplementation(async () => {
-      await capturedSubscriber?.({ type: "agent_end" });
+      await broadcastEvent({ type: "agent_end" });
     });
   });
 
@@ -283,11 +320,11 @@ describe("createWorkerAgent – AGENT_TYPE_PRESETS (spawn label propagation)", (
 
 describe("createWorkerAgent – onProgress", () => {
   beforeEach(() => {
-    capturedSubscriber = null;
+    subscribers.length = 0;
     vi.clearAllMocks();
     mockAgent.state.tools = [];
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
-      capturedSubscriber = cb;
+      subscribers.push(cb);
       return mockUnsubscribe;
     });
     mockAgent.prompt.mockResolvedValue(undefined);
@@ -296,11 +333,11 @@ describe("createWorkerAgent – onProgress", () => {
   it("run() calls onProgress with agentLabel and delta for each text_delta", async () => {
     const onProgress = vi.fn();
     mockAgent.prompt.mockImplementation(async () => {
-      await capturedSubscriber?.({
+      await broadcastEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "chunk" },
       });
-      await capturedSubscriber?.({ type: "agent_end" });
+      await broadcastEvent({ type: "agent_end" });
     });
     const { run } = await createWorkerAgent({
       ...BASE_CONFIG,
@@ -314,11 +351,11 @@ describe("createWorkerAgent – onProgress", () => {
   it("run() uses empty string label when agentLabel not set", async () => {
     const onProgress = vi.fn();
     mockAgent.prompt.mockImplementation(async () => {
-      await capturedSubscriber?.({
+      await broadcastEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "x" },
       });
-      await capturedSubscriber?.({ type: "agent_end" });
+      await broadcastEvent({ type: "agent_end" });
     });
     const { run } = await createWorkerAgent({ ...BASE_CONFIG, onProgress });
     await run("test");
@@ -327,11 +364,11 @@ describe("createWorkerAgent – onProgress", () => {
 
   it("run() does not throw when onProgress is not provided", async () => {
     mockAgent.prompt.mockImplementation(async () => {
-      await capturedSubscriber?.({
+      await broadcastEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "y" },
       });
-      await capturedSubscriber?.({ type: "agent_end" });
+      await broadcastEvent({ type: "agent_end" });
     });
     const { run } = await createWorkerAgent(BASE_CONFIG);
     await expect(run("test")).resolves.toBe("y");
@@ -352,7 +389,7 @@ describe("createWorkerAgent – onProgress", () => {
 
 describe("makeEvaluatorFn", () => {
   beforeEach(async () => {
-    capturedSubscriber = null;
+    subscribers.length = 0;
     vi.clearAllMocks();
     mockAgent.state.tools = [];
     // Restore Agent mock to return shared mockAgent
@@ -361,7 +398,7 @@ describe("makeEvaluatorFn", () => {
       return mockAgent;
     } as never);
     mockAgent.subscribe.mockImplementation((cb: (event: unknown) => Promise<void>) => {
-      capturedSubscriber = cb;
+      subscribers.push(cb);
       return mockUnsubscribe;
     });
   });
@@ -372,11 +409,11 @@ describe("makeEvaluatorFn", () => {
       criteria: [{ name: "completeness", pass: true, rationale: "All sections present" }],
     };
     mockAgent.prompt.mockImplementation(async () => {
-      await capturedSubscriber?.({
+      await broadcastEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: JSON.stringify(verdict) },
       });
-      await capturedSubscriber?.({ type: "agent_end" });
+      await broadcastEvent({ type: "agent_end" });
     });
 
     const fn = makeEvaluatorFn({ ...BASE_CONFIG });
@@ -387,11 +424,11 @@ describe("makeEvaluatorFn", () => {
 
   it("returns parse-error verdict when evaluator output contains no JSON", async () => {
     mockAgent.prompt.mockImplementation(async () => {
-      await capturedSubscriber?.({
+      await broadcastEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: "Sorry, I cannot evaluate this." },
       });
-      await capturedSubscriber?.({ type: "agent_end" });
+      await broadcastEvent({ type: "agent_end" });
     });
 
     const fn = makeEvaluatorFn({ ...BASE_CONFIG });
@@ -403,11 +440,11 @@ describe("makeEvaluatorFn", () => {
 
   it("returns parse-error verdict when evaluator output has malformed JSON", async () => {
     mockAgent.prompt.mockImplementation(async () => {
-      await capturedSubscriber?.({
+      await broadcastEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: '{ "pass": true, broken }' },
       });
-      await capturedSubscriber?.({ type: "agent_end" });
+      await broadcastEvent({ type: "agent_end" });
     });
 
     const fn = makeEvaluatorFn({ ...BASE_CONFIG });
@@ -419,11 +456,11 @@ describe("makeEvaluatorFn", () => {
 
   it("returns parse-error verdict when evaluator output has valid JSON but wrong schema", async () => {
     mockAgent.prompt.mockImplementation(async () => {
-      await capturedSubscriber?.({
+      await broadcastEvent({
         type: "message_update",
         assistantMessageEvent: { type: "text_delta", delta: '{ "foo": "bar" }' },
       });
-      await capturedSubscriber?.({ type: "agent_end" });
+      await broadcastEvent({ type: "agent_end" });
     });
 
     const fn = makeEvaluatorFn({ ...BASE_CONFIG });

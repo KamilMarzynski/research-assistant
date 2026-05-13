@@ -101,7 +101,7 @@ describe("AgentTracer", () => {
       input: "hello",
       parentSpanContext: undefined,
       sessionId: undefined,
-      metadata: undefined,
+      metadata: {},
     });
     expect(tracer.getSpanContext()).toEqual({ traceId: "trace-turn", spanId: "span-turn" });
   });
