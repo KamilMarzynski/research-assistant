@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
 
-import { render, screen, act } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { act, render, screen } from "@testing-library/react";
 import { useContext } from "react";
-import { StreamStateContext, StreamStateProvider } from "../StreamStateContext";
-import type { StreamSegment } from "../StreamStateContext";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { IPC } from "../../../shared/ipc-channels";
+import type { StreamSegment } from "../StreamStateContext";
+import { StreamStateContext, StreamStateProvider } from "../StreamStateContext";
 
 type ListenerMap = Record<string, ((data: unknown) => void)[]>;
 

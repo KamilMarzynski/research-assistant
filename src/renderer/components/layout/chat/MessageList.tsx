@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { Message } from "../../../../shared/types";
+import type { StreamSegment } from "../../../contexts/StreamStateContext";
 import ActivityPill from "../../shared/ActivityPill";
 import MarkdownRenderer from "../../shared/MarkdownRenderer";
-import type { StreamSegment } from "../../../contexts/StreamStateContext";
 
 interface MessageListProps {
   messages: Message[];

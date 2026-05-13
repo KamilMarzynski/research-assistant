@@ -61,7 +61,7 @@ export async function buildSystemContext(
 
   parts.push(
     "<!-- Tool Usage — Always fill the _description argument -->",
-    "When calling any tool, always provide `_description` with a short, user-facing sentence describing what you are doing — e.g. \"Searching for papers on prompt caching\" or \"Writing summary to research/output.md\". This is shown to the user in real time.",
+    'When calling any tool, always provide `_description` with a short, user-facing sentence describing what you are doing — e.g. "Searching for papers on prompt caching" or "Writing summary to research/output.md". This is shown to the user in real time.',
   );
 
   // 1. config.md

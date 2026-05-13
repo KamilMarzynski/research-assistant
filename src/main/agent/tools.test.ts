@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import { Type } from "@sinclair/typebox";
+import { describe, expect, it, vi } from "vitest";
 import { AllowlistService } from "../services/AllowlistService";
 import { CompressionService } from "./CompressionService";
 import { createAgentTools, withDescription } from "./tools";

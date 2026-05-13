@@ -3,9 +3,9 @@ import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { enterPathApprovalGate } from "../extensions/path-approval";
 import { ApprovalRequiredError } from "../../services/AllowlistService";
 import type { CompressionService } from "../CompressionService";
+import { enterPathApprovalGate } from "../extensions/path-approval";
 import type { PathJail } from "../path-jail";
 
 export type SmartReadResult = {

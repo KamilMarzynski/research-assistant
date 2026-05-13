@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import type { AgentEvent } from "@mariozechner/pi-agent-core";
+import { describe, expect, it, vi } from "vitest";
 import { handleStreamChunk } from "./stream-chunk";
 import type { HandlerContext } from "./types";
 

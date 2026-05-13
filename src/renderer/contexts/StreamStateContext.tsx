@@ -8,7 +8,12 @@ import {
   useState,
 } from "react";
 import { IPC } from "../../shared/ipc-channels";
-import { decodeMessageChunk, decodeMessageDone, decodeToolStart, decodeToolEnd } from "../../shared/ipc-guards";
+import {
+  decodeMessageChunk,
+  decodeMessageDone,
+  decodeToolEnd,
+  decodeToolStart,
+} from "../../shared/ipc-guards";
 
 export type StreamSegment =
   | { type: "text"; content: string }

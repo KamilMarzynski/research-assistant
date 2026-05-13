@@ -27,8 +27,7 @@ export async function handleStreamChunk(event: AgentEvent, ctx: HandlerContext):
   }
 
   if (event.type === "tool_execution_start") {
-    const description =
-      ctx.state.pendingToolDescriptions.get(event.toolCallId) ?? event.toolName;
+    const description = ctx.state.pendingToolDescriptions.get(event.toolCallId) ?? event.toolName;
     ctx.state.pendingToolDescriptions.delete(event.toolCallId);
     ctx.eventBus.emit({
       type: "agent:tool_start",

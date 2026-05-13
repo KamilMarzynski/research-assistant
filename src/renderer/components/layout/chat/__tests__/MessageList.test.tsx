@@ -2,18 +2,16 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import MessageList from "../MessageList";
-import type { StreamSegment } from "../../../../contexts/StreamStateContext";
 import type { Message } from "../../../../../shared/types";
+import type { StreamSegment } from "../../../../contexts/StreamStateContext";
+import MessageList from "../MessageList";
 
 const noMessages: Message[] = [];
 
 describe("MessageList — segments", () => {
   it("renders text segment content during streaming", () => {
     const segments: StreamSegment[] = [{ type: "text", content: "Hello world" }];
-    render(
-      <MessageList messages={noMessages} streamingSegments={segments} processing={false} />,
-    );
+    render(<MessageList messages={noMessages} streamingSegments={segments} processing={false} />);
     expect(screen.getByText("Hello world")).toBeTruthy();
   });
 
@@ -27,9 +25,7 @@ describe("MessageList — segments", () => {
         status: "running",
       },
     ];
-    render(
-      <MessageList messages={noMessages} streamingSegments={segments} processing={true} />,
-    );
+    render(<MessageList messages={noMessages} streamingSegments={segments} processing={true} />);
     expect(screen.getByText("Searching for papers")).toBeTruthy();
   });
 
@@ -45,18 +41,14 @@ describe("MessageList — segments", () => {
       },
       { type: "text", content: "Found results." },
     ];
-    render(
-      <MessageList messages={noMessages} streamingSegments={segments} processing={false} />,
-    );
+    render(<MessageList messages={noMessages} streamingSegments={segments} processing={false} />);
     expect(screen.getByText("Let me search.")).toBeTruthy();
     expect(screen.getByText("Searching")).toBeTruthy();
     expect(screen.getByText("Found results.")).toBeTruthy();
   });
 
   it("shows thinking spinner when processing and no running tool", () => {
-    render(
-      <MessageList messages={noMessages} streamingSegments={[]} processing={true} />,
-    );
+    render(<MessageList messages={noMessages} streamingSegments={[]} processing={true} />);
     expect(screen.getByText("Agent is thinking...")).toBeTruthy();
   });
 
@@ -70,9 +62,7 @@ describe("MessageList — segments", () => {
         status: "running",
       },
     ];
-    render(
-      <MessageList messages={noMessages} streamingSegments={segments} processing={true} />,
-    );
+    render(<MessageList messages={noMessages} streamingSegments={segments} processing={true} />);
     expect(screen.queryByText("Agent is thinking...")).toBeNull();
   });
 
@@ -86,9 +76,7 @@ describe("MessageList — segments", () => {
         createdAt: new Date(),
       },
     ];
-    render(
-      <MessageList messages={messages} streamingSegments={[]} processing={false} />,
-    );
+    render(<MessageList messages={messages} streamingSegments={[]} processing={false} />);
     expect(screen.getByText("Hello there")).toBeTruthy();
   });
 });

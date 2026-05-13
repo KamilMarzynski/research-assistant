@@ -5,8 +5,8 @@ import type {
   PendingTool,
   ResearchCompletePayload,
   ResearchStatusUpdatePayload,
-  ToolStartPayload,
   ToolEndPayload,
+  ToolStartPayload,
 } from "./ipc-types";
 
 const PathApprovalPayloadSchema = z.object({
