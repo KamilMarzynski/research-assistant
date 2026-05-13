@@ -56,6 +56,7 @@ export class AgentSession {
       turnSpanId: null as string | null,
       streamingMessageId: null,
       streamChunkCount: 0,
+      pendingToolDescriptions: new Map<string, string>(),
     };
 
     this.pipeline = new MessagePipeline(options, state);

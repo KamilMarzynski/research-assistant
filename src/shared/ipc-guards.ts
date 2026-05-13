@@ -5,6 +5,8 @@ import type {
   PendingTool,
   ResearchCompletePayload,
   ResearchStatusUpdatePayload,
+  ToolEndPayload,
+  ToolStartPayload,
 } from "./ipc-types";
 
 const PathApprovalPayloadSchema = z.object({
@@ -111,5 +113,61 @@ export function decodeMessageDone(data: unknown): { projectId: string } | null {
     if (typeof d.projectId === "string") return { projectId: d.projectId };
   }
   console.warn("[ipc-guard] Invalid MESSAGE_DONE payload: expected null or { projectId }");
+  return null;
+}
+
+export function decodeToolStart(data: unknown): ToolStartPayload | null {
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "projectId" in data &&
+    "toolCallId" in data &&
+    "toolName" in data &&
+    "description" in data
+  ) {
+    const d = data as Record<string, unknown>;
+    if (
+      typeof d.projectId === "string" &&
+      typeof d.toolCallId === "string" &&
+      typeof d.toolName === "string" &&
+      typeof d.description === "string"
+    ) {
+      return {
+        projectId: d.projectId,
+        toolCallId: d.toolCallId,
+        toolName: d.toolName,
+        description: d.description,
+      };
+    }
+  }
+  console.warn("[ipc-guard] Invalid TOOL_START payload");
+  return null;
+}
+
+export function decodeToolEnd(data: unknown): ToolEndPayload | null {
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "projectId" in data &&
+    "toolCallId" in data &&
+    "toolName" in data &&
+    "isError" in data
+  ) {
+    const d = data as Record<string, unknown>;
+    if (
+      typeof d.projectId === "string" &&
+      typeof d.toolCallId === "string" &&
+      typeof d.toolName === "string" &&
+      typeof d.isError === "boolean"
+    ) {
+      return {
+        projectId: d.projectId,
+        toolCallId: d.toolCallId,
+        toolName: d.toolName,
+        isError: d.isError,
+      };
+    }
+  }
+  console.warn("[ipc-guard] Invalid TOOL_END payload");
   return null;
 }

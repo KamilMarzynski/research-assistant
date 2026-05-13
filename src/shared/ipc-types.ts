@@ -89,6 +89,22 @@ export type ResearchStatusUpdatePayload =
   | { status: "progress"; taskId: string; message: string; label?: string }
   | { status: "failed"; taskId: string; projectId: string; query: string; error: string };
 
+/** Payload for TOOL_START push event */
+export interface ToolStartPayload {
+  projectId: string;
+  toolCallId: string;
+  toolName: string;
+  description: string;
+}
+
+/** Payload for TOOL_END push event */
+export interface ToolEndPayload {
+  projectId: string;
+  toolCallId: string;
+  toolName: string;
+  isError: boolean;
+}
+
 export interface FileNode {
   name: string;
   path: string;
