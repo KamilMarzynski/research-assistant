@@ -104,7 +104,7 @@ export function createReadFileTool(
     name: "read_file",
     label: "Read file",
     description:
-      "Read the contents of a file with smart pagination and mime detection. Path must be within the workspace or linked project folder.",
+      "Read the contents of a file with smart pagination and mime detection. You can read any path — use userProjectDir when exploring the user's project.",
     parameters: readFileParameters,
     execute: async (
       _id,
@@ -241,7 +241,7 @@ export function createWriteFileTool(
     name: "write_file",
     label: "Write file",
     description:
-      "Write content to a file, creating parent directories as needed. Path must be within the workspace or linked project folder.",
+      "Write content to a file, creating parent directories as needed. Write to userProjectDir for artifacts and project files. Write to assistantDir for project metadata (GOAL.md, FILES.md, skills). Writing to ~/.scholar/skills requires user approval.",
     parameters: writeFileParameters,
     execute: async (
       _id,
@@ -401,7 +401,7 @@ export function createListDirTool(
     name: "list_dir",
     label: "List directory",
     description:
-      "List files and subdirectories in a directory. Path must be within the workspace or linked project folder.",
+      "List files and subdirectories in a directory. You can list any path — use userProjectDir when exploring the user's project.",
     parameters: listDirParameters,
     execute: async (_id, { path }): Promise<AgentToolResult<string[]>> => {
       let resolved: string;

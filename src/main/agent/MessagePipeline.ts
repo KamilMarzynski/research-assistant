@@ -19,11 +19,11 @@ import { createDefaultSkillRouter } from "./SkillRouter";
 import { createAgentTools } from "./tools";
 import { makeEvaluatorFn } from "./worker-agent";
 
-const BASE_SYSTEM_PROMPT = `You are a research coordinator. Answer directly for simple, certain, or conversational requests. Delegate to background research workers for anything involving files, code, external data, verification, or uncertainty.
+const BASE_SYSTEM_PROMPT = `You are a research coordinator. Answer directly for simple, certain, or conversational requests. Delegate to background research workers for anything involving files, external data, verification, or uncertainty.
 
 ## When to call start_research
 
-- The user asks about code, files, or project structure
+- The user asks about files, documents, project structure, or research topics
 - The request requires current data, web sources, or external verification
 - The answer requires multiple steps or sources to be accurate
 - You are not fully certain about the answer
@@ -33,8 +33,8 @@ Do not guess. A quick research task is always better than a wrong answer.
 
 ## Tool usage
 
-- read_file: Read files before answering questions about them. You can read any path the user references.
-- write_file: Create or edit artifacts. Write to the project folder or the app-managed project directory. Use meaningful filenames — no task IDs, no UUIDs. Follow FILES.md conventions if they exist.
+- read_file: Read files before answering questions about them. You can read any path the user references. Use userProjectDir when exploring the user's project.
+- write_file: Create or edit artifacts. Write research outputs and artifacts to userProjectDir. Write project metadata (GOAL.md, FILES.md) to assistantDir. Use meaningful filenames — no task IDs, no UUIDs. Follow FILES.md conventions if they exist.
 - safe_bash: Run project operations (git, package managers, tests). State your intent clearly.
 - run_in_docker: Execute isolated or untrusted code (Python scripts, data processing). Prefer safe_bash for project-native operations.
 - fetch_url / web_search: Get current information or verify claims.
@@ -43,7 +43,7 @@ Do not guess. A quick research task is always better than a wrong answer.
 
 ## Skills
 
-Skills are reusable technique guides in ~/.scholar/skills/ and <projectPath>/skills/.
+Skills are reusable technique guides in ~/.scholar/skills/ and <assistantDir>/skills/.
 When a task matches a skill description, use read_file to load the full SKILL.md before applying it.
 
 ## Skill creation
@@ -53,7 +53,7 @@ If you discover a reusable pattern the user did not request, use propose_skill t
 
 ## Output conventions
 
-- Research outputs and artifacts go to the project folder by default
+- Research outputs and artifacts go to userProjectDir by default
 - Use descriptive, human-readable filenames
 - If FILES.md defines output locations, follow them exactly
 
@@ -133,6 +133,7 @@ export class MessagePipeline {
   private readonly projectId: string;
   private readonly projectName: string;
   private readonly projectPath: string | null;
+  private readonly folderPath: string | null;
   private readonly provider: ModelProvider;
   private readonly messageService: MessageService;
   private readonly memoryManager: IMemoryManager;
@@ -148,6 +149,7 @@ export class MessagePipeline {
     this.projectId = options.projectId;
     this.projectName = options.projectName;
     this.projectPath = options.projectPath;
+    this.folderPath = options.folderPath;
     this.provider = options.provider;
     this.messageService = options.messageService;
     this.memoryManager = options.memoryManager;
@@ -307,6 +309,7 @@ export class MessagePipeline {
         const memoryContext = await this.memoryManager.buildContext(this.projectId);
         const systemContext = await buildSystemContext(
           this.projectPath ?? join(this.homePath, "projects", this.projectId),
+          this.folderPath,
           this.skillRouter.toXml(),
         );
 

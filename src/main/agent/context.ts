@@ -44,10 +44,20 @@ export async function loadSkillsByContent(
 
 export async function buildSystemContext(
   projectPath: string,
+  folderPath: string | null,
   skillIndexXml?: string,
 ): Promise<string> {
   const scholarHome = getScholarHome();
   const parts: string[] = [];
+
+  // 0. Project directories
+  parts.push(
+    "<!-- Project Directories — Use these exact paths when reading or writing files -->",
+    `## userProjectDir: ${folderPath ?? "not linked yet"}`,
+    "This is the user's actual project directory — where their notes, documents, research materials, source files, drafts, and any work they do lives. When the user asks you to explore the project, read files, or write artifacts, use this path.",
+    `## assistantDir: ${projectPath}`,
+    "This is the assistant's workspace — where the assistant stores its own work: research outputs, generated reports, skills, project configuration (GOAL.md, FILES.md, MEMORY.md), and temporary workspace files.",
+  );
 
   // 1. config.md
   try {

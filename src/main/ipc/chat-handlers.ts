@@ -112,7 +112,7 @@ export function registerChatHandler(
         const isFirstRun = await homeService.isFirstRun();
         const projectPath =
           project.projectPath ?? join(homeService.getHomePath(), "projects", projectId);
-        const systemContext = await buildSystemContext(projectPath);
+        const systemContext = await buildSystemContext(projectPath, project.folderPath);
         const initialMemoryContext = await memoryManager.buildContext(projectId);
         const session = new AgentSession({
           messageService,

@@ -51,7 +51,7 @@ export class ResearchService {
         toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "request_evaluation"],
         systemPromptAddition: [
           "You are a background researcher. Investigate the given query thoroughly using the available tools.",
-          "Create final output files in the project folder using write_file, not in the workspace.",
+          "Create final output files in userProjectDir using write_file, not in the workspace.",
           "Name files meaningfully (no task IDs in filenames).",
           "Cite sources for factual claims. Verify information against multiple sources when possible.",
           "Note uncertainties and gaps explicitly. Be thorough: check multiple angles before concluding.",
@@ -85,7 +85,7 @@ export class ResearchService {
           "You are a top-level research orchestrator. Plan and execute a thorough research strategy for the given query.",
           `Your workspace root: ${workspacePath}`,
           "Write intermediate results to subdirectories within your workspace root.",
-          "Create final output files in the project folder using write_file, not in the workspace.",
+          "Create final output files in userProjectDir using write_file, not in the workspace.",
           "Name files meaningfully (no task IDs in filenames).",
           "Delegate parallel subtasks using spawn_agents_parallel.",
           "Synthesize findings into a coherent final report with clear conclusions.",

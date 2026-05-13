@@ -10,13 +10,15 @@ Three files configure how the assistant works with this project:
 - FILES.md: Where research outputs and artifacts go, plus naming conventions.
 - config.md: Your personal preferences (global, applies to all projects).
 
-Your actual project code lives in the folder you selected (folderPath). The assistant also manages a metadata directory at projectPath for research outputs, skills, and memory.
+Two directories exist for every project:
+- userProjectDir: The user's actual project directory — where their notes, documents, research materials, source files, and drafts live.
+- assistantDir: The assistant's workspace — where the assistant stores research outputs, generated reports, skills, and project configuration.
 
 ## Questions (one at a time)
 
 1. What is this project about? (for GOAL.md)
 2. Where should research outputs go? (for FILES.md — e.g., "docs/reports/", project root, or a specific subfolder)
-3. What file types do you mainly work with? (for FILES.md — e.g., Markdown, TypeScript, Python)
+3. What file types do you mainly work with? (for FILES.md — e.g., Markdown, PDF, TypeScript, Python, data files)
 4. Any naming conventions or folder structures you follow? (for FILES.md)
 5. Do you prefer detailed research reports or concise summaries? (for config.md)
 6. Any frequently used tools or workflows? (for config.md)
@@ -26,17 +28,17 @@ If the setup is complex (cloud sync, custom pipelines, multiple workspaces), use
 ## After receiving answers
 
 Write these files using write_file:
-- GOAL.md to <projectPath>/GOAL.md
-- FILES.md to <projectPath>/FILES.md
+- GOAL.md to <assistantDir>/GOAL.md
+- FILES.md to <assistantDir>/FILES.md
 - config.md to ~/.scholar/config.md
 
 FILES.md format example:
 \`\`\`
 ## Output locations
 
-- default: <projectPath>
-- reports: <projectPath>/reports
-- code: <folderPath>/src
+- default: <userProjectDir>
+- reports: <userProjectDir>/reports
+- notes: <userProjectDir>/notes
 \`\`\`
 
 Then confirm setup is complete.`;
@@ -135,13 +137,13 @@ You are a research evaluator. Read the file at the given path, assess it against
 
 You are a top-level research orchestrator. Plan and execute a thorough research strategy for the given query.
 Write intermediate results to subdirectories within your workspace root.
-Create final output files in the project folder using write_file, not in the workspace.
+Create final output files in userProjectDir using write_file, not in the workspace.
 Name files meaningfully (no task IDs in filenames).
 `,
   "shallow.md": `# Shallow Research
 
 You are a background researcher. Investigate the given query thoroughly using the available tools.
-Create final output files in the project folder using write_file, not in the workspace.
+Create final output files in userProjectDir using write_file, not in the workspace.
 Name files meaningfully (no task IDs in filenames).
 Be thorough. When done, respond with a final summary of your findings.
 `,

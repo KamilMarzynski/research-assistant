@@ -176,7 +176,7 @@ const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
 
 ## Output
 
-Write your complete findings to the project folder using write_file. Use Markdown with clear headings and a Sources section. Use meaningful filenames (no task IDs, no UUIDs).
+Write your complete findings to userProjectDir using write_file. Use Markdown with clear headings and a Sources section. Use meaningful filenames (no task IDs, no UUIDs).
 
 When done, respond with a brief summary of key findings.`,
     remainingDepth: 0,

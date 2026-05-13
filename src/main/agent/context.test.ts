@@ -140,7 +140,7 @@ describe("buildSystemContext", () => {
 
   it("returns onboarding prompt when no context files exist", async () => {
     const home = join(tmpHome, ".scholar");
-    const result = await buildSystemContext(join(home, "projects", "my-project"));
+    const result = await buildSystemContext(join(home, "projects", "my-project"), null);
     expect(result).toContain("no GOAL.md or FILES.md yet");
     expect(result).toContain("If the user already described");
   });
@@ -150,7 +150,7 @@ describe("buildSystemContext", () => {
     await mkdir(home, { recursive: true });
     await writeFile(join(home, "config.md"), "# My working style\nI prefer folders.");
 
-    const result = await buildSystemContext(join(home, "projects", "my-project"));
+    const result = await buildSystemContext(join(home, "projects", "my-project"), null);
     expect(result).toContain("I prefer folders.");
   });
 
@@ -165,7 +165,7 @@ describe("buildSystemContext", () => {
     );
     await writeFile(join(projectPath, "FILES.md"), "# File structure\nsrc/main and src/renderer.");
 
-    const result = await buildSystemContext(projectPath);
+    const result = await buildSystemContext(projectPath, null);
     expect(result).toContain("Build a TypeScript monorepo.");
     expect(result).toContain("src/main and src/renderer.");
   });
@@ -175,7 +175,7 @@ describe("buildSystemContext", () => {
     await mkdir(home, { recursive: true });
     await writeFile(join(home, "config.md"), "   ");
 
-    const result = await buildSystemContext(join(home, "projects", "my-project"));
+    const result = await buildSystemContext(join(home, "projects", "my-project"), null);
     expect(result).not.toContain("config.md");
   });
 
@@ -187,7 +187,7 @@ describe("buildSystemContext", () => {
     await writeFile(join(projectPath, "GOAL.md"), "   ");
     await writeFile(join(projectPath, "FILES.md"), "   ");
 
-    const result = await buildSystemContext(projectPath);
+    const result = await buildSystemContext(projectPath, null);
     expect(result).not.toContain("Project goal");
     expect(result).not.toContain("Project files");
   });
@@ -199,7 +199,7 @@ describe("buildSystemContext", () => {
     await mkdir(projectPath, { recursive: true });
     await writeFile(join(projectPath, "GOAL.md"), "# Context for cool project.");
 
-    const result = await buildSystemContext(projectPath);
+    const result = await buildSystemContext(projectPath, null);
     expect(result).toContain("Context for cool project.");
   });
 
@@ -212,14 +212,14 @@ describe("buildSystemContext", () => {
       "---\nname: my-skill\ndescription: Does something.\n---\n# Content",
     );
 
-    const result = await buildSystemContext(join(home, "projects", "my-project"));
+    const result = await buildSystemContext(join(home, "projects", "my-project"), null);
     expect(result).toContain("<available_skills>");
     expect(result).toContain('name="my-skill"');
   });
 
   it("injects onboarding prompt when GOAL.md or FILES.md is missing", async () => {
     const home = join(tmpHome, ".scholar");
-    const result = await buildSystemContext(join(home, "projects", "test-project"));
+    const result = await buildSystemContext(join(home, "projects", "test-project"), null);
     expect(result).toContain("no GOAL.md or FILES.md yet");
     expect(result).toContain("If they have not yet described it");
   });
@@ -232,7 +232,7 @@ describe("buildSystemContext", () => {
     await writeFile(join(projectPath, "GOAL.md"), "# Test Project\nThis is the project goal.");
     await writeFile(join(projectPath, "FILES.md"), "# Files\nThese are the project files.");
 
-    const result = await buildSystemContext(projectPath);
+    const result = await buildSystemContext(projectPath, null);
     expect(result).toContain("This is the project goal.");
     expect(result).toContain("These are the project files.");
     expect(result).not.toContain("no GOAL.md or FILES.md yet");
@@ -243,7 +243,7 @@ describe("buildSystemContext", () => {
     await mkdir(join(home, "app-memory"), { recursive: true });
     await writeFile(join(home, "app-memory", "MEMORY.md"), "# App Memory\nI remember things.");
 
-    const result = await buildSystemContext(join(home, "projects", "my-project"));
+    const result = await buildSystemContext(join(home, "projects", "my-project"), null);
     expect(result).toContain("App Memory");
     expect(result).toContain("I remember things.");
   });
@@ -255,7 +255,7 @@ describe("buildSystemContext", () => {
     await mkdir(projectPath, { recursive: true });
     await writeFile(join(projectPath, "MEMORY.md"), "# Project Memory\nThis project uses Bun.");
 
-    const result = await buildSystemContext(projectPath);
+    const result = await buildSystemContext(projectPath, null);
     expect(result).toContain("Project Memory");
     expect(result).toContain("This project uses Bun.");
   });
