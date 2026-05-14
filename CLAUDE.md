@@ -85,16 +85,30 @@ docker compose -f docker-compose.langfuse.yml down   # stop
 
 Services: `langfuse-web` (port 3000), `postgres`, `clickhouse`, `redis`, `minio`. See `docs/langfuse-local-setup.md` for full instructions.
 
-## Agent Home Directory (Run 6+)
+## Agent Home Directory
 
-`~/.research-assistant/` — not yet implemented. Planned: `config.md`, `skills/`, `projects/<slug>/AGENTS.md`, `workspace/`, `audit.log`.
+`~/.scholar/` — implemented. Layout:
 
-## Code Execution Model (Run 6+, Run 8)
+```
+~/.scholar/
+├── projects/<slug>/        — one dir per project (slug = readable name + 6-char UUID suffix)
+│   ├── GOAL.md             — project goals (agent-written on first run)
+│   ├── FILES.md            — output routing conventions (agent-written on first run)
+│   ├── MEMORY.md           — project-level rolling memory
+│   ├── skills/             — project-scoped skills
+│   └── workspace/          — agent scratch space (task subdirs created per research run)
+├── skills/                 — global skills
+├── tasks/                  — persisted research task records
+├── pending-tools/          — skills awaiting user approval
+└── app-memory/             — app-level memory files
+```
 
-Three tiers — not yet implemented:
-- **Tier 1** (Run 6): Path-jailed `read`/`write`/`edit` via `src/main/agent/path-jail.ts`
-- **Tier 2** (Run 6): `safe_bash` Pi extension — fenced execution with blocklist + timeout + audit log
-- **Tier 3** (Run 8): `run_in_sandbox` E2B extension — isolated container
+## Code Execution Model
+
+Three tiers — Tiers 1 and 2 implemented:
+- **Tier 1**: Path-jailed `read_file`/`write_file`/`list_dir` via `src/main/agent/path-jail.ts` — workspace, project dir, and optionally linked folder
+- **Tier 2**: `safe_bash` — fenced shell execution with blocklist, timeout, and audit log; detects inline code and hints `run_in_docker`
+- **Tier 3**: `run_in_docker` — isolated Docker container; supports Python, JavaScript, bash; not E2B
 
 ## Toolchain
 
@@ -103,7 +117,7 @@ Three tiers — not yet implemented:
 | Runtime / package manager | Bun |
 | Build | electron-vite |
 | Linting + formatting | Biome v2 (no ESLint, no Prettier) |
-| UI | React 19 + MUI v9 |
+| UI | React 19 + Scholar design system (custom tokens/components); MUI v9 used sparingly |
 | Language | TypeScript strict throughout |
 | DI | TSyringe (`@injectable()`, `@inject()`) |
 | DB | Drizzle ORM + `@libsql/client` (NOT `bun:sqlite`) |
@@ -123,5 +137,4 @@ Three tiers — not yet implemented:
 - No ESLint, no Prettier — Biome only
 - No `bun:sqlite` — use `@libsql/client`
 - No `@mariozechner/pi-coding-agent` — use `pi-agent-core` + `pi-ai`
-- No Mastra imports before Run 7
 - Do not register `ipcMain.handle` inside the `activate` handler
