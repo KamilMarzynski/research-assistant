@@ -4,6 +4,30 @@ import type { Artifact, Message, Project, ResearchTask } from "./types";
 /** Unified return shape for all ipcMain.handle handlers */
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string; code: string };
 
+/** Extensible tagged union for all agent execution progress events.
+ * Adding a new event kind = one new union member here + one emitPush() call in main. */
+export type AgentProgressEvent =
+  // Research lifecycle (replaces RESEARCH_STATUS_UPDATE + RESEARCH_COMPLETE channels)
+  | { kind: "research_started"; taskId: string; projectId: string; query: string }
+  | { kind: "research_step"; taskId: string; message: string; label?: string }
+  | { kind: "research_complete"; taskId: string; projectId: string; query: string; artifactId?: string; filePaths: string[] }
+  | { kind: "research_failed"; taskId: string; projectId: string; query: string; error: string }
+  // Tool execution (replaces TOOL_START + TOOL_END channels)
+  | { kind: "tool_call_start"; projectId: string; toolCallId: string; toolName: string; description: string }
+  | { kind: "tool_call_end"; projectId: string; toolCallId: string; toolName: string; isError: boolean };
+
+/** Discriminated union covering every webContents.send() call from main → renderer.
+ * All push channels must have an entry here. */
+export type IpcPushEvent =
+  | { type: "MESSAGE_CHUNK"; projectId: string; delta: string }
+  | { type: "MESSAGE_DONE"; projectId: string }
+  | { type: "AGENT_PROGRESS"; event: AgentProgressEvent }
+  | { type: "NEW_MESSAGE"; projectId: string; message: Message }
+  | { type: "SETTINGS_UPDATED"; settings: SettingsResponse }
+  | ({ type: "BASH_BLOCKED" } & BlockedCommandPayload)
+  | ({ type: "TOOL_PENDING" } & PendingTool)
+  | ({ type: "PATH_APPROVAL_REQUIRED" } & PathApprovalPayload);
+
 /** Typed request payloads for all invoke() channels */
 export interface IpcRequestMap {
   GET_PROJECTS: undefined;
