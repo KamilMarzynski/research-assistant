@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { type TObject, Type } from "@sinclair/typebox";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { CompressionService } from "./CompressionService";
 import { PathJail } from "./path-jail";
@@ -42,7 +41,18 @@ export interface EvaluationVerdict {
   criteria: Array<{ name: string; pass: boolean; rationale: string }>;
 }
 
-export interface AgentToolsOptions {
+export interface ToolCapabilities {
+  webAccess: boolean;
+  memory: boolean;
+  codeExecution: boolean;
+  research: boolean;
+  evaluation: boolean;
+  spawn: boolean;
+  proposeSkill: boolean;
+  compression: boolean;
+}
+
+export interface ToolContext {
   projectId: string;
   slug: string;
   projectName: string;
@@ -54,7 +64,12 @@ export interface AgentToolsOptions {
   model?: string;
   startResearchFn?: (query: string, deep?: boolean) => Promise<{ taskId: string }>;
   requestEvaluationFn?: (filePath: string, criteria: string[]) => Promise<EvaluationVerdict>;
-  spawnAgentFn?: (type: AgentType, query: string, outputPath: string) => Promise<SpawnResult>;
+  spawnAgentFn?: (
+    type: AgentType,
+    query: string,
+    outputPath: string,
+    label?: string,
+  ) => Promise<SpawnResult>;
   spawnAgentsParallelFn?: (
     agents: Array<{ type: AgentType; query: string; outputPath: string }>,
   ) => Promise<SpawnResult[]>;
@@ -91,55 +106,55 @@ export interface AgentToolsOptions {
   allowlistService: AllowlistService;
 }
 
-export function withDescription(tool: AgentTool): AgentTool {
-  const base = tool.parameters as TObject;
-  // biome-ignore lint/suspicious/noExplicitAny: wrapping heterogeneous tools
-  const originalExecute = tool.execute.bind(tool) as (...args: any[]) => any;
-  return {
-    ...tool,
-    parameters: Type.Object({
-      ...base.properties,
-      _description: Type.Optional(
-        Type.String({
-          description:
-            "Short user-facing sentence describing what you are doing — e.g. 'Searching for papers on prompt caching' or 'Writing summary to research/output.md'",
-        }),
-      ),
-    }),
-    execute: async (toolCallId, params, signal, onUpdate) => {
-      const { _description: _desc, ...rest } = params as Record<string, unknown>;
-      return originalExecute(toolCallId, rest, signal, onUpdate);
-    },
-  };
+/** Backward-compat alias — callers that pass a single options object continue to work */
+export type AgentToolsOptions = ToolContext;
+
+function capabilitiesToToolNames(caps: ToolCapabilities): AgentToolName[] {
+  const names: AgentToolName[] = [
+    "read_file",
+    "write_file",
+    "list_dir",
+    "safe_bash",
+    "run_in_docker",
+  ];
+  if (caps.webAccess) names.push("fetch_url", "web_search");
+  if (caps.memory) names.push("save_memory", "read_memory");
+  if (caps.compression) names.push("compress");
+  if (caps.research) names.push("start_research");
+  if (caps.evaluation) names.push("request_evaluation");
+  if (caps.spawn) names.push("spawn_agent", "spawn_agents_parallel");
+  if (caps.proposeSkill) names.push("propose_skill");
+  return names;
 }
 
-export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
-  const { projectId, slug, projectPath, folderPath, homePath, startResearchFn, onFileWrite } = opts;
-  const jail = new PathJail(projectId, slug, folderPath, projectPath, opts.allowlistService);
+// biome-ignore lint/suspicious/noExplicitAny: AgentTool generic is covariant in TDetails but contravariant in TParams; any is the correct erasure for a heterogeneous collection
+function buildTools(ctx: ToolContext): AgentTool<any>[] {
+  const { projectId, slug, projectPath, folderPath, homePath, startResearchFn, onFileWrite } = ctx;
+  const jail = new PathJail(projectId, slug, folderPath, projectPath, ctx.allowlistService);
   const workspacePath = join(homePath, "projects", slug, "workspace");
   const auditLogPath = join(homePath, "audit.log");
 
-  // biome-ignore lint/suspicious/noExplicitAny: AgentTool generic is covariant in TDetails but contravariant in TParams; any is the correct erasure for a heterogeneous collection
+  // biome-ignore lint/suspicious/noExplicitAny: see above
   const tools: AgentTool<any>[] = [
-    createReadFileTool(jail, opts.compressionService, opts.emitApprovalRequired),
-    createWriteFileTool(jail, folderPath, onFileWrite, opts.emitApprovalRequired),
-    createListDirTool(jail, opts.emitApprovalRequired),
-    createSafeBashTool(projectId, workspacePath, auditLogPath, opts.emitBlocked),
+    createReadFileTool(jail, ctx.compressionService, ctx.emitApprovalRequired),
+    createWriteFileTool(jail, folderPath, onFileWrite, ctx.emitApprovalRequired),
+    createListDirTool(jail, ctx.emitApprovalRequired),
+    createSafeBashTool(projectId, workspacePath, auditLogPath, ctx.emitBlocked),
   ];
 
-  if (opts.saveMemoryFn) {
-    tools.push(createSaveMemoryTool(opts.saveMemoryFn));
+  if (ctx.saveMemoryFn) {
+    tools.push(createSaveMemoryTool(ctx.saveMemoryFn));
   }
-  if (opts.readMemoryFn) {
-    tools.push(createReadMemoryTool(opts.readMemoryFn));
-  }
-
-  if (opts.webAccessEnabled !== false) {
-    tools.push(createFetchUrlTool(opts.compressionService));
-    tools.push(createWebSearchTool(opts.compressionService));
+  if (ctx.readMemoryFn) {
+    tools.push(createReadMemoryTool(ctx.readMemoryFn));
   }
 
-  const compressionService = opts.compressionService;
+  if (ctx.webAccessEnabled !== false) {
+    tools.push(createFetchUrlTool(ctx.compressionService));
+    tools.push(createWebSearchTool(ctx.compressionService));
+  }
+
+  const compressionService = ctx.compressionService;
   if (compressionService) {
     tools.push(
       createCompressTool(async (path, _maxWords) => {
@@ -159,25 +174,39 @@ export function createAgentTools(opts: AgentToolsOptions): AgentTool[] {
     tools.push(createStartResearchTool(startResearchFn));
   }
 
-  if (opts.requestEvaluationFn) {
-    tools.push(createRequestEvaluationTool(jail, opts.requestEvaluationFn));
+  if (ctx.requestEvaluationFn) {
+    tools.push(createRequestEvaluationTool(jail, ctx.requestEvaluationFn));
   }
 
-  if (opts.spawnAgentFn) {
-    tools.push(createSpawnAgentTool(jail, opts.spawnAgentFn));
+  if (ctx.spawnAgentFn) {
+    tools.push(createSpawnAgentTool(jail, ctx.spawnAgentFn));
   }
 
-  if (opts.spawnAgentsParallelFn) {
-    tools.push(createSpawnAgentsParallelTool(jail, opts.spawnAgentsParallelFn));
+  if (ctx.spawnAgentsParallelFn) {
+    tools.push(createSpawnAgentsParallelTool(jail, ctx.spawnAgentsParallelFn));
   }
 
-  if (opts.proposeSkillFn) {
-    tools.push(createProposeSkillTool(opts.proposeSkillFn));
+  if (ctx.proposeSkillFn) {
+    tools.push(createProposeSkillTool(ctx.proposeSkillFn));
   }
 
-  if (opts.toolNames) {
-    const allowed = new Set<AgentToolName>(opts.toolNames);
-    return tools.filter((t) => allowed.has(t.name as AgentToolName)).map(withDescription);
+  if (ctx.toolNames) {
+    const allowed = new Set<AgentToolName>(ctx.toolNames);
+    return tools.filter((t) => allowed.has(t.name as AgentToolName));
   }
-  return tools.map(withDescription);
+  return tools;
+}
+
+export function createAgentTools(opts: ToolContext): AgentTool[];
+export function createAgentTools(caps: ToolCapabilities, ctx: ToolContext): AgentTool[];
+export function createAgentTools(
+  optsOrCaps: ToolContext | ToolCapabilities,
+  ctx?: ToolContext,
+  // biome-ignore lint/suspicious/noExplicitAny: see buildTools
+): AgentTool<any>[] {
+  if (ctx === undefined) {
+    return buildTools(optsOrCaps as ToolContext);
+  }
+  const caps = optsOrCaps as ToolCapabilities;
+  return buildTools({ ...ctx, toolNames: capabilitiesToToolNames(caps) });
 }
