@@ -3,7 +3,10 @@ import { injectable } from "tsyringe";
 
 type AppEvent =
   | { type: "research:started"; payload: { taskId: string; projectId: string; query: string } }
-  | { type: "research:progress"; payload: { taskId: string; message: string; label?: string } }
+  | {
+      type: "research:progress";
+      payload: { taskId: string; projectId: string; message: string; label?: string };
+    }
   | {
       type: "research:complete";
       payload: { taskId: string; projectId: string; query: string; filePaths: string[] };

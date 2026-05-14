@@ -5,12 +5,13 @@ import { checkOllamaAvailable } from "../agent/model-provider";
 import { CheckOllamaSchema, GetProviderModelsSchema, SaveSettingsSchema } from "../ipc-validation";
 import type { ProjectService } from "../services/ProjectService";
 import type { SettingsService } from "../services/SettingsService";
+import { emitPush } from "./emit-push";
 import { parseOrThrow } from "./parse-util";
 import type { SessionManager } from "./session-manager";
 import { wrapIpc } from "./wrap-ipc";
 
 export function registerSettingsHandlers(
-  _win: Electron.BrowserWindow,
+  win: Electron.BrowserWindow,
   deps: {
     settingsService: SettingsService;
     sessionManager: SessionManager;
@@ -38,7 +39,7 @@ export function registerSettingsHandlers(
     }),
   );
 
-  ipcMain.handle(IPC.SAVE_SETTINGS, (event, payload: unknown) =>
+  ipcMain.handle(IPC.SAVE_SETTINGS, (_event, payload: unknown) =>
     wrapIpc(async () => {
       const p = parseOrThrow(SaveSettingsSchema, payload, "SAVE_SETTINGS");
       await settingsService.saveSettings(p as Parameters<typeof settingsService.saveSettings>[0]);
@@ -55,14 +56,17 @@ export function registerSettingsHandlers(
       const isOllama = updated.activeProvider === "ollama";
       const activeApiKey = "apiKey" in activeCreds ? (activeCreds.apiKey ?? null) : null;
 
-      event.sender.send(IPC.SETTINGS_UPDATED, {
-        hasApiKey: isOllama || (activeApiKey !== null && activeApiKey !== ""),
-        activeProvider: updated.activeProvider,
-        defaultCloudProvider: updated.defaultCloudProvider,
-        providerCredentials: updated.providerCredentials,
-        langfuseEnabled: updated.langfuseEnabled,
-        webAccessEnabled: updated.webAccessEnabled,
-        theme: updated.theme,
+      emitPush(win, {
+        type: "SETTINGS_UPDATED",
+        settings: {
+          hasApiKey: isOllama || (activeApiKey !== null && activeApiKey !== ""),
+          activeProvider: updated.activeProvider,
+          defaultCloudProvider: updated.defaultCloudProvider,
+          providerCredentials: updated.providerCredentials,
+          langfuseEnabled: updated.langfuseEnabled,
+          webAccessEnabled: updated.webAccessEnabled,
+          theme: updated.theme,
+        },
       });
     }),
   );

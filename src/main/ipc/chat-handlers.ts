@@ -17,6 +17,7 @@ import type { OutputNotificationService } from "../services/OutputNotificationSe
 import type { ProjectService } from "../services/ProjectService";
 import type { ResearchService } from "../services/ResearchService";
 import type { SettingsService } from "../services/SettingsService";
+import { emitPush } from "./emit-push";
 import { parseOrThrow } from "./parse-util";
 import type { SessionManager } from "./session-manager";
 import { wrapIpc } from "./wrap-ipc";
@@ -54,10 +55,10 @@ export function registerChatHandler(
   } = deps;
 
   eventBus.on("agent:chunk", (payload) => {
-    win.webContents.send(IPC.MESSAGE_CHUNK, { projectId: payload.projectId, delta: payload.delta });
+    emitPush(win, { type: "MESSAGE_CHUNK", projectId: payload.projectId, delta: payload.delta });
   });
   eventBus.on("agent:done", (payload) => {
-    win.webContents.send(IPC.MESSAGE_DONE, { projectId: payload.projectId });
+    emitPush(win, { type: "MESSAGE_DONE", projectId: payload.projectId });
   });
 
   ipcMain.handle(IPC.GET_MESSAGES, (_event, payload: unknown) =>
@@ -105,11 +106,12 @@ export function registerChatHandler(
           });
 
           if (provider.type !== "ollama" && !provider.apiKey) {
-            win.webContents.send(IPC.MESSAGE_CHUNK, {
+            emitPush(win, {
+              type: "MESSAGE_CHUNK",
               projectId,
               delta: "⚠️ No API key configured. Open Settings to add your API key.",
             });
-            win.webContents.send(IPC.MESSAGE_DONE, { projectId });
+            emitPush(win, { type: "MESSAGE_DONE", projectId });
             return { messageId: randomUUID() };
           }
 
@@ -182,18 +184,20 @@ export function registerChatHandler(
         if (err instanceof Error && err.message === "stream_timeout") {
           const session = sessionManager.get(projectId);
           session?.abort();
-          win.webContents.send(IPC.MESSAGE_CHUNK, {
+          emitPush(win, {
+            type: "MESSAGE_CHUNK",
             projectId,
             delta: "⚠️ The response timed out. Please try again.",
           });
         } else {
           console.error("[IPC] SEND_MESSAGE error:", err);
-          win.webContents.send(IPC.MESSAGE_CHUNK, {
+          emitPush(win, {
+            type: "MESSAGE_CHUNK",
             projectId,
             delta: "⚠️ An error occurred. Please try again.",
           });
         }
-        win.webContents.send(IPC.MESSAGE_DONE, { projectId });
+        emitPush(win, { type: "MESSAGE_DONE", projectId });
         return { messageId: randomUUID() };
       } finally {
         releaseLock?.();

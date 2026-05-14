@@ -144,7 +144,7 @@ export class ResearchService {
       if (label) {
         this.eventBus.emit({
           type: "research:progress",
-          payload: { taskId, message: delta, label },
+          payload: { taskId, projectId: config.projectId, message: delta, label },
         });
       }
     };
@@ -181,7 +181,7 @@ export class ResearchService {
         if (ae?.type === "text_delta") {
           this.eventBus.emit({
             type: "research:progress",
-            payload: { taskId, message: ae.delta },
+            payload: { taskId, projectId: config.projectId, message: ae.delta },
           });
         }
       } else if (e.type === "agent_end") {

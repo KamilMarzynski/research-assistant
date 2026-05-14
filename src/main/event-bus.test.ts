@@ -23,7 +23,10 @@ describe("EventBus", () => {
 
     const unsubscribe = bus.on("research:progress", handler);
     unsubscribe();
-    bus.emit({ type: "research:progress", payload: { taskId: "t1", message: "Working..." } });
+    bus.emit({
+      type: "research:progress",
+      payload: { taskId: "t1", projectId: "p1", message: "Working..." },
+    });
 
     expect(handler).not.toHaveBeenCalled();
   });
