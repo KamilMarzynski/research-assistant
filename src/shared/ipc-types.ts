@@ -1,6 +1,64 @@
 import type { SkillInfo } from "./ipc-channels";
 import type { Artifact, Message, Project, ResearchTask } from "./types";
 
+/** Unified return shape for all ipcMain.handle handlers */
+export type IpcResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string; code: string };
+
+/** Typed request payloads for all invoke() channels */
+export interface IpcRequestMap {
+  GET_PROJECTS: undefined;
+  CREATE_PROJECT: { name: string; folderPath: string };
+  RENAME_PROJECT: { id: string; name: string };
+  DELETE_PROJECT: { id: string };
+  GET_ARTIFACTS: { projectId: string };
+  GET_PROJECT_ARTIFACTS: { projectId: string };
+  GET_RESEARCHES: { projectId: string };
+  GET_MESSAGES: { projectId: string };
+  GET_SETTINGS: undefined;
+  SAVE_SETTINGS: {
+    activeProvider?: string;
+    defaultCloudProvider?: string;
+    providerCredentials?: unknown;
+    langfuseEnabled?: boolean;
+    webAccessEnabled?: boolean;
+    theme?: "light" | "dark" | "system";
+  };
+  OPEN_FOLDER_DIALOG: undefined;
+  LINK_FOLDER: { projectId: string; folderPath: string };
+  UNLINK_FOLDER: { id: string };
+  RETRY_RESEARCH: { projectId: string; query: string };
+  READ_ARTIFACT_FILE: { filePath: string; projectId: string };
+  GET_FILE_TREE: { projectId: string };
+  REVEAL_IN_FOLDER: { filePath: string; projectId: string };
+  GET_PENDING_TOOLS: undefined;
+  APPROVE_TOOL: { name: string };
+  REJECT_TOOL: { name: string };
+  GET_SKILLS: undefined;
+  TOGGLE_SKILL: { name: string; enabled: boolean };
+  DELETE_SKILL: { name: string };
+  GET_AUDIT_LOG: undefined;
+  CLEAR_AUDIT_LOG: undefined;
+  RESOLVE_BLOCKED_COMMAND: {
+    commandId: string;
+    action: "approve_once" | "approve_session" | "deny";
+    projectId?: string;
+  };
+  GET_PENDING_PATH_APPROVALS: undefined;
+  RESOLVE_PATH_APPROVAL: {
+    path: string;
+    mode: "read" | "write";
+    action: "approve_once" | "approve_session" | "deny";
+    projectId: string;
+  };
+  CHECK_OLLAMA: string;
+  GET_PROVIDER_MODELS: GetProviderModelsRequest;
+  SEND_MESSAGE: { projectId: string; content: string };
+  ABORT_MESSAGE: { projectId: string };
+  SET_PROJECT_MODEL: { projectId: string; modelOverride: string };
+}
+
 /** Response from GET_SETTINGS */
 export interface SettingsResponse {
   hasApiKey: boolean;
