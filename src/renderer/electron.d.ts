@@ -3,6 +3,11 @@ import type { IpcChannel, IpcResponseMap } from "../shared/ipc-channels";
 import type { FileNode } from "../shared/ipc-types";
 
 declare global {
+  /**
+   * @deprecated Do NOT use window.electronAPI directly.
+   * Import { ipc } from "src/renderer/lib/ipc-client" instead.
+   * Direct usage bypasses type safety and error handling contracts.
+   */
   interface Window {
     electronAPI: {
       send(channel: IpcChannel, data?: unknown): void;
