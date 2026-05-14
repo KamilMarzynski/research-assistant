@@ -47,7 +47,7 @@ export class ResearchService {
   ): Promise<{ taskId: string }> {
     return this._runResearch(
       { projectId, projectName, projectPath: projectPath ?? null, query, folderPath },
-      (_workspacePath) => ({
+      (_workspacePath, parentSpanContext) => ({
         toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "request_evaluation"],
         systemPromptAddition: [
           "You are a background researcher. Investigate the given query thoroughly using the available tools.",
@@ -64,6 +64,8 @@ export class ResearchService {
         homePath: this.homeService.getHomePath(),
         remainingDepth: 0,
         allowlistService: this.allowlistService,
+        observabilityService: this.observabilityService,
+        parentSpanContext,
       }),
     );
   }
@@ -79,7 +81,7 @@ export class ResearchService {
 
     return this._runResearch(
       { projectId, projectName, projectPath: projectPath ?? null, query, folderPath },
-      (workspacePath) => ({
+      (workspacePath, parentSpanContext) => ({
         toolNames: [...ORCHESTRATOR_TOOL_NAMES],
         systemPromptAddition: [
           "You are a top-level research orchestrator. Plan and execute a thorough research strategy for the given query.",
@@ -97,6 +99,8 @@ export class ResearchService {
         homePath,
         remainingDepth: 3,
         allowlistService: this.allowlistService,
+        observabilityService: this.observabilityService,
+        parentSpanContext,
       }),
     );
   }
@@ -133,6 +137,7 @@ export class ResearchService {
     config: RunResearchConfig,
     buildPartialConfig: (
       workspacePath: string,
+      parentSpanContext: { traceId: string; spanId: string } | undefined,
     ) => Omit<WorkerAgentConfig, "provider" | "onProgress">,
   ): Promise<{ taskId: string }> {
     const taskId = randomUUID();
@@ -163,6 +168,10 @@ export class ResearchService {
       metadata: { taskId, projectId: config.projectId, projectName: config.projectName },
     });
 
+    const parentSpanContext = researchSpan
+      ? { traceId: researchSpan.traceId, spanId: researchSpan.spanId }
+      : undefined;
+
     const onProgress = (label: string, delta: string) => {
       if (label) {
         this.eventBus.emit({
@@ -179,14 +188,14 @@ export class ResearchService {
     }
 
     const workerConfig: WorkerAgentConfig = {
-      ...buildPartialConfig(workspacePath),
+      ...buildPartialConfig(workspacePath, parentSpanContext),
       provider,
       onProgress,
       webAccessEnabled: settings.webAccessEnabled,
       allowlistService: this.allowlistService,
     };
 
-    const { agent } = await createWorkerAgent(workerConfig);
+    const { agent, run } = await createWorkerAgent(workerConfig);
 
     this.eventBus.emit({
       type: "research:started",
@@ -282,7 +291,7 @@ export class ResearchService {
       }
     });
 
-    agent.prompt(config.query).catch(async (err) => {
+    run(config.query).catch(async (err) => {
       researchSpan?.update({
         output: { status: "failed", error: String(err) },
         metadata: { taskId },

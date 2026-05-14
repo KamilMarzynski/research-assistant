@@ -886,8 +886,10 @@ describe("AgentSession", () => {
       );
 
       const sendPromise = session.send("my question");
-      // Yield so send() reaches the prompt and creates the placeholder
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // Wait until send() reaches agent.prompt() so the placeholder exists
+      while (mockAgent.prompt.mock.calls.length === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
       session.abort();
       resolvePrompt?.();
       await sendPromise.catch(() => {});

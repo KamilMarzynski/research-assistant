@@ -15,6 +15,9 @@ vi.mock("electron", () => ({
     encryptString: vi.fn().mockReturnValue(Buffer.from("encrypted")),
     decryptString: vi.fn().mockReturnValue("decrypted"),
   },
+  dialog: {
+    showErrorBox: vi.fn(),
+  },
 }));
 
 vi.mock("../../agent/worker-agent", () => {
@@ -29,7 +32,9 @@ vi.mock("../../agent/worker-agent", () => {
   (globalThis as Record<string, unknown>).__testMockAgent = agent;
   (globalThis as Record<string, unknown>).__testCaptured = captured;
   return {
-    createWorkerAgent: vi.fn().mockResolvedValue({ agent, run: vi.fn() }),
+    createWorkerAgent: vi
+      .fn()
+      .mockResolvedValue({ agent, run: vi.fn().mockResolvedValue(undefined) }),
     ORCHESTRATOR_TOOL_NAMES: [
       "read_file",
       "write_file",
@@ -103,7 +108,12 @@ function makeArtifactService() {
 function makeObservabilityService() {
   return {
     getTraceId: vi.fn().mockResolvedValue(null),
-    startObservation: vi.fn().mockResolvedValue(null),
+    startObservation: vi.fn().mockResolvedValue({
+      traceId: "t",
+      spanId: "s",
+      update: vi.fn(),
+      end: vi.fn(),
+    }),
     observe: vi
       .fn()
       .mockImplementation((_name: string, fn: (span: unknown) => Promise<unknown>) =>
@@ -259,9 +269,9 @@ describe("ResearchService", () => {
           getCaptured().current = cb;
           return () => {};
         }),
-        prompt: vi.fn().mockRejectedValue(new Error("worker crashed")),
+        prompt: vi.fn().mockResolvedValue(undefined),
       } as never,
-      run: vi.fn(),
+      run: vi.fn().mockRejectedValue(new Error("worker crashed")),
     });
     const svc = new ResearchService(
       bus as never,
@@ -714,6 +724,32 @@ describe("ResearchService – _runResearch internals", () => {
     );
     consoleSpy.mockRestore();
   });
+
+  it("passes observabilityService and parentSpanContext to createWorkerAgent", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeArtifactService() as never,
+      makeObservabilityService() as never,
+    );
+    await svc.startResearch("p1", "My Project", "research X", null);
+    expect(createWorkerAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        observabilityService: expect.any(Object),
+        parentSpanContext: { traceId: "t", spanId: "s" },
+      }),
+    );
+  });
 });
 
 async function createTestDb() {
@@ -772,6 +808,8 @@ describe("TaskPersistenceService", () => {
     const result = await taskPersistence.getTasksByProject("proj-a");
     expect(result).toHaveLength(2);
     expect(result[0].taskId).toBe("t2");
+    expect(result[0].status).toBe("in_progress");
     expect(result[1].taskId).toBe("t1");
+    expect(result[1].status).toBe("in_progress");
   });
 });

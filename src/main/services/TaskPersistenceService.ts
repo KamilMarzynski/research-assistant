@@ -14,6 +14,7 @@ export interface ResearchTask {
   query: string;
   folderPath: string | null;
   startedAt: string;
+  status?: "pending" | "in_progress" | "complete" | "failed";
 }
 
 const ResearchTaskSchema = z.object({
@@ -77,6 +78,7 @@ export class TaskPersistenceService {
       query: r.query,
       folderPath: r.folderPath,
       startedAt: new Date(r.createdAt).toISOString(),
+      status: r.status,
     }));
   }
 
