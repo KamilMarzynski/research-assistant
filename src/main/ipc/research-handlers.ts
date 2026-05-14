@@ -1,9 +1,9 @@
 import { ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import { ProjectIdSchema, RetryResearchSchema } from "../ipc-validation";
-import type { HomeService } from "../services/HomeService";
 import type { ProjectService } from "../services/ProjectService";
 import type { ResearchService } from "../services/ResearchService";
+import type { TaskPersistenceService } from "../services/TaskPersistenceService";
 import { parseOrThrow } from "./parse-util";
 import { wrapIpc } from "./wrap-ipc";
 
@@ -12,15 +12,15 @@ export function registerResearchHandlers(
   deps: {
     projectService: ProjectService;
     researchService: ResearchService;
-    homeService: HomeService;
+    taskPersistenceService: TaskPersistenceService;
   },
 ): void {
-  const { projectService, researchService, homeService } = deps;
+  const { projectService, researchService, taskPersistenceService } = deps;
 
   ipcMain.handle(IPC.GET_RESEARCHES, (_event, payload: unknown) =>
     wrapIpc(async () => {
       const { projectId } = parseOrThrow(ProjectIdSchema, payload, "GET_RESEARCHES");
-      return homeService.getTasksByProject(projectId);
+      return taskPersistenceService.getTasksByProject(projectId);
     }),
   );
 

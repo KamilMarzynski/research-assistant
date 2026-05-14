@@ -17,6 +17,7 @@ import type { OutputNotificationService } from "../services/OutputNotificationSe
 import type { ProjectService } from "../services/ProjectService";
 import type { ResearchService } from "../services/ResearchService";
 import type { SettingsService } from "../services/SettingsService";
+import type { ToolApprovalService } from "../services/ToolApprovalService";
 import { emitPush } from "./emit-push";
 import { parseOrThrow } from "./parse-util";
 import type { SessionManager } from "./session-manager";
@@ -37,6 +38,7 @@ export function registerChatHandler(
     memoryFileService: MemoryFileService;
     allowlistService: AllowlistService;
     observabilityService: ObservabilityService;
+    toolApprovalService: ToolApprovalService;
   },
 ): void {
   const {
@@ -52,6 +54,7 @@ export function registerChatHandler(
     memoryFileService,
     allowlistService,
     observabilityService,
+    toolApprovalService,
   } = deps;
 
   eventBus.on("agent:chunk", (payload) => {
@@ -141,7 +144,7 @@ export function registerChatHandler(
             allowlistService,
             observabilityService,
             proposeSkillFn: async (name, skillContent, script) => {
-              await homeService.savePendingTool(name, skillContent, script);
+              await toolApprovalService.savePendingTool(name, skillContent, script);
               eventBus.emit({ type: "tool:pending", payload: { name, skillContent } });
             },
             onFileWrite: (absolutePath, relativePath, fileName) => {

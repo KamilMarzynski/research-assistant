@@ -1,26 +1,11 @@
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { inject, injectable } from "tsyringe";
-import type { SkillInfo } from "../../shared/ipc-channels";
+import { injectable } from "tsyringe";
 import { BUILTIN_SKILLS } from "../agent/builtin-skills";
 import { getHomePath } from "../paths";
-import { SkillManagementService } from "./SkillManagementService";
-import { type ResearchTask, TaskPersistenceService } from "./TaskPersistenceService";
-import { ToolApprovalService } from "./ToolApprovalService";
-
-export type { ResearchTask };
 
 @injectable()
 export class HomeService {
-  constructor(
-    @inject(TaskPersistenceService)
-    private readonly taskPersistence: TaskPersistenceService,
-    @inject(SkillManagementService)
-    private readonly skillManagement: SkillManagementService,
-    @inject(ToolApprovalService)
-    private readonly toolApproval: ToolApprovalService,
-  ) {}
-
   getHomePath(): string {
     return getHomePath();
   }
@@ -56,68 +41,6 @@ export class HomeService {
     const dir = join(this.getHomePath(), "projects", slug, "workspace");
     await mkdir(dir, { recursive: true });
     return dir;
-  }
-
-  // --- Task persistence delegation ---
-
-  async saveTask(task: ResearchTask): Promise<void> {
-    return this.taskPersistence.saveTask(task);
-  }
-
-  async deleteTask(taskId: string): Promise<void> {
-    return this.taskPersistence.deleteTask(taskId);
-  }
-
-  async getInProgressTasks(): Promise<ResearchTask[]> {
-    return this.taskPersistence.getInProgressTasks();
-  }
-
-  async getTasksByProject(projectId: string): Promise<ResearchTask[]> {
-    return this.taskPersistence.getTasksByProject(projectId);
-  }
-
-  async updateTaskStatus(
-    taskId: string,
-    status: "pending" | "in_progress" | "complete" | "failed",
-    error?: string,
-  ): Promise<void> {
-    return this.taskPersistence.updateTaskStatus(taskId, status, error);
-  }
-
-  async migrateTasksFromJson(): Promise<void> {
-    return this.taskPersistence.migrateTasksFromJson();
-  }
-
-  // --- Tool approval delegation ---
-
-  async savePendingTool(name: string, skillContent: string, script?: string): Promise<void> {
-    return this.toolApproval.savePendingTool(name, skillContent, script);
-  }
-
-  async getPendingTools(): Promise<Array<{ name: string; skillContent: string }>> {
-    return this.toolApproval.getPendingTools();
-  }
-
-  async approvePendingTool(name: string): Promise<void> {
-    return this.toolApproval.approvePendingTool(name);
-  }
-
-  async rejectPendingTool(name: string): Promise<void> {
-    return this.toolApproval.rejectPendingTool(name);
-  }
-
-  // --- Skill management delegation ---
-
-  async getSkills(): Promise<SkillInfo[]> {
-    return this.skillManagement.getSkills();
-  }
-
-  async toggleSkill(name: string, enabled: boolean): Promise<void> {
-    return this.skillManagement.toggleSkill(name, enabled);
-  }
-
-  async deleteSkill(name: string): Promise<void> {
-    return this.skillManagement.deleteSkill(name);
   }
 
   private async copyBuiltinSkillsIfNeeded(): Promise<void> {

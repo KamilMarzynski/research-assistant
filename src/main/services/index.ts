@@ -1,6 +1,5 @@
 export * from "./AllowlistService";
 export * from "./ArtifactService";
-export * from "./CrystallizationService";
 export * from "./HomeService";
 export * from "./MemoryFileService";
 export * from "./MemoryManager";

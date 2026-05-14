@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -126,10 +125,17 @@ function makeHomeService() {
   return {
     getHomePath: vi.fn().mockReturnValue("/tmp/home"),
     ensureWorkspaceForProject: vi.fn().mockResolvedValue("/tmp/home/workspace/p1"),
+  };
+}
+
+function makeTaskPersistenceService() {
+  return {
     saveTask: vi.fn().mockResolvedValue(undefined),
     deleteTask: vi.fn().mockResolvedValue(undefined),
     updateTaskStatus: vi.fn().mockResolvedValue(undefined),
-    savePendingTool: vi.fn().mockResolvedValue(undefined),
+    getInProgressTasks: vi.fn().mockResolvedValue([]),
+    getTasksByProject: vi.fn().mockResolvedValue([]),
+    migrateTasksFromJson: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -156,6 +162,7 @@ describe("ResearchService", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskId).toBeTruthy();
@@ -175,17 +182,18 @@ describe("ResearchService", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
   });
 
-  it("calls homeService.saveTask with task details", async () => {
-    const home = makeHomeService();
+  it("calls taskPersistence.saveTask with task details", async () => {
+    const taskPersistence = makeTaskPersistenceService();
     const svc = new ResearchService(
       makeEventBus() as never,
       makeSettingsService() as never,
-      home as never,
+      makeHomeService() as never,
       new AllowlistService() as never,
       {
         getProject: vi
@@ -194,20 +202,21 @@ describe("ResearchService", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      taskPersistence as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
-    expect(home.saveTask).toHaveBeenCalledWith(
+    expect(taskPersistence.saveTask).toHaveBeenCalledWith(
       expect.objectContaining({ taskId, projectId: "p1", query: "research X" }),
     );
   });
 
   it("calls updateTaskStatus with complete on research:complete", async () => {
-    const home = makeHomeService();
+    const taskPersistence = makeTaskPersistenceService();
     const bus = makeEventBus();
     const svc = new ResearchService(
       bus as never,
       makeSettingsService() as never,
-      home as never,
+      makeHomeService() as never,
       new AllowlistService() as never,
       {
         getProject: vi
@@ -216,12 +225,13 @@ describe("ResearchService", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      taskPersistence as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
     await getCaptured().current?.({ type: "agent_end" });
 
-    expect(home.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
+    expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
   });
 
   it("throws when no API key is configured for cloud provider", async () => {
@@ -250,6 +260,7 @@ describe("ResearchService", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     await expect(svc.startResearch("p1", "My Project", "research X", null)).rejects.toThrow(
       "No API key configured",
@@ -257,7 +268,7 @@ describe("ResearchService", () => {
   });
 
   it("calls updateTaskStatus with failed on research error", async () => {
-    const home = makeHomeService();
+    const taskPersistence = makeTaskPersistenceService();
     const bus = makeEventBus();
     const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
       createWorkerAgent: MockFn;
@@ -276,7 +287,7 @@ describe("ResearchService", () => {
     const svc = new ResearchService(
       bus as never,
       makeSettingsService() as never,
-      home as never,
+      makeHomeService() as never,
       new AllowlistService() as never,
       {
         getProject: vi
@@ -285,13 +296,18 @@ describe("ResearchService", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      taskPersistence as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
     // Let the promise rejection propagate
     await new Promise((r) => setTimeout(r, 10));
 
-    expect(home.updateTaskStatus).toHaveBeenCalledWith(taskId, "failed", expect.any(String));
+    expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(
+      taskId,
+      "failed",
+      expect.any(String),
+    );
   });
 
   it("emits research:progress for text_delta message_update", async () => {
@@ -308,6 +324,7 @@ describe("ResearchService", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -338,6 +355,7 @@ describe("ResearchService", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -367,6 +385,7 @@ describe("ResearchService", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -404,6 +423,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -430,17 +450,18 @@ describe("ResearchService – startOrchestratedResearch", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 3 }));
   });
 
-  it("calls homeService.saveTask with task details", async () => {
-    const home = makeHomeService();
+  it("calls taskPersistence.saveTask with task details", async () => {
+    const taskPersistence = makeTaskPersistenceService();
     const svc = new ResearchService(
       makeEventBus() as never,
       makeSettingsService() as never,
-      home as never,
+      makeHomeService() as never,
       new AllowlistService() as never,
       {
         getProject: vi
@@ -449,6 +470,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      taskPersistence as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -456,7 +478,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       "deep research",
       null,
     );
-    expect(home.saveTask).toHaveBeenCalledWith(
+    expect(taskPersistence.saveTask).toHaveBeenCalledWith(
       expect.objectContaining({ taskId, projectId: "p1", query: "deep research" }),
     );
   });
@@ -475,17 +497,18 @@ describe("ResearchService – startOrchestratedResearch", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
   });
 
   it("calls updateTaskStatus with complete on agent_end", async () => {
-    const home = makeHomeService();
+    const taskPersistence = makeTaskPersistenceService();
     const svc = new ResearchService(
       makeEventBus() as never,
       makeSettingsService() as never,
-      home as never,
+      makeHomeService() as never,
       new AllowlistService() as never,
       {
         getProject: vi
@@ -494,6 +517,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      taskPersistence as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -502,7 +526,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       null,
     );
     await getCaptured().current?.({ type: "agent_end" });
-    expect(home.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
+    expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
   });
 });
 
@@ -532,6 +556,7 @@ describe("ResearchService – _runResearch internals", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query A", null);
@@ -562,6 +587,7 @@ describe("ResearchService – _runResearch internals", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -594,6 +620,7 @@ describe("ResearchService – _runResearch internals", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
 
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
@@ -620,6 +647,7 @@ describe("ResearchService – _runResearch internals", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -645,6 +673,7 @@ describe("ResearchService – _runResearch internals", () => {
       } as never,
       makeArtifactService() as never,
       makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(

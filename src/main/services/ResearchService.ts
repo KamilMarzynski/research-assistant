@@ -14,6 +14,7 @@ import { HomeService } from "./HomeService";
 import { ObservabilityService } from "./ObservabilityService";
 import { ProjectService } from "./ProjectService";
 import { SettingsService } from "./SettingsService";
+import { TaskPersistenceService } from "./TaskPersistenceService";
 
 interface RunResearchConfig {
   projectId: string;
@@ -33,6 +34,8 @@ export class ResearchService {
     @inject(ProjectService) private readonly projectService: ProjectService,
     @inject(ArtifactService) private readonly artifactService: ArtifactService,
     @inject(ObservabilityService) private readonly observabilityService: ObservabilityService,
+    @inject(TaskPersistenceService)
+    private readonly taskPersistence: TaskPersistenceService,
   ) {}
 
   async startResearch(
@@ -121,7 +124,7 @@ export class ResearchService {
 
     await mkdir(workspacePath, { recursive: true });
 
-    await this.homeService.saveTask({
+    await this.taskPersistence.saveTask({
       taskId,
       projectId: config.projectId,
       projectName: config.projectName,
@@ -191,7 +194,7 @@ export class ResearchService {
         });
         researchSpan?.end();
         try {
-          await this.homeService.updateTaskStatus(taskId, "complete");
+          await this.taskPersistence.updateTaskStatus(taskId, "complete");
 
           // Read FILES.md for output conventions
           let filePaths: string[] = [];
@@ -247,7 +250,7 @@ export class ResearchService {
             },
           });
         } catch (err) {
-          await this.homeService.updateTaskStatus(taskId, "failed", String(err));
+          await this.taskPersistence.updateTaskStatus(taskId, "failed", String(err));
           this.eventBus.emit({
             type: "research:failed",
             payload: {
@@ -268,7 +271,7 @@ export class ResearchService {
       });
       researchSpan?.end();
       console.error("[ResearchService] worker error:", err);
-      await this.homeService.updateTaskStatus(taskId, "failed", String(err));
+      await this.taskPersistence.updateTaskStatus(taskId, "failed", String(err));
       await rm(workspacePath, { recursive: true, force: true }).catch(() => {
         // Best-effort cleanup; don't let cleanup failure mask the original error
       });

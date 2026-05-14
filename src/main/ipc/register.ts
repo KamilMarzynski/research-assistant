@@ -13,6 +13,9 @@ import { OutputNotificationService } from "../services/OutputNotificationService
 import { ProjectService } from "../services/ProjectService";
 import { ResearchService } from "../services/ResearchService";
 import { SettingsService } from "../services/SettingsService";
+import { SkillManagementService } from "../services/SkillManagementService";
+import { TaskPersistenceService } from "../services/TaskPersistenceService";
+import { ToolApprovalService } from "../services/ToolApprovalService";
 import { registerAdminHandlers } from "./admin-handlers";
 import { registerArtifactHandlers } from "./artifact-handlers";
 import { registerChatHandler } from "./chat-handlers";
@@ -39,6 +42,9 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const memoryFileService = container.resolve(MemoryFileService);
   const allowlistService = container.resolve(AllowlistService);
   const observabilityService = container.resolve(ObservabilityService);
+  const toolApprovalService = container.resolve(ToolApprovalService);
+  const skillManagementService = container.resolve(SkillManagementService);
+  const taskPersistenceService = container.resolve(TaskPersistenceService);
 
   registerProjectHandlers(win, { projectService, sessionManager });
   registerSettingsHandlers(win, { settingsService, sessionManager, projectService });
@@ -56,10 +62,11 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     memoryFileService,
     allowlistService,
     observabilityService,
+    toolApprovalService,
   });
-  registerAdminHandlers(win, { homeService });
-  registerResearchHandlers(win, { projectService, researchService, homeService });
+  registerAdminHandlers(win, { homeService, toolApprovalService, skillManagementService });
+  registerResearchHandlers(win, { projectService, researchService, taskPersistenceService });
   registerCommandHandlers(win, allowlistService);
   registerEventForwarders(win, { eventBus, sessionManager });
-  registerStartupTasks({ homeService, researchService, eventBus });
+  registerStartupTasks({ taskPersistenceService, researchService, eventBus });
 }
