@@ -2,7 +2,7 @@ import type { AgentEvent } from "@mariozechner/pi-agent-core";
 import type { EventBus } from "../../event-bus";
 import type { IMemoryManager } from "../../services/MemoryManager";
 import type { MessageService } from "../../services/MessageService";
-import type { ObservabilityService, ObservationSpan } from "../../services/ObservabilityService";
+import type { ObservabilityService } from "../../services/ObservabilityService";
 
 /** Mutable state shared between AgentSession, MessagePipeline, and event handlers. Passed by reference. */
 export interface SessionState {
@@ -15,12 +15,7 @@ export interface SessionState {
   pendingSkillDeltas: Array<{ skillName: string; summary: string }>;
   pendingToolDescriptions: Map<string, string>;
   skillRouterReady: boolean;
-  activeTurnSpan: ObservationSpan | null;
-  activeGenerationSpan: ObservationSpan | null;
-  activeToolSpan: ObservationSpan | null;
   sessionId: string;
-  turnTraceId: string | null;
-  turnSpanId: string | null;
   streamingMessageId: string | null;
   streamChunkCount: number;
 }

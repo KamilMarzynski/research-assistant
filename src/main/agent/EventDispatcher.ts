@@ -3,12 +3,10 @@ import type { EventBus } from "../event-bus";
 import type { IMemoryManager } from "../services/MemoryManager";
 import type { MessageService } from "../services/MessageService";
 import type { ObservabilityService } from "../services/ObservabilityService";
-import { handleGenerationSpan } from "./handlers/generation-span";
+import type { AgentTracer } from "./AgentTracer";
 import { handleStreamChunk } from "./handlers/stream-chunk";
-import { handleToolSpan } from "./handlers/tool-span";
 import { handleTurnCompletion } from "./handlers/turn-completion";
 import type { SessionState } from "./handlers/types";
-import type { ModelProvider } from "./model-provider";
 
 export interface EventDispatcherOptions {
   agent: Agent;
@@ -17,32 +15,32 @@ export interface EventDispatcherOptions {
   messageService: MessageService;
   memoryManager: IMemoryManager;
   observabilityService?: ObservabilityService;
-  provider: ModelProvider;
   state: SessionState;
+  tracer: AgentTracer;
 }
 
 export function subscribeEvents(options: EventDispatcherOptions): () => void {
-  const {
-    agent,
-    projectId,
-    eventBus,
-    messageService,
-    memoryManager,
-    observabilityService,
-    provider,
-    state,
-  } = options;
+  const { agent, projectId, eventBus, messageService, memoryManager, state, tracer } = options;
 
-  const ctx = { projectId, eventBus, messageService, memoryManager, observabilityService, state };
+  const ctx = { projectId, eventBus, messageService, memoryManager, state };
 
-  return agent.subscribe(async (event: AgentEvent) => {
+  const unsubscribeMain = agent.subscribe(async (event: AgentEvent) => {
     try {
       await handleStreamChunk(event, ctx);
       await handleTurnCompletion(event, ctx);
-      await handleGenerationSpan(event, state, observabilityService, provider, agent);
-      await handleToolSpan(event, state, observabilityService, agent);
+
+      if (event.type === "agent_end") {
+        tracer.endTurn({ role: "assistant", content: state.assistantContent });
+      }
     } catch (err) {
       console.error("[AgentSession] subscriber error:", err);
     }
   });
+
+  const unsubscribeTracer = tracer.subscribeToAgent(agent);
+
+  return () => {
+    unsubscribeMain();
+    unsubscribeTracer();
+  };
 }

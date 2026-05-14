@@ -48,14 +48,7 @@ export class AgentSession {
       pendingSkillDeltas: [] as Array<{ skillName: string; summary: string }>,
       pendingToolDescriptions: new Map<string, string>(),
       skillRouterReady: false,
-      activeTurnSpan: null as import("../services/ObservabilityService").ObservationSpan | null,
-      activeGenerationSpan: null as
-        | import("../services/ObservabilityService").ObservationSpan
-        | null,
-      activeToolSpan: null as import("../services/ObservabilityService").ObservationSpan | null,
       sessionId: randomUUID(),
-      turnTraceId: null as string | null,
-      turnSpanId: null as string | null,
       streamingMessageId: null,
       streamChunkCount: 0,
     };
@@ -69,8 +62,8 @@ export class AgentSession {
       messageService: options.messageService,
       memoryManager: options.memoryManager,
       observabilityService: options.observabilityService,
-      provider: options.provider,
       state,
+      tracer: this.pipeline.tracer,
     });
   }
 

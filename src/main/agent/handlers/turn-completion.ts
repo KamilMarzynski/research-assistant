@@ -4,21 +4,6 @@ import type { HandlerContext } from "./types";
 export async function handleTurnCompletion(event: AgentEvent, ctx: HandlerContext): Promise<void> {
   if (event.type !== "agent_end") return;
 
-  // End turn span
-  ctx.state.activeTurnSpan?.update({
-    output: { role: "assistant", content: ctx.state.assistantContent },
-  });
-  ctx.state.activeTurnSpan?.end();
-  ctx.state.activeTurnSpan = null;
-  ctx.state.turnTraceId = null;
-  ctx.state.turnSpanId = null;
-
-  // End any lingering spans
-  ctx.state.activeGenerationSpan?.end();
-  ctx.state.activeGenerationSpan = null;
-  ctx.state.activeToolSpan?.end();
-  ctx.state.activeToolSpan = null;
-
   const content = ctx.state.assistantContent;
   const userContent = ctx.state.lastUserContent;
   ctx.state.assistantContent = "";
