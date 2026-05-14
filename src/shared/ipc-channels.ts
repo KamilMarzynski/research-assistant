@@ -38,6 +38,7 @@ export const IPC = {
   TOOL_PENDING: "TOOL_PENDING",
   BASH_BLOCKED: "BASH_BLOCKED",
   SETTINGS_UPDATED: "SETTINGS_UPDATED",
+  PATH_APPROVAL_REQUIRED: "PATH_APPROVAL_REQUIRED",
 
   // renderer → main (blocked command resolution)
   RESOLVE_BLOCKED_COMMAND: "RESOLVE_BLOCKED_COMMAND",
@@ -45,9 +46,6 @@ export const IPC = {
   // renderer → main (path approval)
   GET_PENDING_PATH_APPROVALS: "GET_PENDING_PATH_APPROVALS",
   RESOLVE_PATH_APPROVAL: "RESOLVE_PATH_APPROVAL",
-
-  // main → renderer (path approval push)
-  PATH_APPROVAL_REQUIRED: "PATH_APPROVAL_REQUIRED",
 
   // Audit log
   GET_AUDIT_LOG: "GET_AUDIT_LOG",
@@ -66,6 +64,7 @@ export const IPC = {
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
 
+// TODO: remove — superseded by AgentProgressEvent["research_step"]
 export interface ResearchProgressPayload {
   taskId: string;
   message: string;

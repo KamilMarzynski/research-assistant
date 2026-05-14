@@ -9,12 +9,31 @@ export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string; c
 export type AgentProgressEvent =
   // Research lifecycle (replaces RESEARCH_STATUS_UPDATE + RESEARCH_COMPLETE channels)
   | { kind: "research_started"; taskId: string; projectId: string; query: string }
-  | { kind: "research_step"; taskId: string; message: string; label?: string }
-  | { kind: "research_complete"; taskId: string; projectId: string; query: string; artifactId?: string; filePaths: string[] }
+  | { kind: "research_step"; taskId: string; projectId: string; message: string; label?: string }
+  | {
+      kind: "research_complete";
+      taskId: string;
+      projectId: string;
+      query: string;
+      artifactId?: string;
+      filePaths: string[];
+    }
   | { kind: "research_failed"; taskId: string; projectId: string; query: string; error: string }
   // Tool execution (replaces TOOL_START + TOOL_END channels)
-  | { kind: "tool_call_start"; projectId: string; toolCallId: string; toolName: string; description: string }
-  | { kind: "tool_call_end"; projectId: string; toolCallId: string; toolName: string; isError: boolean };
+  | {
+      kind: "tool_call_start";
+      projectId: string;
+      toolCallId: string;
+      toolName: string;
+      description: string;
+    }
+  | {
+      kind: "tool_call_end";
+      projectId: string;
+      toolCallId: string;
+      toolName: string;
+      isError: boolean;
+    };
 
 /** Discriminated union covering every webContents.send() call from main → renderer.
  * All push channels must have an entry here. */
@@ -154,7 +173,7 @@ export interface PathApprovalPayload {
   projectId: string;
 }
 
-/** Payload for RESEARCH_COMPLETE push event */
+/** @deprecated Superseded by AgentProgressEvent. Remove when ipc-guards.ts is migrated. */
 export interface ResearchCompletePayload {
   taskId: string;
   artifactId?: string;
@@ -163,13 +182,13 @@ export interface ResearchCompletePayload {
   filePaths: string[];
 }
 
-/** Payload for RESEARCH_STATUS_UPDATE push event */
+/** @deprecated Superseded by AgentProgressEvent. Remove when ipc-guards.ts is migrated. */
 export type ResearchStatusUpdatePayload =
   | { status: "started"; taskId: string; projectId: string; query: string }
   | { status: "progress"; taskId: string; message: string; label?: string }
   | { status: "failed"; taskId: string; projectId: string; query: string; error: string };
 
-/** Payload for TOOL_START push event */
+/** @deprecated Superseded by AgentProgressEvent. Remove when ipc-guards.ts is migrated. */
 export interface ToolStartPayload {
   projectId: string;
   toolCallId: string;
@@ -177,7 +196,7 @@ export interface ToolStartPayload {
   description: string;
 }
 
-/** Payload for TOOL_END push event */
+/** @deprecated Superseded by AgentProgressEvent. Remove when ipc-guards.ts is migrated. */
 export interface ToolEndPayload {
   projectId: string;
   toolCallId: string;
@@ -226,4 +245,5 @@ export interface IpcResponseMap {
   GET_PROVIDER_MODELS: GetProviderModelsResponse;
   SEND_MESSAGE: { messageId: string };
   ABORT_MESSAGE: undefined;
+  SET_PROJECT_MODEL: undefined;
 }
