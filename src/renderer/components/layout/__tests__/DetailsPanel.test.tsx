@@ -8,7 +8,7 @@ import DetailsPanel from "../DetailsPanel";
 
 function mockInvoke(results: Record<string, unknown[]>) {
   return vi.fn((channel: string) => {
-    return Promise.resolve(results[channel] ?? []);
+    return Promise.resolve({ ok: true, data: results[channel] ?? [] });
   });
 }
 

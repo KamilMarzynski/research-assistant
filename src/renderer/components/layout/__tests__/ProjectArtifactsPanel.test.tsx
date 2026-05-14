@@ -6,7 +6,7 @@ import ProjectArtifactsPanel from "../ProjectArtifactsPanel";
 
 function mockInvoke(results: Record<string, unknown[]>) {
   return vi.fn((channel: string) => {
-    return Promise.resolve(results[channel] ?? []);
+    return Promise.resolve({ ok: true, data: results[channel] ?? [] });
   });
 }
 

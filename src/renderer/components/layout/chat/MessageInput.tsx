@@ -1,6 +1,7 @@
 import { MenuItem, Select } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
+import { ipc } from "../../../lib/ipc-client";
 import { IconChevD, IconCpu, IconSend, IconStop } from "../../shared/Icons";
 
 interface ModelInfo {
@@ -45,7 +46,7 @@ export default function MessageInput({
         modelId = parts.slice(1).join(":") ?? "";
       } else {
         // Fallback to global settings for projects created before per-project models
-        const settings = await window.electronAPI.invoke(IPC.GET_SETTINGS);
+        const settings = await ipc.invoke(IPC.GET_SETTINGS);
         provider = settings.activeProvider ?? "openrouter";
         modelId =
           settings.providerCredentials[provider as keyof typeof settings.providerCredentials]
@@ -59,7 +60,7 @@ export default function MessageInput({
 
       // Fetch available models for the project's provider
       setModelsLoading(true);
-      const settings = await window.electronAPI.invoke(IPC.GET_SETTINGS);
+      const settings = await ipc.invoke(IPC.GET_SETTINGS);
       const apiKey =
         provider === "openai"
           ? (settings.providerCredentials.openai?.apiKey ?? undefined)
@@ -68,9 +69,13 @@ export default function MessageInput({
             : undefined;
       const host = provider === "ollama" ? settings.providerCredentials.ollama?.host : undefined;
 
-      window.electronAPI
-        .invoke(IPC.GET_PROVIDER_MODELS, { provider, apiKey, host })
-        .then((result: { models?: ModelInfo[] }) => {
+      ipc
+        .invoke(IPC.GET_PROVIDER_MODELS, {
+          provider: provider as "ollama" | "openrouter" | "openai",
+          apiKey,
+          host,
+        })
+        .then((result) => {
           if (result.models && result.models.length > 0) {
             setAvailableModels(result.models);
           } else {
@@ -88,7 +93,7 @@ export default function MessageInput({
 
   const handleModelChange = async (newModel: string) => {
     setModel(newModel);
-    await window.electronAPI.invoke(IPC.SET_PROJECT_MODEL, {
+    await ipc.invoke(IPC.SET_PROJECT_MODEL, {
       projectId,
       modelOverride: `${activeProvider}:${newModel}`,
     });

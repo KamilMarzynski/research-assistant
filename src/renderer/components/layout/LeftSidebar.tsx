@@ -24,6 +24,7 @@ import {
 } from "../../components/shared/Icons";
 import { useProject } from "../../contexts/ProjectContext";
 import { useStreamState } from "../../contexts/StreamStateContext";
+import { ipc } from "../../lib/ipc-client";
 import WindowDragBar from "./WindowDragBar";
 
 interface LeftSidebarProps {
@@ -76,11 +77,11 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
   useEffect(() => {
-    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
-    window.electronAPI.invoke(IPC.GET_SETTINGS).then((s) => setSettings(s));
+    void ipc.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
+    void ipc.invoke(IPC.GET_SETTINGS).then((s) => setSettings(s));
 
-    const unsub = window.electronAPI.on(IPC.SETTINGS_UPDATED, (data) => {
-      setSettings(data as SettingsResponse);
+    const unsub = ipc.on(IPC.SETTINGS_UPDATED, (event) => {
+      setSettings(event.settings);
     });
     return unsub;
   }, []);
@@ -88,18 +89,18 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   // Refresh projects when switching projects so footer model is current
   useEffect(() => {
     if (!activeProjectId) return;
-    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
+    void ipc.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
   }, [activeProjectId]);
 
   const handleBrowseFolder = async () => {
-    const path = await window.electronAPI.invoke(IPC.OPEN_FOLDER_DIALOG);
+    const path = await ipc.invoke(IPC.OPEN_FOLDER_DIALOG);
     setNewFolderPath(path);
   };
 
   const handleCreate = async () => {
     if (!newFolderPath) return;
     const name = newFolderPath.split("/").pop() || "Untitled";
-    const project = await window.electronAPI.invoke(IPC.CREATE_PROJECT, {
+    const project = await ipc.invoke(IPC.CREATE_PROJECT, {
       name,
       folderPath: newFolderPath,
     });
@@ -131,8 +132,8 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
       return;
     }
     try {
-      await window.electronAPI.invoke(IPC.RENAME_PROJECT, { id: renamingId, name });
-      const projects = await window.electronAPI.invoke(IPC.GET_PROJECTS);
+      await ipc.invoke(IPC.RENAME_PROJECT, { id: renamingId, name });
+      const projects = await ipc.invoke(IPC.GET_PROJECTS);
       setProjects(projects);
     } catch (err) {
       console.error("Failed to rename project:", err);
@@ -149,9 +150,9 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     try {
-      await window.electronAPI.invoke(IPC.DELETE_PROJECT, { id: deleteTarget.id });
+      await ipc.invoke(IPC.DELETE_PROJECT, { id: deleteTarget.id });
       if (activeProjectId === deleteTarget.id) setActiveProjectId(null);
-      const projects = await window.electronAPI.invoke(IPC.GET_PROJECTS);
+      const projects = await ipc.invoke(IPC.GET_PROJECTS);
       setProjects(projects);
     } catch (err) {
       console.error("Failed to delete project:", err);

@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { IPC } from "../../shared/ipc-channels";
+import { ipc } from "../lib/ipc-client";
 
 type ThemeMode = "light" | "dark" | "system";
 
@@ -40,7 +41,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
+    void ipc.invoke(IPC.GET_SETTINGS).then((settings) => {
       if (initialized.current) return;
       const mode = settings.theme;
       setThemeState(mode);
@@ -72,7 +73,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = useCallback((mode: ThemeMode) => {
     setThemeState(mode);
     initialized.current = true;
-    void window.electronAPI.invoke(IPC.SAVE_SETTINGS, { theme: mode });
+    void ipc.invoke(IPC.SAVE_SETTINGS, { theme: mode });
   }, []);
 
   return (

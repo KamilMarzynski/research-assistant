@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DEFAULT_OPENROUTER_MODEL } from "../../shared/constants";
 import { IPC } from "../../shared/ipc-channels";
 import type { ProviderCredentials } from "../components/settings/ModelProviderTab";
+import { ipc } from "../lib/ipc-client";
 
 export interface ProviderSettings {
   activeProvider: string;
@@ -46,7 +47,7 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
     setModelsLoading(true);
     setModelsError(null);
     try {
-      const result = await window.electronAPI.invoke(IPC.GET_PROVIDER_MODELS, {
+      const result = await ipc.invoke(IPC.GET_PROVIDER_MODELS, {
         provider,
         host,
         apiKey,
@@ -64,7 +65,7 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
   }, []);
 
   const loadFromSettings = useCallback(async () => {
-    const settings = await window.electronAPI.invoke(IPC.GET_SETTINGS);
+    const settings = await ipc.invoke(IPC.GET_SETTINGS);
     setActiveProvider(settings.activeProvider ?? "openrouter");
     setCredentials({
       openrouter: {
@@ -99,7 +100,7 @@ export function useProviderSettings(enabled: boolean): ProviderSettings {
   const testOllama = useCallback(async () => {
     setOllamaTestStatus("idle");
     const host = credentials.ollama.host;
-    const result = await window.electronAPI.invoke(IPC.CHECK_OLLAMA, host);
+    const result = await ipc.invoke(IPC.CHECK_OLLAMA, host);
     setOllamaTestStatus(result.available ? "ok" : "error");
   }, [credentials.ollama.host]);
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AuditLogEntry } from "../../shared/ipc-channels";
 import { IPC } from "../../shared/ipc-channels";
+import { ipc } from "../lib/ipc-client";
 
 export interface AuditLogState {
   entries: AuditLogEntry[];
@@ -15,12 +16,12 @@ export function useAuditLog(enabled: boolean): AuditLogState {
   const [filter, setFilter] = useState<"all" | "executed" | "blocked">("all");
 
   const load = useCallback(async () => {
-    const result = await window.electronAPI.invoke(IPC.GET_AUDIT_LOG);
+    const result = await ipc.invoke(IPC.GET_AUDIT_LOG);
     setEntries(result);
   }, []);
 
   const clear = useCallback(async () => {
-    await window.electronAPI.invoke(IPC.CLEAR_AUDIT_LOG);
+    await ipc.invoke(IPC.CLEAR_AUDIT_LOG);
     setEntries([]);
   }, []);
 

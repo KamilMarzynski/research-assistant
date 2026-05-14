@@ -4,6 +4,7 @@ import { decodeBlockedCommandPayload } from "../../../../shared/ipc-guards";
 import type { BlockedCommandPayload } from "../../../../shared/ipc-types";
 import { IconAlert } from "../../../components/shared/Icons";
 import { usePendingItems } from "../../../hooks/usePendingItems";
+import { ipc } from "../../../lib/ipc-client";
 import PendingCommandModal from "./PendingCommandModal";
 
 export default function PendingCommandBanner() {
@@ -19,7 +20,7 @@ export default function PendingCommandBanner() {
     action: "approve_once" | "approve_session" | "deny",
   ) => {
     try {
-      await window.electronAPI.invoke(IPC.RESOLVE_BLOCKED_COMMAND, {
+      await ipc.invoke(IPC.RESOLVE_BLOCKED_COMMAND, {
         commandId: cmd.commandId,
         action,
         projectId: cmd.projectId,

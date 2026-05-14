@@ -1,5 +1,6 @@
 import { IPC } from "@shared/ipc-channels";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ipc } from "../../lib/ipc-client";
 import { IconChevD, IconChevR } from "../shared/Icons";
 
 interface ResearchItem {
@@ -52,18 +53,16 @@ export default function ResearchHistoryPanel({
     const gen = ++generationRef.current;
     setLoading(true);
     setError(null);
-    window.electronAPI
+    ipc
       .invoke(IPC.GET_RESEARCHES, { projectId })
-      .then((rows: unknown[]) => {
+      .then((rows) => {
         if (gen !== generationRef.current) return;
         setItems(
           rows.map((r) => ({
-            id: String((r as Record<string, unknown>).id ?? ""),
-            query: String((r as Record<string, unknown>).query ?? ""),
-            status: String(
-              (r as Record<string, unknown>).status ?? "pending",
-            ) as ResearchItem["status"],
-            startedAt: new Date(String((r as Record<string, unknown>).startedAt ?? Date.now())),
+            id: r.id,
+            query: r.query,
+            status: r.status as ResearchItem["status"],
+            startedAt: new Date(r.startedAt),
           })),
         );
       })
@@ -85,18 +84,10 @@ export default function ResearchHistoryPanel({
   }, [load]);
 
   useEffect(() => {
-    const unsubUpdate = window.electronAPI.on(IPC.RESEARCH_STATUS_UPDATE, (data: unknown) => {
-      const d = data as { projectId?: string };
-      if (d.projectId === projectId) load();
+    const unsub = ipc.on(IPC.AGENT_PROGRESS, (event) => {
+      if ("projectId" in event.event && event.event.projectId === projectId) load();
     });
-    const unsubComplete = window.electronAPI.on(IPC.RESEARCH_COMPLETE, (data: unknown) => {
-      const d = data as { projectId?: string };
-      if (d.projectId === projectId) load();
-    });
-    return () => {
-      unsubUpdate();
-      unsubComplete();
-    };
+    return unsub;
   }, [projectId, load]);
 
   return (

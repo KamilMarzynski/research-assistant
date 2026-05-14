@@ -4,6 +4,7 @@ import { decodePathApprovalPayload } from "../../../../shared/ipc-guards";
 import type { PathApprovalPayload } from "../../../../shared/ipc-types";
 import { IconShield } from "../../../components/shared/Icons";
 import { usePendingItems } from "../../../hooks/usePendingItems";
+import { ipc } from "../../../lib/ipc-client";
 import PendingPathModal from "./PendingPathModal";
 
 export default function PendingPathBanner() {
@@ -19,7 +20,7 @@ export default function PendingPathBanner() {
     action: "approve_once" | "approve_session" | "deny",
   ) => {
     try {
-      await window.electronAPI.invoke(IPC.RESOLVE_PATH_APPROVAL, {
+      await ipc.invoke(IPC.RESOLVE_PATH_APPROVAL, {
         path: req.path,
         mode: req.mode,
         action,

@@ -6,7 +6,7 @@ import ResearchHistoryPanel from "../ResearchHistoryPanel";
 
 function mockInvoke(results: Record<string, unknown[]>) {
   return vi.fn((channel: string) => {
-    return Promise.resolve(results[channel] ?? []);
+    return Promise.resolve({ ok: true, data: results[channel] ?? [] });
   });
 }
 
@@ -46,8 +46,8 @@ describe("ResearchHistoryPanel", () => {
   });
 
   it("shows loading state while fetching", async () => {
-    let resolveResearch!: (value: unknown[]) => void;
-    const researchPromise = new Promise<unknown[]>((resolve) => {
+    let resolveResearch!: (value: { ok: true; data: unknown[] }) => void;
+    const researchPromise = new Promise<{ ok: true; data: unknown[] }>((resolve) => {
       resolveResearch = resolve;
     });
 
@@ -60,7 +60,10 @@ describe("ResearchHistoryPanel", () => {
     render(<ResearchHistoryPanel projectId="proj-1" />);
     expect(screen.getByText("Loading...")).toBeTruthy();
 
-    resolveResearch([{ id: "r1", query: "test", status: "complete", startedAt: new Date() }]);
+    resolveResearch({
+      ok: true,
+      data: [{ id: "r1", query: "test", status: "complete", startedAt: new Date() }],
+    });
     await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull());
   });
 
@@ -98,8 +101,11 @@ describe("ResearchHistoryPanel", () => {
       GET_RESEARCHES: [{ id: "r2", query: "updated", status: "complete", startedAt: new Date() }],
     });
 
-    listeners.RESEARCH_STATUS_UPDATE?.forEach((h) => {
-      h({ projectId: "proj-1" });
+    listeners.AGENT_PROGRESS?.forEach((h) => {
+      h({
+        type: "AGENT_PROGRESS",
+        event: { kind: "research_started", taskId: "t1", projectId: "proj-1", query: "updated" },
+      });
     });
     await waitFor(() => expect(screen.queryByText("updated")).toBeTruthy());
   });
@@ -127,8 +133,11 @@ describe("ResearchHistoryPanel", () => {
       .fn()
       .mockRejectedValue(new Error("should not be called"));
 
-    listeners.RESEARCH_STATUS_UPDATE?.forEach((h) => {
-      h({ projectId: "proj-2" });
+    listeners.AGENT_PROGRESS?.forEach((h) => {
+      h({
+        type: "AGENT_PROGRESS",
+        event: { kind: "research_started", taskId: "t1", projectId: "proj-2", query: "other" },
+      });
     });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByText("initial")).toBeTruthy();
@@ -160,13 +169,15 @@ describe("ResearchHistoryPanel", () => {
   });
 
   it("cancels stale fetch when projectId changes", async () => {
-    let resolveFirst!: (value: unknown[]) => void;
-    const firstPromise = new Promise<unknown[]>((resolve) => {
+    type WrappedResult = { ok: true; data: unknown[] };
+
+    let resolveFirst!: (value: WrappedResult) => void;
+    const firstPromise = new Promise<WrappedResult>((resolve) => {
       resolveFirst = resolve;
     });
 
-    let resolveSecond!: (value: unknown[]) => void;
-    const secondPromise = new Promise<unknown[]>((resolve) => {
+    let resolveSecond!: (value: WrappedResult) => void;
+    const secondPromise = new Promise<WrappedResult>((resolve) => {
       resolveSecond = resolve;
     });
 
@@ -174,7 +185,7 @@ describe("ResearchHistoryPanel", () => {
     invoke.mockImplementation((_channel: string, payload: { projectId: string }) => {
       if (payload.projectId === "proj-1") return firstPromise;
       if (payload.projectId === "proj-2") return secondPromise;
-      return Promise.resolve([]);
+      return Promise.resolve({ ok: true, data: [] });
     });
 
     window.electronAPI = {
@@ -191,11 +202,17 @@ describe("ResearchHistoryPanel", () => {
     await waitFor(() => expect(screen.getByText("Loading...")).toBeTruthy());
 
     // Resolve the fresh proj-2 fetch first
-    resolveSecond([{ id: "new", query: "fresh", status: "complete", startedAt: new Date() }]);
+    resolveSecond({
+      ok: true,
+      data: [{ id: "new", query: "fresh", status: "complete", startedAt: new Date() }],
+    });
     await waitFor(() => expect(screen.getByText("fresh")).toBeTruthy());
 
     // Now resolve the stale proj-1 fetch — it must be ignored
-    resolveFirst([{ id: "old", query: "stale", status: "complete", startedAt: new Date() }]);
+    resolveFirst({
+      ok: true,
+      data: [{ id: "old", query: "stale", status: "complete", startedAt: new Date() }],
+    });
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(screen.queryByText("stale")).toBeNull();

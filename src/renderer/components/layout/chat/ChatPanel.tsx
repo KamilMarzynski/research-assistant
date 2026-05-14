@@ -3,6 +3,7 @@ import { IPC } from "../../../../shared/ipc-channels";
 import type { Message, Project } from "../../../../shared/types";
 import { useProject } from "../../../contexts/ProjectContext";
 import { useStreamState } from "../../../contexts/StreamStateContext";
+import { ipc } from "../../../lib/ipc-client";
 import WindowDragBar from "../../layout/WindowDragBar";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -24,10 +25,10 @@ export default function ChatPanel() {
 
   // Check API key once on mount
   useEffect(() => {
-    window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
+    void ipc.invoke(IPC.GET_SETTINGS).then((settings) => {
       setHasApiKey(settings.hasApiKey);
     });
-    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
+    void ipc.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
   }, []);
 
   // Load message history and refresh project list when active project changes
@@ -36,10 +37,10 @@ export default function ChatPanel() {
       setMessages([]);
       return;
     }
-    window.electronAPI
+    void ipc
       .invoke(IPC.GET_MESSAGES, { projectId: activeProjectId })
       .then((msgs) => setMessages(msgs));
-    window.electronAPI.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
+    void ipc.invoke(IPC.GET_PROJECTS).then((p) => setProjects(p));
   }, [activeProjectId]);
 
   // Reload messages from DB when the active project finishes streaming
@@ -49,11 +50,11 @@ export default function ChatPanel() {
     const wasProcessing = prevProcessingRef.current;
     prevProcessingRef.current = processing;
     if (wasProcessing && !processing) {
-      window.electronAPI
+      void ipc
         .invoke(IPC.GET_MESSAGES, { projectId: activeProjectId })
         .then((msgs) => setMessages(msgs));
       // Re-check API key state from settings after each message
-      window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
+      void ipc.invoke(IPC.GET_SETTINGS).then((settings) => {
         setHasApiKey(settings.hasApiKey);
       });
     }
@@ -74,12 +75,12 @@ export default function ChatPanel() {
         createdAt: new Date(),
       },
     ]);
-    void window.electronAPI.invoke(IPC.SEND_MESSAGE, { projectId: activeProjectId, content });
+    void ipc.invoke(IPC.SEND_MESSAGE, { projectId: activeProjectId, content });
   };
 
   const handleAbort = () => {
     if (!activeProjectId) return;
-    void window.electronAPI.invoke(IPC.ABORT_MESSAGE, { projectId: activeProjectId });
+    void ipc.invoke(IPC.ABORT_MESSAGE, { projectId: activeProjectId });
   };
 
   if (!activeProjectId) {

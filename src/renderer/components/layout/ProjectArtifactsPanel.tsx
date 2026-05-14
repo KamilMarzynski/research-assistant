@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
 import type { Artifact } from "../../../shared/types";
+import { ipc } from "../../lib/ipc-client";
 import { IconChevD, IconChevR, IconDoc } from "../shared/Icons";
 
 interface ProjectArtifactsPanelProps {
@@ -23,10 +24,10 @@ export default function ProjectArtifactsPanel({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    window.electronAPI
+    ipc
       .invoke(IPC.GET_PROJECT_ARTIFACTS, { projectId })
       .then((data) => {
-        if (!cancelled) setArtifacts(data as Artifact[]);
+        if (!cancelled) setArtifacts(data);
       })
       .catch((err) => {
         if (!cancelled) setError(String(err));

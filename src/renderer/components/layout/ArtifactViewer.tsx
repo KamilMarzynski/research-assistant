@@ -3,6 +3,7 @@ import { Box, CircularProgress, IconButton, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { IPC } from "../../../shared/ipc-channels";
 import type { Artifact } from "../../../shared/types";
+import { ipc } from "../../lib/ipc-client";
 import MarkdownRenderer from "../shared/MarkdownRenderer";
 
 interface ArtifactViewerProps {
@@ -18,7 +19,7 @@ export default function ArtifactViewer({ artifact, onBack }: ArtifactViewerProps
     setContent(null);
     setError(null);
 
-    window.electronAPI
+    ipc
       .invoke(IPC.READ_ARTIFACT_FILE, {
         filePath: artifact.filePath,
         projectId: artifact.projectId,

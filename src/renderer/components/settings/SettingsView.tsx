@@ -4,6 +4,7 @@ import { IPC } from "../../../shared/ipc-channels";
 import { useAuditLog } from "../../hooks/useAuditLog";
 import { useProviderSettings } from "../../hooks/useProviderSettings";
 import { useSkillManager } from "../../hooks/useSkillManager";
+import { ipc } from "../../lib/ipc-client";
 import { useTheme } from "../../theme/ThemeContext";
 import WindowDragBar from "../layout/WindowDragBar";
 import { IconArrowL } from "../shared/Icons";
@@ -42,7 +43,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
 
   useEffect(() => {
     void provider.loadFromSettings().then(() => {
-      window.electronAPI.invoke(IPC.GET_SETTINGS).then((settings) => {
+      void ipc.invoke(IPC.GET_SETTINGS).then((settings) => {
         setLangfuseEnabled(settings.langfuseEnabled ?? false);
         setWebAccessEnabled(settings.webAccessEnabled ?? true);
         setThemeSetting(settings.theme ?? "system");
@@ -52,7 +53,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
 
   const handleSave = async () => {
     setSaving(true);
-    await window.electronAPI.invoke(IPC.SAVE_SETTINGS, {
+    await ipc.invoke(IPC.SAVE_SETTINGS, {
       activeProvider: provider.activeProvider,
       providerCredentials: {
         openrouter: {

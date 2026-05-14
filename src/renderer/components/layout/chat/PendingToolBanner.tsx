@@ -4,6 +4,7 @@ import { decodePendingTool } from "../../../../shared/ipc-guards";
 import type { PendingTool } from "../../../../shared/ipc-types";
 import { IconBolt } from "../../../components/shared/Icons";
 import { usePendingItems } from "../../../hooks/usePendingItems";
+import { ipc } from "../../../lib/ipc-client";
 import PendingToolModal from "./PendingToolModal";
 
 export default function PendingToolBanner() {
@@ -15,14 +16,14 @@ export default function PendingToolBanner() {
   const [selectedTool, setSelectedTool] = useState<PendingTool | null>(null);
 
   useEffect(() => {
-    window.electronAPI.invoke(IPC.GET_PENDING_TOOLS).then((tools) => {
-      for (const tool of tools as PendingTool[]) add(tool);
+    void ipc.invoke(IPC.GET_PENDING_TOOLS).then((tools) => {
+      for (const tool of tools) add(tool);
     });
   }, [add]);
 
   const handleApprove = async (tool: PendingTool) => {
     try {
-      await window.electronAPI.invoke(IPC.APPROVE_TOOL, { name: tool.name });
+      await ipc.invoke(IPC.APPROVE_TOOL, { name: tool.name });
     } catch {
       // File may not exist (e.g. in test context); proceed with UI update
     }
@@ -31,7 +32,7 @@ export default function PendingToolBanner() {
   };
 
   const handleReject = async (tool: PendingTool) => {
-    await window.electronAPI.invoke(IPC.REJECT_TOOL, { name: tool.name });
+    await ipc.invoke(IPC.REJECT_TOOL, { name: tool.name });
     remove(tool);
     setSelectedTool(null);
   };

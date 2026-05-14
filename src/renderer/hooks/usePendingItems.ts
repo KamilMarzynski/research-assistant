@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import type { IpcChannel } from "../../shared/ipc-channels";
+import type { IpcPushEvent } from "../../shared/ipc-types";
+import { ipc } from "../lib/ipc-client";
 
 export interface UsePendingItemsOptions<T> {
-  channel: IpcChannel;
+  channel: IpcPushEvent["type"];
   decode: (data: unknown) => T | null;
   getKey: (item: T) => string;
 }
@@ -40,8 +41,8 @@ export function usePendingItems<T>({
   );
 
   useEffect(() => {
-    const unsub = window.electronAPI.on(channel, (data) => {
-      const item = decode(data);
+    const unsub = ipc.on(channel, (event) => {
+      const item = decode(event);
       if (item) add(item);
     });
     return unsub;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SkillInfo } from "../../shared/ipc-channels";
 import { IPC } from "../../shared/ipc-channels";
+import { ipc } from "../lib/ipc-client";
 
 export interface SkillManagerState {
   skills: SkillInfo[];
@@ -23,7 +24,7 @@ export function useSkillManager(enabled: boolean): SkillManagerState {
     setLoading(true);
     setError(null);
     try {
-      const result = await window.electronAPI.invoke(IPC.GET_SKILLS);
+      const result = await ipc.invoke(IPC.GET_SKILLS);
       setSkills(result);
     } catch {
       setError("Failed to load skills");
@@ -33,12 +34,12 @@ export function useSkillManager(enabled: boolean): SkillManagerState {
   }, []);
 
   const toggle = useCallback(async (name: string, enabled: boolean) => {
-    await window.electronAPI.invoke(IPC.TOGGLE_SKILL, { name, enabled });
+    await ipc.invoke(IPC.TOGGLE_SKILL, { name, enabled });
     setSkills((prev) => prev.map((s) => (s.name === name ? { ...s, enabled } : s)));
   }, []);
 
   const deleteSkill = useCallback(async (name: string) => {
-    await window.electronAPI.invoke(IPC.DELETE_SKILL, { name });
+    await ipc.invoke(IPC.DELETE_SKILL, { name });
     setSkills((prev) => prev.filter((s) => s.name !== name));
   }, []);
 

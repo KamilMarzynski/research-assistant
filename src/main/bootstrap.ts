@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { app } from "electron";
 import { container, type DependencyContainer } from "tsyringe";
+import { PathJailFactory } from "./agent/path-jail-factory";
 import { createDatabase } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import {
@@ -35,7 +36,6 @@ import { SkillManagementService } from "./services/SkillManagementService";
 import { SkillWatcherService } from "./services/SkillWatcherService";
 import { TaskPersistenceService } from "./services/TaskPersistenceService";
 import { ToolApprovalService } from "./services/ToolApprovalService";
-import { PathJailFactory } from "./agent/path-jail-factory";
 import { MonotonicClock } from "./utils/time";
 
 export async function bootstrap(): Promise<DependencyContainer> {

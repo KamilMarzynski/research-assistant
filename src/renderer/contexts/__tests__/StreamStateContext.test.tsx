@@ -72,11 +72,15 @@ describe("StreamStateContext — segments", () => {
 
   it("starts new text segment after activity segment", () => {
     act(() =>
-      emit(listeners, IPC.TOOL_START, {
-        projectId: "p1",
-        toolCallId: "tc-1",
-        toolName: "web_search",
-        description: "Searching",
+      emit(listeners, IPC.AGENT_PROGRESS, {
+        type: "AGENT_PROGRESS",
+        event: {
+          kind: "tool_call_start",
+          projectId: "p1",
+          toolCallId: "tc-1",
+          toolName: "web_search",
+          description: "Searching",
+        },
       }),
     );
     act(() => emit(listeners, IPC.MESSAGE_CHUNK, { projectId: "p1", delta: "Result:" }));
@@ -88,13 +92,17 @@ describe("StreamStateContext — segments", () => {
     expect(segments[1]).toEqual({ type: "text", content: "Result:" });
   });
 
-  it("pushes activity segment on TOOL_START", () => {
+  it("pushes activity segment on tool_call_start AGENT_PROGRESS", () => {
     act(() =>
-      emit(listeners, IPC.TOOL_START, {
-        projectId: "p1",
-        toolCallId: "tc-1",
-        toolName: "web_search",
-        description: "Searching for X",
+      emit(listeners, IPC.AGENT_PROGRESS, {
+        type: "AGENT_PROGRESS",
+        event: {
+          kind: "tool_call_start",
+          projectId: "p1",
+          toolCallId: "tc-1",
+          toolName: "web_search",
+          description: "Searching for X",
+        },
       }),
     );
     const segments: StreamSegment[] = JSON.parse(
@@ -111,21 +119,29 @@ describe("StreamStateContext — segments", () => {
     ]);
   });
 
-  it("updates activity segment to done on TOOL_END", () => {
+  it("updates activity segment to done on tool_call_end AGENT_PROGRESS", () => {
     act(() =>
-      emit(listeners, IPC.TOOL_START, {
-        projectId: "p1",
-        toolCallId: "tc-2",
-        toolName: "write_file",
-        description: "Writing output",
+      emit(listeners, IPC.AGENT_PROGRESS, {
+        type: "AGENT_PROGRESS",
+        event: {
+          kind: "tool_call_start",
+          projectId: "p1",
+          toolCallId: "tc-2",
+          toolName: "write_file",
+          description: "Writing output",
+        },
       }),
     );
     act(() =>
-      emit(listeners, IPC.TOOL_END, {
-        projectId: "p1",
-        toolCallId: "tc-2",
-        toolName: "write_file",
-        isError: false,
+      emit(listeners, IPC.AGENT_PROGRESS, {
+        type: "AGENT_PROGRESS",
+        event: {
+          kind: "tool_call_end",
+          projectId: "p1",
+          toolCallId: "tc-2",
+          toolName: "write_file",
+          isError: false,
+        },
       }),
     );
     const segments: StreamSegment[] = JSON.parse(
@@ -134,21 +150,29 @@ describe("StreamStateContext — segments", () => {
     expect(segments[0]).toMatchObject({ type: "activity", status: "done", toolCallId: "tc-2" });
   });
 
-  it("updates activity segment to error on TOOL_END with isError", () => {
+  it("updates activity segment to error on tool_call_end AGENT_PROGRESS with isError", () => {
     act(() =>
-      emit(listeners, IPC.TOOL_START, {
-        projectId: "p1",
-        toolCallId: "tc-3",
-        toolName: "safe_bash",
-        description: "Running cmd",
+      emit(listeners, IPC.AGENT_PROGRESS, {
+        type: "AGENT_PROGRESS",
+        event: {
+          kind: "tool_call_start",
+          projectId: "p1",
+          toolCallId: "tc-3",
+          toolName: "safe_bash",
+          description: "Running cmd",
+        },
       }),
     );
     act(() =>
-      emit(listeners, IPC.TOOL_END, {
-        projectId: "p1",
-        toolCallId: "tc-3",
-        toolName: "safe_bash",
-        isError: true,
+      emit(listeners, IPC.AGENT_PROGRESS, {
+        type: "AGENT_PROGRESS",
+        event: {
+          kind: "tool_call_end",
+          projectId: "p1",
+          toolCallId: "tc-3",
+          toolName: "safe_bash",
+          isError: true,
+        },
       }),
     );
     const segments: StreamSegment[] = JSON.parse(

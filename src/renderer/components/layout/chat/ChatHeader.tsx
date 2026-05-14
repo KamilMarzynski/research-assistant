@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { useProject } from "../../../contexts/ProjectContext";
+import { ipc } from "../../../lib/ipc-client";
 
 export default function ChatHeader() {
   const { activeProjectId } = useProject();
@@ -12,7 +13,7 @@ export default function ChatHeader() {
       return;
     }
     let ignore = false;
-    window.electronAPI
+    ipc
       .invoke(IPC.GET_PROJECTS)
       .then((projects) => {
         if (ignore) return;
