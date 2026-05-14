@@ -31,9 +31,14 @@ describe("IpcClient.invoke", () => {
     const result: IpcResult<never> = { ok: false, error: "Not found", code: "NOT_FOUND" };
     mockElectronAPI.invoke.mockResolvedValue(result);
     const client = new IpcClient();
-    const err = await client.invoke("GET_PROJECTS").catch((e: Error) => e);
-    expect(err.message).toBe("Not found");
-    expect((err as NodeJS.ErrnoException).code).toBe("NOT_FOUND");
+    let thrown: Error | undefined;
+    try {
+      await client.invoke("GET_PROJECTS");
+    } catch (e) {
+      thrown = e as Error;
+    }
+    expect(thrown?.message).toBe("Not found");
+    expect((thrown as NodeJS.ErrnoException | undefined)?.code).toBe("NOT_FOUND");
   });
 
   it("passes payload to electronAPI", async () => {
