@@ -4,8 +4,8 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useReducer,
   useRef,
-  useState,
 } from "react";
 import { IPC } from "../../shared/ipc-channels";
 import { ipc } from "../lib/ipc-client";
@@ -25,6 +25,134 @@ export interface ProjectStreamState {
   processing: boolean;
 }
 
+// ─── Reducer state ────────────────────────────────────────────────────────────
+
+export interface StreamState {
+  states: Record<string, ProjectStreamState>;
+}
+
+// ─── Reducer actions ──────────────────────────────────────────────────────────
+
+export type StreamAction =
+  | { type: "START_STREAM"; projectId: string }
+  | { type: "END_STREAM"; projectId: string }
+  | { type: "APPEND_CHUNK"; projectId: string; delta: string }
+  | {
+      type: "TOOL_CALL_START";
+      projectId: string;
+      toolCallId: string;
+      toolName: string;
+      description: string;
+    }
+  | {
+      type: "TOOL_CALL_END";
+      projectId: string;
+      toolCallId: string;
+      isError: boolean;
+    };
+
+// ─── Initial state ────────────────────────────────────────────────────────────
+
+export const initialStreamState: StreamState = { states: {} };
+
+// ─── Reducer ──────────────────────────────────────────────────────────────────
+
+export function streamReducer(state: StreamState, action: StreamAction): StreamState {
+  switch (action.type) {
+    case "START_STREAM": {
+      const existing = state.states[action.projectId];
+      return {
+        ...state,
+        states: {
+          ...state.states,
+          [action.projectId]: {
+            streamingSegments: existing?.streamingSegments ?? [],
+            processing: true,
+          },
+        },
+      };
+    }
+
+    case "END_STREAM": {
+      const existing = state.states[action.projectId];
+      if (!existing) return state;
+      return {
+        ...state,
+        states: {
+          ...state.states,
+          [action.projectId]: { ...existing, streamingSegments: [], processing: false },
+        },
+      };
+    }
+
+    case "APPEND_CHUNK": {
+      const existing = state.states[action.projectId];
+      const segments: StreamSegment[] = existing?.streamingSegments
+        ? [...existing.streamingSegments]
+        : [];
+      const last = segments[segments.length - 1];
+      if (last?.type === "text") {
+        segments[segments.length - 1] = {
+          type: "text",
+          content: last.content + action.delta,
+        };
+      } else {
+        segments.push({ type: "text", content: action.delta });
+      }
+      return {
+        ...state,
+        states: {
+          ...state.states,
+          [action.projectId]: { streamingSegments: segments, processing: true },
+        },
+      };
+    }
+
+    case "TOOL_CALL_START": {
+      const existing = state.states[action.projectId];
+      const segments: StreamSegment[] = existing?.streamingSegments
+        ? [...existing.streamingSegments]
+        : [];
+      segments.push({
+        type: "activity",
+        toolCallId: action.toolCallId,
+        toolName: action.toolName,
+        description: action.description,
+        status: "running",
+      });
+      return {
+        ...state,
+        states: {
+          ...state.states,
+          [action.projectId]: {
+            streamingSegments: segments,
+            processing: existing?.processing ?? true,
+          },
+        },
+      };
+    }
+
+    case "TOOL_CALL_END": {
+      const existing = state.states[action.projectId];
+      if (!existing) return state;
+      const segments: StreamSegment[] = existing.streamingSegments.map((seg) =>
+        seg.type === "activity" && seg.toolCallId === action.toolCallId
+          ? { ...seg, status: action.isError ? ("error" as const) : ("done" as const) }
+          : seg,
+      );
+      return {
+        ...state,
+        states: {
+          ...state.states,
+          [action.projectId]: { ...existing, streamingSegments: segments },
+        },
+      };
+    }
+  }
+}
+
+// ─── Context ──────────────────────────────────────────────────────────────────
+
 interface StreamStateContextValue {
   states: Record<string, ProjectStreamState>;
   startStream(projectId: string): void;
@@ -40,9 +168,7 @@ const StreamStateContext = createContext<StreamStateContextValue>({
 export { StreamStateContext };
 
 export function StreamStateProvider({ children }: { children: ReactNode }) {
-  const [states, setStates] = useState<Record<string, ProjectStreamState>>({});
-  const statesRef = useRef(states);
-  statesRef.current = states;
+  const [{ states }, dispatch] = useReducer(streamReducer, initialStreamState);
   const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const STREAM_TIMEOUT_MS = 300_000;
 
@@ -58,13 +184,7 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
     (projectId: string) => {
       clearTimer(projectId);
       timersRef.current[projectId] = setTimeout(() => {
-        setStates((prev) => {
-          const next = { ...prev };
-          if (next[projectId]) {
-            next[projectId] = { ...next[projectId], streamingSegments: [], processing: false };
-          }
-          return next;
-        });
+        dispatch({ type: "END_STREAM", projectId });
       }, STREAM_TIMEOUT_MS);
     },
     [clearTimer],
@@ -72,16 +192,7 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
 
   const startStream = useCallback(
     (projectId: string) => {
-      setStates((prev) => {
-        const existing = prev[projectId];
-        return {
-          ...prev,
-          [projectId]: {
-            streamingSegments: existing?.streamingSegments ?? [],
-            processing: true,
-          },
-        };
-      });
+      dispatch({ type: "START_STREAM", projectId });
       startTimer(projectId);
     },
     [startTimer],
@@ -90,13 +201,7 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
   const endStream = useCallback(
     (projectId: string) => {
       clearTimer(projectId);
-      setStates((prev) => {
-        const next = { ...prev };
-        if (next[projectId]) {
-          next[projectId] = { ...next[projectId], streamingSegments: [], processing: false };
-        }
-        return next;
-      });
+      dispatch({ type: "END_STREAM", projectId });
     },
     [clearTimer],
   );
@@ -105,23 +210,7 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
     const unsubChunk = ipc.on(IPC.MESSAGE_CHUNK, (event) => {
       const { projectId, delta } = event;
       if (!projectId) return;
-
-      setStates((prev) => {
-        const existing = prev[projectId];
-        const segments: StreamSegment[] = existing?.streamingSegments
-          ? [...existing.streamingSegments]
-          : [];
-        const last = segments[segments.length - 1];
-        if (last?.type === "text") {
-          segments[segments.length - 1] = { type: "text", content: last.content + delta };
-        } else {
-          segments.push({ type: "text", content: delta });
-        }
-        return {
-          ...prev,
-          [projectId]: { streamingSegments: segments, processing: true },
-        };
-      });
+      dispatch({ type: "APPEND_CHUNK", projectId, delta });
       startTimer(projectId);
     });
 
@@ -136,35 +225,10 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
 
       if (kind === "tool_call_start") {
         const { projectId, toolCallId, toolName, description } = event.event;
-        setStates((prev) => {
-          const existing = prev[projectId];
-          const segments: StreamSegment[] = existing?.streamingSegments
-            ? [...existing.streamingSegments]
-            : [];
-          segments.push({ type: "activity", toolCallId, toolName, description, status: "running" });
-          return {
-            ...prev,
-            [projectId]: {
-              streamingSegments: segments,
-              processing: existing?.processing ?? true,
-            },
-          };
-        });
+        dispatch({ type: "TOOL_CALL_START", projectId, toolCallId, toolName, description });
       } else if (kind === "tool_call_end") {
         const { projectId, toolCallId, isError } = event.event;
-        setStates((prev) => {
-          const existing = prev[projectId];
-          if (!existing) return prev;
-          const segments: StreamSegment[] = existing.streamingSegments.map((seg) =>
-            seg.type === "activity" && seg.toolCallId === toolCallId
-              ? { ...seg, status: isError ? ("error" as const) : ("done" as const) }
-              : seg,
-          );
-          return {
-            ...prev,
-            [projectId]: { ...existing, streamingSegments: segments },
-          };
-        });
+        dispatch({ type: "TOOL_CALL_END", projectId, toolCallId, isError });
       }
     });
 
