@@ -1,3 +1,4 @@
+import ErrorBoundary from "../ErrorBoundary";
 import ChatPanel from "./chat/ChatPanel";
 import DetailsPanel from "./DetailsPanel";
 import LeftSidebar from "./LeftSidebar";
@@ -24,7 +25,9 @@ export default function AppShell({ onOpenSettings }: AppShellProps) {
         <LeftSidebar onOpenSettings={onOpenSettings} />
       </div>
       <div style={{ flex: 1, overflow: "hidden", height: "100%", background: "var(--bg)" }}>
-        <ChatPanel />
+        <ErrorBoundary>
+          <ChatPanel />
+        </ErrorBoundary>
       </div>
       <div
         style={{
