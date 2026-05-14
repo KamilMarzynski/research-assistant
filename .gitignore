@@ -10,6 +10,7 @@ out/
 coverage/
 .agents/
 .claude/skills/
+.claude/worktrees/
 skills-lock.json
 test-results/
 tests/eval/reports/
