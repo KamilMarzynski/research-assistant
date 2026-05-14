@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IpcResult } from "../../../shared/ipc-types";
 import { IpcClient } from "../ipc-client";
 
@@ -27,11 +27,13 @@ describe("IpcClient.invoke", () => {
     expect(mockElectronAPI.invoke).toHaveBeenCalledWith("GET_PROJECTS", undefined);
   });
 
-  it("throws when not ok", async () => {
+  it("throws when not ok with message and code", async () => {
     const result: IpcResult<never> = { ok: false, error: "Not found", code: "NOT_FOUND" };
     mockElectronAPI.invoke.mockResolvedValue(result);
     const client = new IpcClient();
-    await expect(client.invoke("GET_PROJECTS")).rejects.toThrow("Not found");
+    const err = await client.invoke("GET_PROJECTS").catch((e: Error) => e);
+    expect(err.message).toBe("Not found");
+    expect((err as NodeJS.ErrnoException).code).toBe("NOT_FOUND");
   });
 
   it("passes payload to electronAPI", async () => {
