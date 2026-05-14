@@ -5,8 +5,8 @@ import { inject, injectable } from "tsyringe";
 import { resolveProvider } from "../agent/model-provider";
 import { OutputRouter } from "../agent/OutputRouter";
 import { PathJail } from "../agent/path-jail";
-import type { WorkerAgentConfig } from "../agent/worker-agent";
-import { createWorkerAgent, ORCHESTRATOR_TOOL_NAMES } from "../agent/worker-agent";
+import type { AgentType } from "../agent/tools";
+import { AGENT_TYPE_PRESETS, createWorkerAgent } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
 import { ArtifactService } from "./ArtifactService";
@@ -26,6 +26,7 @@ interface RunResearchConfig {
 
 @injectable()
 export class ResearchService {
+  private readonly DEFAULT_RESEARCH_DEPTH = 5;
   constructor(
     @inject(EventBus) private readonly eventBus: EventBus,
     @inject(SettingsService) private readonly settingsService: SettingsService,
@@ -47,27 +48,8 @@ export class ResearchService {
   ): Promise<{ taskId: string }> {
     return this._runResearch(
       { projectId, projectName, projectPath: projectPath ?? null, query, folderPath },
-      (_workspacePath, parentSpanContext) => ({
-        toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "request_evaluation"],
-        systemPromptAddition: [
-          "You are a background researcher. Investigate the given query thoroughly using the available tools.",
-          "Create final output files in userProjectDir using write_file, not in the workspace.",
-          "Name files meaningfully (no task IDs in filenames).",
-          "Cite sources for factual claims. Verify information against multiple sources when possible.",
-          "Note uncertainties and gaps explicitly. Be thorough: check multiple angles before concluding.",
-          "When done, respond with a final summary of findings and where files were saved.",
-        ].join(" "),
-        projectId,
-        slug: projectId,
-        projectName,
-        projectPath: projectPath ?? null,
-        folderPath,
-        homePath: this.homeService.getHomePath(),
-        remainingDepth: 0,
-        allowlistService: this.allowlistService,
-        observabilityService: this.observabilityService,
-        parentSpanContext,
-      }),
+      "researcher",
+      0,
     );
   }
 
@@ -78,41 +60,17 @@ export class ResearchService {
     folderPath: string | null,
     projectPath?: string | null,
   ): Promise<{ taskId: string }> {
-    const homePath = this.homeService.getHomePath();
-
     return this._runResearch(
       { projectId, projectName, projectPath: projectPath ?? null, query, folderPath },
-      (workspacePath, parentSpanContext) => ({
-        toolNames: [...ORCHESTRATOR_TOOL_NAMES],
-        systemPromptAddition: [
-          "You are a top-level research orchestrator. Plan and execute a thorough research strategy for the given query.",
-          `Your workspace root: ${workspacePath}`,
-          "Write intermediate results to subdirectories within your workspace root.",
-          "Create final output files in userProjectDir using write_file, not in the workspace.",
-          "Name files meaningfully (no task IDs in filenames).",
-          "Delegate parallel subtasks using spawn_agents_parallel.",
-          "Synthesize findings into a coherent final report with clear conclusions.",
-        ].join("\n"),
-        projectId,
-        slug: projectId,
-        projectName,
-        projectPath: projectPath ?? null,
-        folderPath,
-        homePath,
-        remainingDepth: 3,
-        allowlistService: this.allowlistService,
-        observabilityService: this.observabilityService,
-        parentSpanContext,
-      }),
+      "orchestrator",
+      this.DEFAULT_RESEARCH_DEPTH,
     );
   }
 
   private async _runResearch(
     config: RunResearchConfig,
-    buildPartialConfig: (
-      workspacePath: string,
-      parentSpanContext: { traceId: string; spanId: string } | undefined,
-    ) => Omit<WorkerAgentConfig, "provider" | "onProgress">,
+    agentType: AgentType,
+    depth: number,
   ): Promise<{ taskId: string }> {
     const taskId = randomUUID();
     const settings = await this.settingsService.getSettings();
@@ -157,14 +115,31 @@ export class ResearchService {
       throw new Error("No API key configured for the active provider");
     }
 
-    const workerConfig: WorkerAgentConfig = {
-      ...buildPartialConfig(workspacePath, parentSpanContext),
+    const projectPath = config.projectPath ?? join(homePath, "projects", slug);
+    let filesMdContent: string | undefined;
+    try {
+      filesMdContent = await readFile(join(projectPath, "FILES.md"), "utf-8");
+    } catch {
+      // FILES.md not yet created — agent will write without routing conventions
+    }
+
+    const base = {
+      projectId: config.projectId,
       slug,
+      projectName: config.projectName,
+      projectPath: config.projectPath,
+      folderPath: config.folderPath,
+      homePath,
+      taskWorkspacePath: workspacePath,
+      filesMdContent: filesMdContent || undefined,
       provider,
       onProgress,
       webAccessEnabled: settings.webAccessEnabled,
       allowlistService: this.allowlistService,
+      observabilityService: this.observabilityService,
+      parentSpanContext,
     };
+    const workerConfig = AGENT_TYPE_PRESETS[agentType](base, workspacePath, depth);
 
     const { agent, run } = await createWorkerAgent(workerConfig);
 

@@ -43,6 +43,26 @@ vi.mock("../../agent/worker-agent", () => {
       "spawn_agent",
       "spawn_agents_parallel",
     ],
+    AGENT_TYPE_PRESETS: {
+      researcher: (base: Record<string, unknown>, outputPath: string) => ({
+        ...base,
+        toolNames: ["read_file", "write_file", "web_search"],
+        systemPromptAddition: `You are a background researcher. Output: ${outputPath}. Use meaningful filenames.`,
+        remainingDepth: 0,
+      }),
+      orchestrator: (base: Record<string, unknown>, outputPath: string, depth: number) => ({
+        ...base,
+        toolNames: ["read_file", "write_file", "spawn_agent", "spawn_agents_parallel"],
+        systemPromptAddition: `You are a research orchestrator. Output: ${outputPath}.`,
+        remainingDepth: depth,
+      }),
+      coder: (base: Record<string, unknown>, outputPath: string) => ({
+        ...base,
+        toolNames: ["read_file", "run_in_docker"],
+        systemPromptAddition: `You are a code executor. Output: ${outputPath}.`,
+        remainingDepth: 0,
+      }),
+    },
   };
 });
 
@@ -434,7 +454,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
     expect(taskId).toBeTruthy();
   });
 
-  it("calls createWorkerAgent with remainingDepth: 3", async () => {
+  it("calls createWorkerAgent with remainingDepth: 5", async () => {
     const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
       createWorkerAgent: MockFn;
     };
@@ -453,7 +473,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeTaskPersistenceService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
-    expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 3 }));
+    expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 5 }));
   });
 
   it("calls taskPersistence.saveTask with task details", async () => {
@@ -540,7 +560,7 @@ describe("ResearchService – _runResearch internals", () => {
     getMockAgent().prompt.mockResolvedValue(undefined);
   });
 
-  it("two sequential startResearch calls on same project produce identical system prompts", async () => {
+  it("two sequential startResearch calls both produce researcher prompts", async () => {
     const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
       createWorkerAgent: MockFn;
     };
@@ -565,9 +585,10 @@ describe("ResearchService – _runResearch internals", () => {
     await svc.startResearch("p1", "My Project", "query B", null);
     const secondCall = createWorkerAgent.mock.calls[1][0];
 
-    // System prompts are identical (no task-specific path), but that's fine
-    expect(firstCall.systemPromptAddition).toBe(secondCall.systemPromptAddition);
-    expect(firstCall.systemPromptAddition).toContain("Name files meaningfully");
+    // Each call gets its own task workspace path, so prompts differ in paths
+    expect(firstCall.systemPromptAddition).toContain("background researcher");
+    expect(secondCall.systemPromptAddition).toContain("background researcher");
+    expect(firstCall.remainingDepth).toBe(0);
   });
 
   it("startResearch passes onProgress that emits research:progress with label", async () => {
@@ -604,7 +625,7 @@ describe("ResearchService – _runResearch internals", () => {
     );
   });
 
-  it("startOrchestratedResearch passes remainingDepth: 3 and onProgress", async () => {
+  it("startOrchestratedResearch passes remainingDepth: 5 and onProgress", async () => {
     const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
       createWorkerAgent: MockFn;
     };
@@ -626,7 +647,7 @@ describe("ResearchService – _runResearch internals", () => {
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
     const call = createWorkerAgent.mock.calls[0][0];
 
-    expect(call.remainingDepth).toBe(3);
+    expect(call.remainingDepth).toBe(5);
     expect(call.onProgress).toBeTypeOf("function");
   });
 

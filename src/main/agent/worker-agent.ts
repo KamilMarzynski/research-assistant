@@ -1,3 +1,4 @@
+import { dirname } from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { z } from "zod/v4";
 import type { AllowlistService } from "../services/AllowlistService";
@@ -6,6 +7,13 @@ import { AgentTracer } from "./AgentTracer";
 import { loadSkillsByContent } from "./context";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
+import {
+  buildAgentDirs,
+  coderPrompt,
+  evaluatorPrompt,
+  orchestratorPrompt,
+  researcherPrompt,
+} from "./prompts";
 import type { AgentToolName, AgentType, EvaluationVerdict, SpawnResult } from "./tools";
 import { createAgentTools } from "./tools";
 
@@ -34,6 +42,10 @@ export interface WorkerAgentConfig {
   projectPath: string | null;
   folderPath: string | null;
   homePath: string;
+  /** Ephemeral workspace for this specific research task. Injected into agent prompt. */
+  taskWorkspacePath?: string;
+  /** Content of FILES.md for this project. Injected into top-level agent prompts to guide output routing. Not passed to child agents. */
+  filesMdContent?: string;
   provider: ModelProvider;
   remainingDepth?: number; // defaults to 0 (leaf)
   proposeSkillFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
@@ -105,8 +117,7 @@ export function makeEvaluatorFn(
   return async (filePath, criteria) => {
     const { run } = await createWorkerAgent({
       toolNames: ["read_file", "safe_bash"],
-      systemPromptAddition:
-        "You are a research evaluator. Read the file at the given path, assess it against the criteria, and respond with ONLY a JSON object. No preamble. No explanation.",
+      systemPromptAddition: evaluatorPrompt(),
       skills: ["evaluate-research"],
       webAccessEnabled: base.webAccessEnabled,
       ...base,
@@ -161,63 +172,49 @@ type PresetBuilder = (
   depth: number,
 ) => WorkerAgentConfig;
 
-const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
-  researcher: (base, outputPath) => ({
-    ...base,
-    toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "fetch_url", "web_search"],
-    systemPromptAddition: `You are a background researcher. Investigate thoroughly using the available tools, then write complete findings to: ${outputPath}.
-
-## Methodology
-
-1. Search broadly for overview information and identify key sources
-2. Read specific documents that directly address the query
-3. Verify claims against multiple sources; note conflicts
-4. Synthesize into a coherent narrative with clear headings
-
-## Source requirements
-
-- Cite sources for every factual claim
-- Prefer primary sources over summaries
-- Note when information is incomplete or uncertain
-
-## Output
-
-Write your complete findings to userProjectDir using write_file. Use Markdown with clear headings and a Sources section. Use meaningful filenames (no task IDs, no UUIDs).
-
-When done, respond with a brief summary of key findings.`,
-    remainingDepth: 0,
-  }),
-  coder: (base, outputPath) => ({
-    ...base,
-    toolNames: ["read_file", "write_file", "run_in_docker"],
-    systemPromptAddition: `You are a code execution agent. Use run_in_docker to execute code safely, then write results to: ${outputPath}.
-
-## When to use each tool
-
-- run_in_docker: For executing Python scripts, data processing, or any isolated code execution
-- safe_bash: For project-native operations (git, tests, package managers) when available
-
-## Output
-
-Write working code plus a brief explanation to the specified outputPath.`,
-    remainingDepth: 0,
-  }),
-  orchestrator: (base, outputPath, depth) => ({
-    ...base,
-    toolNames: [...ORCHESTRATOR_TOOL_NAMES],
-    systemPromptAddition: `You are a research orchestrator. Plan and delegate subtasks, then write your final synthesis to: ${outputPath}.
-
-## Planning
-
-1. Break the query into independent subtasks
-2. Use spawn_agents_parallel for tasks that can run simultaneously
-3. Use spawn_agent for sequential tasks with dependencies
-
-## Synthesis
-
-Combine findings from subagents into a coherent conclusion. Do not concatenate outputs. Resolve conflicts, summarize themes, and present actionable results.`,
-    remainingDepth: depth - 1,
-  }),
+export const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
+  researcher: (base, outputPath) => {
+    const dirs = buildAgentDirs({
+      folderPath: base.folderPath,
+      homePath: base.homePath,
+      slug: base.slug,
+      taskWorkspaceDir: base.taskWorkspacePath ?? dirname(outputPath),
+    });
+    return {
+      ...base,
+      toolNames: ["read_file", "write_file", "list_dir", "safe_bash", "fetch_url", "web_search"],
+      systemPromptAddition: researcherPrompt(dirs, outputPath, base.filesMdContent),
+      remainingDepth: 0,
+    };
+  },
+  coder: (base, outputPath) => {
+    const dirs = buildAgentDirs({
+      folderPath: base.folderPath,
+      homePath: base.homePath,
+      slug: base.slug,
+      taskWorkspaceDir: base.taskWorkspacePath ?? dirname(outputPath),
+    });
+    return {
+      ...base,
+      toolNames: ["read_file", "write_file", "run_in_docker"],
+      systemPromptAddition: coderPrompt(dirs, outputPath),
+      remainingDepth: 0,
+    };
+  },
+  orchestrator: (base, outputPath, depth) => {
+    const dirs = buildAgentDirs({
+      folderPath: base.folderPath,
+      homePath: base.homePath,
+      slug: base.slug,
+      taskWorkspaceDir: base.taskWorkspacePath ?? dirname(outputPath),
+    });
+    return {
+      ...base,
+      toolNames: [...ORCHESTRATOR_TOOL_NAMES],
+      systemPromptAddition: orchestratorPrompt(dirs, outputPath, base.filesMdContent),
+      remainingDepth: depth,
+    };
+  },
 };
 
 export async function createWorkerAgent(config: WorkerAgentConfig): Promise<WorkerAgent> {
@@ -267,6 +264,8 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       projectPath,
       folderPath,
       homePath,
+      taskWorkspacePath: config.taskWorkspacePath,
+      filesMdContent: config.filesMdContent,
       provider,
       proposeSkillFn,
       onProgress,
@@ -281,7 +280,13 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       label?: string,
     ): Promise<SpawnResult> => {
       const effectiveLabel = label ?? `[${type}]`;
-      const childConfig = AGENT_TYPE_PRESETS[type](base, outputPath, remainingDepth);
+      // Children write to workspace temp files — don't inherit FILES.md routing instructions
+      const childBase: WorkerAgentBase = {
+        ...base,
+        taskWorkspacePath: dirname(outputPath),
+        filesMdContent: undefined,
+      };
+      const childConfig = AGENT_TYPE_PRESETS[type](childBase, outputPath, remainingDepth - 1);
       const { run } = await createWorkerAgent({
         ...childConfig,
         agentLabel: effectiveLabel,
