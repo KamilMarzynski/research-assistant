@@ -11,6 +11,7 @@ import type { AllowlistService } from "../services/AllowlistService";
 import type { ArtifactService } from "../services/ArtifactService";
 import type { ProjectService } from "../services/ProjectService";
 import { parseOrThrow } from "./parse-util";
+import { wrapIpc } from "./wrap-ipc";
 
 const IGNORED_NAMES = new Set([
   "node_modules",
@@ -47,188 +48,198 @@ export function registerArtifactHandlers(
 ): void {
   const { projectService, artifactService, allowlistService } = deps;
 
-  ipcMain.handle(IPC.GET_ARTIFACTS, async (_event, payload: unknown) => {
-    const p = parseOrThrow(ProjectIdSchema, payload, "GET_ARTIFACTS");
-    return artifactService.listArtifacts(p.projectId);
-  });
+  ipcMain.handle(IPC.GET_ARTIFACTS, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const p = parseOrThrow(ProjectIdSchema, payload, "GET_ARTIFACTS");
+      return artifactService.listArtifacts(p.projectId);
+    }),
+  );
 
-  ipcMain.handle(IPC.GET_FILE_TREE, async (_event, payload: unknown) => {
-    const p = parseOrThrow(ProjectIdSchema, payload, "GET_FILE_TREE");
+  ipcMain.handle(IPC.GET_FILE_TREE, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const p = parseOrThrow(ProjectIdSchema, payload, "GET_FILE_TREE");
 
-    let project: Awaited<ReturnType<typeof projectService.getProject>>;
-    try {
-      project = await projectService.getProject(p.projectId);
-    } catch {
-      throw new Error("Project not found");
-    }
-
-    const jail = new PathJail(
-      project.id,
-      project.slug ?? project.id,
-      project.folderPath,
-      project.name,
-      allowlistService,
-    );
-    let count = 0;
-
-    async function walk(dirPath: string, depth: number): Promise<FileNode[]> {
-      if (depth >= MAX_TREE_DEPTH || count >= MAX_TREE_ENTRIES) return [];
-
-      let entries: import("node:fs").Dirent[];
+      let project: Awaited<ReturnType<typeof projectService.getProject>>;
       try {
-        entries = await readdir(dirPath, { withFileTypes: true });
+        project = await projectService.getProject(p.projectId);
       } catch {
-        return [];
+        throw new Error("Project not found");
       }
 
-      const nodes: FileNode[] = [];
-      for (const entry of entries) {
-        if (count >= MAX_TREE_ENTRIES) break;
-        if (IGNORED_NAMES.has(entry.name)) continue;
-        if (entry.name.startsWith(".")) {
-          continue;
-        }
+      const jail = new PathJail(
+        project.id,
+        project.slug ?? project.id,
+        project.folderPath,
+        project.name,
+        allowlistService,
+      );
+      let count = 0;
 
-        const fullPath = join(dirPath, entry.name);
+      async function walk(dirPath: string, depth: number): Promise<FileNode[]> {
+        if (depth >= MAX_TREE_DEPTH || count >= MAX_TREE_ENTRIES) return [];
+
+        let entries: import("node:fs").Dirent[];
         try {
-          jail.validate(fullPath, "read");
+          entries = await readdir(dirPath, { withFileTypes: true });
         } catch {
-          continue;
+          return [];
         }
 
-        count++;
-        const node: FileNode = {
-          name: entry.name,
-          path: fullPath,
-          isDirectory: entry.isDirectory(),
-        };
+        const nodes: FileNode[] = [];
+        for (const entry of entries) {
+          if (count >= MAX_TREE_ENTRIES) break;
+          if (IGNORED_NAMES.has(entry.name)) continue;
+          if (entry.name.startsWith(".")) {
+            continue;
+          }
 
-        if (entry.isDirectory() && depth < MAX_TREE_DEPTH - 1) {
-          node.children = await walk(fullPath, depth + 1);
+          const fullPath = join(dirPath, entry.name);
+          try {
+            jail.validate(fullPath, "read");
+          } catch {
+            continue;
+          }
+
+          count++;
+          const node: FileNode = {
+            name: entry.name,
+            path: fullPath,
+            isDirectory: entry.isDirectory(),
+          };
+
+          if (entry.isDirectory() && depth < MAX_TREE_DEPTH - 1) {
+            node.children = await walk(fullPath, depth + 1);
+          }
+          nodes.push(node);
         }
-        nodes.push(node);
+        return nodes;
       }
-      return nodes;
-    }
 
-    const children: FileNode[] = [];
+      const children: FileNode[] = [];
 
-    if (project.folderPath) {
+      if (project.folderPath) {
+        try {
+          const folderPath = jail.validate(project.folderPath, "read");
+          const folderStats = await stat(folderPath);
+          if (folderStats.isDirectory()) {
+            children.push({
+              name: "Project Folder",
+              path: folderPath,
+              isDirectory: true,
+              children: await walk(folderPath, 0),
+            });
+          }
+        } catch {
+          // Folder not accessible
+        }
+      }
+
       try {
-        const folderPath = jail.validate(project.folderPath, "read");
-        const folderStats = await stat(folderPath);
-        if (folderStats.isDirectory()) {
+        const workspacePath = join(getScholarHome(), "workspace", project.id);
+        const resolvedWorkspace = jail.validate(workspacePath, "read");
+        const workspaceStats = await stat(resolvedWorkspace);
+        if (workspaceStats.isDirectory()) {
           children.push({
-            name: "Project Folder",
-            path: folderPath,
+            name: "Workspace",
+            path: resolvedWorkspace,
             isDirectory: true,
-            children: await walk(folderPath, 0),
+            children: await walk(resolvedWorkspace, 0),
           });
         }
       } catch {
-        // Folder not accessible
+        // Workspace not accessible
       }
-    }
 
-    try {
-      const workspacePath = join(getScholarHome(), "workspace", project.id);
-      const resolvedWorkspace = jail.validate(workspacePath, "read");
-      const workspaceStats = await stat(resolvedWorkspace);
-      if (workspaceStats.isDirectory()) {
-        children.push({
-          name: "Workspace",
-          path: resolvedWorkspace,
-          isDirectory: true,
-          children: await walk(resolvedWorkspace, 0),
-        });
+      return {
+        name: project.name,
+        path: project.folderPath || "",
+        isDirectory: true,
+        children,
+      };
+    }),
+  );
+
+  ipcMain.handle(IPC.READ_ARTIFACT_FILE, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { filePath, projectId } = parseOrThrow(
+        ReadArtifactFileSchema,
+        payload,
+        "READ_ARTIFACT_FILE",
+      );
+
+      // Resolve project to get folder path for PathJail
+      let project: Awaited<ReturnType<typeof projectService.getProject>>;
+      try {
+        project = await projectService.getProject(projectId);
+      } catch {
+        throw new Error("Project not found");
       }
-    } catch {
-      // Workspace not accessible
-    }
 
-    return {
-      name: project.name,
-      path: project.folderPath || "",
-      isDirectory: true,
-      children,
-    };
-  });
+      const jail = new PathJail(
+        projectId,
+        project.slug ?? project.id,
+        project.folderPath,
+        project.name,
+        allowlistService,
+      );
 
-  ipcMain.handle(IPC.READ_ARTIFACT_FILE, async (_event, payload: unknown) => {
-    const { filePath, projectId } = parseOrThrow(
-      ReadArtifactFileSchema,
-      payload,
-      "READ_ARTIFACT_FILE",
-    );
+      // PathJail validates the path is within allowed zones
+      const resolvedPath = jail.validate(filePath, "read");
 
-    // Resolve project to get folder path for PathJail
-    let project: Awaited<ReturnType<typeof projectService.getProject>>;
-    try {
-      project = await projectService.getProject(projectId);
-    } catch {
-      throw new Error("Project not found");
-    }
+      // Check file exists and get size
+      let fileStats: import("node:fs").Stats;
+      try {
+        fileStats = await stat(resolvedPath);
+      } catch {
+        throw new Error("File not found");
+      }
 
-    const jail = new PathJail(
-      projectId,
-      project.slug ?? project.id,
-      project.folderPath,
-      project.name,
-      allowlistService,
-    );
+      // Check size before reading — reject files over 10MB
+      if (fileStats.size > 10 * 1024 * 1024) {
+        throw new Error("File too large to display (max 10MB)");
+      }
 
-    // PathJail validates the path is within allowed zones
-    const resolvedPath = jail.validate(filePath, "read");
+      // Read with 500KB cap
+      const content = await readFile(resolvedPath, { encoding: "utf-8" });
+      if (content.length > 512_000) {
+        return `${content.slice(0, 512_000)}\n\n<!-- Content truncated at 500KB -->`;
+      }
+      return content;
+    }),
+  );
 
-    // Check file exists and get size
-    let fileStats: import("node:fs").Stats;
-    try {
-      fileStats = await stat(resolvedPath);
-    } catch {
-      throw new Error("File not found");
-    }
+  ipcMain.handle(IPC.GET_PROJECT_ARTIFACTS, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const p = parseOrThrow(ProjectIdSchema, payload, "GET_PROJECT_ARTIFACTS");
+      return artifactService.listArtifacts(p.projectId);
+    }),
+  );
 
-    // Check size before reading — reject files over 10MB
-    if (fileStats.size > 10 * 1024 * 1024) {
-      throw new Error("File too large to display (max 10MB)");
-    }
+  ipcMain.handle(IPC.REVEAL_IN_FOLDER, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { filePath, projectId } = parseOrThrow(
+        z.object({ filePath: z.string(), projectId: z.string() }),
+        payload,
+        "REVEAL_IN_FOLDER",
+      );
 
-    // Read with 500KB cap
-    const content = await readFile(resolvedPath, { encoding: "utf-8" });
-    if (content.length > 512_000) {
-      return `${content.slice(0, 512_000)}\n\n<!-- Content truncated at 500KB -->`;
-    }
-    return content;
-  });
+      let project: Awaited<ReturnType<typeof projectService.getProject>>;
+      try {
+        project = await projectService.getProject(projectId);
+      } catch {
+        throw new Error("Project not found");
+      }
 
-  ipcMain.handle(IPC.GET_PROJECT_ARTIFACTS, async (_event, payload: unknown) => {
-    const p = parseOrThrow(ProjectIdSchema, payload, "GET_PROJECT_ARTIFACTS");
-    return artifactService.listArtifacts(p.projectId);
-  });
+      const jail = new PathJail(
+        projectId,
+        project.slug ?? project.id,
+        project.folderPath,
+        project.name,
+        allowlistService,
+      );
+      const resolvedPath = jail.validate(filePath, "read");
 
-  ipcMain.handle(IPC.REVEAL_IN_FOLDER, async (_event, payload: unknown) => {
-    const { filePath, projectId } = parseOrThrow(
-      z.object({ filePath: z.string(), projectId: z.string() }),
-      payload,
-      "REVEAL_IN_FOLDER",
-    );
-
-    let project: Awaited<ReturnType<typeof projectService.getProject>>;
-    try {
-      project = await projectService.getProject(projectId);
-    } catch {
-      throw new Error("Project not found");
-    }
-
-    const jail = new PathJail(
-      projectId,
-      project.slug ?? project.id,
-      project.folderPath,
-      project.name,
-      allowlistService,
-    );
-    const resolvedPath = jail.validate(filePath, "read");
-
-    shell.showItemInFolder(resolvedPath);
-  });
+      shell.showItemInFolder(resolvedPath);
+    }),
+  );
 }

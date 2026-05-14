@@ -11,6 +11,7 @@ import {
 import type { ProjectService } from "../services/ProjectService";
 import { parseOrThrow } from "./parse-util";
 import type { SessionManager } from "./session-manager";
+import { wrapIpc } from "./wrap-ipc";
 
 export function registerProjectHandlers(
   win: BrowserWindow,
@@ -21,52 +22,66 @@ export function registerProjectHandlers(
 ): void {
   const { projectService, sessionManager } = deps;
 
-  ipcMain.handle(IPC.GET_PROJECTS, async () => projectService.listProjects());
+  ipcMain.handle(IPC.GET_PROJECTS, () => wrapIpc(() => projectService.listProjects()));
 
-  ipcMain.handle(IPC.CREATE_PROJECT, async (_event, payload: unknown) => {
-    const p = parseOrThrow(CreateProjectSchema, payload, "CREATE_PROJECT");
-    return projectService.createProject(p.name, p.folderPath);
-  });
+  ipcMain.handle(IPC.CREATE_PROJECT, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const p = parseOrThrow(CreateProjectSchema, payload, "CREATE_PROJECT");
+      return projectService.createProject(p.name, p.folderPath);
+    }),
+  );
 
-  ipcMain.handle(IPC.RENAME_PROJECT, async (_event, payload: unknown) => {
-    const { id, name } = parseOrThrow(RenameProjectSchema, payload, "RENAME_PROJECT");
-    if (!name.trim()) throw new Error("Name cannot be empty");
-    await projectService.renameProject(id, name.trim());
-  });
+  ipcMain.handle(IPC.RENAME_PROJECT, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { id, name } = parseOrThrow(RenameProjectSchema, payload, "RENAME_PROJECT");
+      if (!name.trim()) throw new Error("Name cannot be empty");
+      await projectService.renameProject(id, name.trim());
+    }),
+  );
 
-  ipcMain.handle(IPC.DELETE_PROJECT, async (_event, payload: unknown) => {
-    const { id } = parseOrThrow(DeleteProjectSchema, payload, "DELETE_PROJECT");
-    await projectService.deleteProject(id);
-    sessionManager.delete(id);
-  });
+  ipcMain.handle(IPC.DELETE_PROJECT, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { id } = parseOrThrow(DeleteProjectSchema, payload, "DELETE_PROJECT");
+      await projectService.deleteProject(id);
+      sessionManager.delete(id);
+    }),
+  );
 
-  ipcMain.handle(IPC.LINK_FOLDER, async (_event, payload: unknown) => {
-    const { projectId, folderPath } = parseOrThrow(LinkFolderSchema, payload, "LINK_FOLDER");
-    await projectService.linkFolder(projectId, folderPath);
-    sessionManager.delete(projectId);
-  });
+  ipcMain.handle(IPC.LINK_FOLDER, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { projectId, folderPath } = parseOrThrow(LinkFolderSchema, payload, "LINK_FOLDER");
+      await projectService.linkFolder(projectId, folderPath);
+      sessionManager.delete(projectId);
+    }),
+  );
 
-  ipcMain.handle(IPC.UNLINK_FOLDER, async (_event, payload: unknown) => {
-    const { id } = parseOrThrow(UnlinkFolderSchema, payload, "UNLINK_FOLDER");
-    await projectService.unlinkFolder(id);
-  });
+  ipcMain.handle(IPC.UNLINK_FOLDER, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { id } = parseOrThrow(UnlinkFolderSchema, payload, "UNLINK_FOLDER");
+      await projectService.unlinkFolder(id);
+    }),
+  );
 
-  ipcMain.handle(IPC.SET_PROJECT_MODEL, async (_event, payload: unknown) => {
-    const { projectId, modelOverride } = parseOrThrow(
-      SetProjectModelSchema,
-      payload,
-      "SET_PROJECT_MODEL",
-    );
-    await projectService.setModelOverride(projectId, modelOverride);
-    sessionManager.delete(projectId);
-  });
+  ipcMain.handle(IPC.SET_PROJECT_MODEL, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { projectId, modelOverride } = parseOrThrow(
+        SetProjectModelSchema,
+        payload,
+        "SET_PROJECT_MODEL",
+      );
+      await projectService.setModelOverride(projectId, modelOverride);
+      sessionManager.delete(projectId);
+    }),
+  );
 
-  ipcMain.handle(IPC.OPEN_FOLDER_DIALOG, async () => {
-    const result = await dialog.showOpenDialog(win, {
-      properties: ["openDirectory", "createDirectory"],
-      title: "Select or create project folder",
-    });
-    if (result.canceled || result.filePaths.length === 0) return null;
-    return result.filePaths[0];
-  });
+  ipcMain.handle(IPC.OPEN_FOLDER_DIALOG, () =>
+    wrapIpc(async () => {
+      const result = await dialog.showOpenDialog(win, {
+        properties: ["openDirectory", "createDirectory"],
+        title: "Select or create project folder",
+      });
+      if (result.canceled || result.filePaths.length === 0) return null;
+      return result.filePaths[0];
+    }),
+  );
 }
