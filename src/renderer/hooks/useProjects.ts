@@ -30,17 +30,6 @@ export function useProjects(): UseProjectsResult {
 
   useEffect(() => {
     void refresh();
-
-    // NOTE: IpcPushEvent does not define a dedicated NEW_PROJECT push event yet.
-    // SETTINGS_UPDATED is the closest available signal — it fires after any
-    // settings change (including model overrides per project), so we piggyback
-    // on it to keep the project list fresh. When a proper NEW_PROJECT event is
-    // added to IpcPushEvent in ipc-types.ts, subscribe to that instead.
-    const unsub = ipc.on(IPC.SETTINGS_UPDATED, () => {
-      void refresh();
-    });
-
-    return unsub;
   }, [refresh]);
 
   return { projects, loading, error, refresh };

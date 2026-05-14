@@ -38,28 +38,12 @@ function makeErrResult(error: string): IpcResult<never> {
   return { ok: false, error, code: "ERR" };
 }
 
-type ListenerMap = Record<string, ((data: unknown) => void)[]>;
-
-function setupElectronAPI(
-  invokeImpl: (channel: string, payload?: unknown) => Promise<unknown>,
-): ListenerMap {
-  const listeners: ListenerMap = {};
+function setupElectronAPI(invokeImpl: (channel: string, payload?: unknown) => Promise<unknown>) {
   window.electronAPI = {
     invoke: vi.fn(invokeImpl),
     send: vi.fn(),
-    on: vi.fn((channel: string, cb: (data: unknown) => void) => {
-      listeners[channel] = listeners[channel] ?? [];
-      listeners[channel].push(cb);
-      return () => {
-        listeners[channel] = listeners[channel].filter((l) => l !== cb);
-      };
-    }),
+    on: vi.fn().mockReturnValue(() => {}),
   } as unknown as Window["electronAPI"];
-  return listeners;
-}
-
-function emit(listeners: ListenerMap, channel: string, data: unknown) {
-  for (const cb of listeners[channel] ?? []) cb(data);
 }
 
 describe("useProjects", () => {
@@ -112,39 +96,5 @@ describe("useProjects", () => {
 
     expect(result.current.projects).toHaveLength(2);
     expect(window.electronAPI.invoke).toHaveBeenCalledTimes(2);
-  });
-
-  it("refreshes when SETTINGS_UPDATED push event fires", async () => {
-    let callCount = 0;
-    const listeners = setupElectronAPI((_ch) => {
-      callCount += 1;
-      const data = callCount === 1 ? [project1] : [project1, project2];
-      return Promise.resolve(makeOkResult(data));
-    });
-
-    const { result } = renderHook(() => useProjects());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.projects).toHaveLength(1);
-
-    await act(async () => {
-      emit(listeners, "SETTINGS_UPDATED", { type: "SETTINGS_UPDATED", settings: {} });
-    });
-
-    await waitFor(() => expect(result.current.projects).toHaveLength(2));
-  });
-
-  it("cleans up the SETTINGS_UPDATED listener on unmount", async () => {
-    setupElectronAPI((_ch) => Promise.resolve(makeOkResult([project1])));
-
-    const { result, unmount } = renderHook(() => useProjects());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    const invokeCallsBefore = (window.electronAPI.invoke as ReturnType<typeof vi.fn>).mock.calls
-      .length;
-    unmount();
-    // After unmount the listener should be removed; no further invoke calls
-    expect((window.electronAPI.invoke as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
-      invokeCallsBefore,
-    );
   });
 });
