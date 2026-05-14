@@ -19,6 +19,7 @@ import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
 import { getContextWindow } from "./model-registry";
 import { createDefaultSkillRouter } from "./SkillRouter";
+import { buildSystemPrompt } from "./system-prompt-builder";
 import { createAgentTools } from "./tools";
 import { makeEvaluatorFn } from "./worker-agent";
 
@@ -135,13 +136,13 @@ export class MessagePipeline {
 
     this.homePath = options.homeService.getHomePath();
 
-    const systemPrompt = [
-      options.isFirstRun ? FIRST_RUN_SKILL : BASE_SYSTEM_PROMPT,
-      options.initialMemoryContext.summary,
-      options.systemContext ?? "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    const systemPrompt = buildSystemPrompt({
+      basePrompt: BASE_SYSTEM_PROMPT,
+      firstRunPrompt: FIRST_RUN_SKILL,
+      memorySummary: options.initialMemoryContext.summary,
+      systemContext: options.systemContext,
+      isFirstRun: options.isFirstRun,
+    });
 
     const initialMessages = options.initialMemoryContext.recentMessages.map((m) => ({
       role: m.role,
@@ -291,9 +292,11 @@ export class MessagePipeline {
           this.skillRouter.toXml(),
         );
 
-        const newSystemPrompt = [BASE_SYSTEM_PROMPT, memoryContext.summary, systemContext]
-          .filter(Boolean)
-          .join("\n\n");
+        const newSystemPrompt = buildSystemPrompt({
+          basePrompt: BASE_SYSTEM_PROMPT,
+          memorySummary: memoryContext.summary,
+          systemContext,
+        });
 
         if (newSystemPrompt !== this.agent.state.systemPrompt) {
           this.agent.state.systemPrompt = newSystemPrompt;
