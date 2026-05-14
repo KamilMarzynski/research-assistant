@@ -206,11 +206,10 @@ describe("createAgentTools – request_evaluation execute path", () => {
     };
     const evaluateFn = vi.fn().mockResolvedValue(verdict);
 
-    // PathJail uses homedir() to build workspace: homedir()/.scholar/workspace/<projectId>/
-    // With projectId "p1", the allowed workspace path is homedir()/.scholar/workspace/p1/
+    // PathJail workspace: homedir()/.scholar/projects/<slug>/workspace/
     const { homedir } = await import("node:os");
     const { join } = await import("node:path");
-    const filePath = join(homedir(), ".scholar", "workspace", "p1", "output.md");
+    const filePath = join(homedir(), ".scholar", "projects", "p1", "workspace", "output.md");
 
     const tools = createAgentTools({
       ...BASE,

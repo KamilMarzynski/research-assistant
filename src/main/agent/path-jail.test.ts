@@ -72,13 +72,28 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("allows read outside all zones", () => {
-      expect(() => jail.validate("/etc/passwd", "read")).not.toThrow();
+    it("blocks read outside all zones", () => {
+      expect(() => jail.validate("/etc/passwd", "read")).toThrow(ApprovalRequiredError);
     });
 
-    it("allows read through path traversal from workspace", () => {
+    it("blocks read through path traversal to outside zones", () => {
       const p = join(HOME, "projects", PROJECT_SLUG, "workspace", "../../etc/passwd");
-      expect(() => jail.validate(p, "read")).not.toThrow();
+      expect(() => jail.validate(p, "read")).toThrow(ApprovalRequiredError);
+    });
+
+    it("blocks read inside memories dir", () => {
+      const p = join(HOME, "projects", "test-project", "memories", "finding", "note.md");
+      expect(() => jail.validate(p, "read")).toThrow(/not permitted/);
+    });
+
+    it("blocks write inside memories dir", () => {
+      const p = join(HOME, "projects", "test-project", "memories", "decision", "note.md");
+      expect(() => jail.validate(p, "write")).toThrow(/not permitted/);
+    });
+
+    it("blocks read of other project directory", () => {
+      const p = join(HOME, "projects", "other-project", "GOAL.md");
+      expect(() => jail.validate(p, "read")).toThrow(ApprovalRequiredError);
     });
 
     it("blocks write outside all zones with ApprovalRequiredError", () => {
@@ -99,8 +114,10 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("allows read to arbitrary path when no folder linked", () => {
-      expect(() => jail.validate("/Users/test/myproject/src/index.ts", "read")).not.toThrow();
+    it("blocks read of arbitrary path when no folder linked", () => {
+      expect(() => jail.validate("/Users/test/myproject/src/index.ts", "read")).toThrow(
+        ApprovalRequiredError,
+      );
     });
 
     it("blocks write outside zones when no folder linked with ApprovalRequiredError", () => {

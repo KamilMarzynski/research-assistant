@@ -43,11 +43,18 @@ export async function buildSystemContext(
 
   // 0. Project directories
   parts.push(
-    "<!-- Project Directories — Use these exact paths when reading or writing files -->",
+    "<!-- Project Directories — You may only read/write paths listed here. Everything else requires user approval. -->",
     `## userProjectDir: ${folderPath ?? "not linked yet"}`,
-    "This is the user's actual project directory — where their notes, documents, research materials, source files, drafts, and any work they do lives. When the user asks you to explore the project, read files, or write artifacts, use this path.",
-    `## assistantDir: ${projectPath}`,
-    "This is the assistant's workspace — where the assistant stores its own work: research outputs, generated reports, skills, project configuration (GOAL.md, FILES.md), and temporary workspace files.",
+    "User's actual project files — notes, documents, source files, drafts. Write final outputs here. Read and write.",
+    `## assistantProjectDir: ${projectPath}`,
+    "Project config (GOAL.md, FILES.md). Read and write.",
+    `## assistantProjectWorkspaceDir: ${join(projectPath, "workspace")}`,
+    "Ephemeral scratch space for in-progress work. Read and write. Auto-cleaned after tasks complete.",
+    `## assistantProjectSkillsDir: ${join(projectPath, "skills")}`,
+    "Project-scoped skills. Read and write.",
+    `## homeSkillsDir: ${join(scholarHome, "skills")}`,
+    "Global skills shared across all projects. Read only — writes require user approval.",
+    "Note: project memories are not accessible as file paths. Use the read_memory and save_memory tools.",
   );
 
   parts.push(

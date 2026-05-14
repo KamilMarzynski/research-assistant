@@ -11,8 +11,9 @@ export class PathJail {
   private readonly projectFolder: string | null;
   private readonly projectSkills: string;
   private readonly projectsDir: string;
+  private readonly memoriesDir: string;
   private readonly readWriteZones: string[];
-  private readonly protectedZones: string[];
+  private readonly readZones: string[];
 
   constructor(
     readonly projectId: string,
@@ -22,12 +23,14 @@ export class PathJail {
     private readonly allowlistService: AllowlistService,
   ) {
     this.home = getScholarHome();
-    this.workspace = join(this.home, "projects", slug, "workspace");
+    const slugBasedPath = join(this.home, "projects", slug);
+    this.workspace = join(slugBasedPath, "workspace");
     this.homeSkills = join(this.home, "skills");
     this.projectFolder = folderPath ? resolve(normalize(folderPath)) : null;
     this.allProjectsDir = join(this.home, "projects");
-    this.projectSkills = projectPath ? join(projectPath, "skills") : this.allProjectsDir;
-    this.projectsDir = projectPath ?? this.allProjectsDir;
+    this.projectsDir = projectPath ? resolve(normalize(projectPath)) : slugBasedPath;
+    this.projectSkills = join(this.projectsDir, "skills");
+    this.memoriesDir = join(this.projectsDir, "memories");
 
     this.readWriteZones = [
       this.workspace,
@@ -36,34 +39,23 @@ export class PathJail {
       ...(this.projectFolder ? [this.projectFolder] : []),
     ];
 
-    this.protectedZones = [
-      this.workspace,
-      this.projectsDir,
-      this.projectSkills,
-      this.homeSkills,
-      this.allProjectsDir,
-      ...(this.projectFolder ? [this.projectFolder] : []),
-    ];
+    // homeSkills is readable but writes require approval
+    this.readZones = [...this.readWriteZones, this.homeSkills];
   }
 
   private isInZone(target: string, zones: string[]): boolean {
     return zones.some((z) => target.startsWith(`${z}/`) || target === z);
   }
 
-  /**
-   * Walk path components from the allowed zone root to the target,
-   * resolving symlinks at each step to prevent escape via symlinks.
-   * If any intermediate component resolves outside allowed zones, reject.
-   */
+  // Walk path components from the zone root to the target, resolving symlinks
+  // at each step to prevent escape via symlink indirection.
   private walkComponents(target: string): void {
-    const containingZone = this.protectedZones.find((z) => this.isInZone(target, [z]));
+    const containingZone = this.readZones.find((z) => this.isInZone(target, [z]));
 
     if (!containingZone) {
-      // Path is not in any protected zone — no symlink check needed.
       return;
     }
 
-    // Resolve the containing zone so symlink comparisons are consistent
     const realContainingZone = (() => {
       try {
         return realpathSync(containingZone);
@@ -72,14 +64,13 @@ export class PathJail {
       }
     })();
 
-    // Walk from the zone root to the target, component by component
     const rel = relative(containingZone, target);
-    if (rel === "") return; // Target is the zone root itself
+    if (rel === "") return;
 
     const segments = rel.split("/");
 
     let current = containingZone;
-    // We walk up to but NOT including the last segment (the file itself may not exist yet for writes)
+    // Walk up to but NOT including the last segment (target file may not exist yet)
     for (let i = 0; i < segments.length - 1; i++) {
       current = join(current, segments[i]);
       try {
@@ -93,10 +84,7 @@ export class PathJail {
         if (err instanceof Error && err.message.includes("resolves outside")) {
           throw err;
         }
-        // ENOENT or other FS error: component doesn't exist yet. For parent dirs,
-        // if they don't exist and the string is in zone, it's an attempt to create
-        // dirs within the zone — that's allowed. We just can't verify realpath.
-        // Continue to the next component.
+        // ENOENT: component doesn't exist yet — allowed for new file creation within zone
       }
     }
   }
@@ -104,18 +92,16 @@ export class PathJail {
   validate(inputPath: string, mode: "read" | "write"): string {
     const resolved = resolve(normalize(inputPath));
 
-    // READ MODE: allow everywhere, with symlink checks inside protected zones
-    if (mode === "read") {
-      if (this.isInZone(resolved, this.protectedZones)) {
-        this.walkComponents(resolved);
-      }
-      return resolved;
+    // Memories dir is always blocked — only accessible via read_memory/save_memory tools
+    if (this.isInZone(resolved, [this.memoriesDir])) {
+      throw new Error(
+        `Direct access to "${resolved}" is not permitted. Use the read_memory and save_memory tools to access memories.`,
+      );
     }
 
-    // WRITE MODE: check restrictions
-
-    // 1. Cross-project write protection (hard block, no allowlist override)
+    // Cross-project write protection (hard block, no allowlist override)
     if (
+      mode === "write" &&
       this.isInZone(resolved, [this.allProjectsDir]) &&
       !this.isInZone(resolved, [this.projectsDir])
     ) {
@@ -124,29 +110,34 @@ export class PathJail {
       );
     }
 
-    // 2. Read-write zones
-    if (this.isInZone(resolved, this.readWriteZones)) {
-      this.walkComponents(resolved);
-      return resolved;
+    // Symlink traversal check for any path within readable zones
+    this.walkComponents(resolved);
+
+    if (mode === "read") {
+      if (this.isInZone(resolved, this.readZones)) {
+        return resolved;
+      }
+      const result = this.allowlistService.isAllowed(
+        this.projectId,
+        resolved,
+        mode,
+        this.readZones,
+      );
+      if (result.allowed) return resolved;
+      throw new ApprovalRequiredError(resolved, mode);
     }
 
-    // 3. Allowlist — checked before home skills so approved paths are not re-blocked
+    // Write mode
+    if (this.isInZone(resolved, this.readWriteZones)) {
+      return resolved;
+    }
     const result = this.allowlistService.isAllowed(
       this.projectId,
       resolved,
       mode,
       this.readWriteZones,
     );
-    if (result.allowed) {
-      this.walkComponents(resolved);
-      return resolved;
-    }
-
-    // 4. Home skills require explicit approval
-    if (this.isInZone(resolved, [this.homeSkills])) {
-      throw new ApprovalRequiredError(resolved, mode);
-    }
-
+    if (result.allowed) return resolved;
     throw new ApprovalRequiredError(resolved, mode);
   }
 }
