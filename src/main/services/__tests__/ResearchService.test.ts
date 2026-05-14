@@ -343,7 +343,6 @@ describe("ResearchService", () => {
     expect(progressCalls).toHaveLength(0);
   });
 
-
   it("emits research:complete with empty filePaths on agent_end", async () => {
     const bus = makeEventBus();
     const svc = new ResearchService(
@@ -619,7 +618,6 @@ describe("ResearchService – _runResearch internals", () => {
     call.onProgress?.("", "some delta");
     expect(bus.emit).not.toHaveBeenCalled();
   });
-
 });
 
 async function createTestDb() {
