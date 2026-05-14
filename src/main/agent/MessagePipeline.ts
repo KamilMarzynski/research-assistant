@@ -14,6 +14,7 @@ import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { CompressionService } from "./CompressionService";
 import { buildSystemContext } from "./context";
 import type { SessionState } from "./handlers/types";
+import { pruneMessages } from "./message-context-pruner";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
 import { getContextWindow } from "./model-registry";
@@ -64,38 +65,6 @@ If you discover a reusable pattern the user did not request, use propose_skill t
 - If a tool returns "Approval required", explain what path was blocked and ask the user if they want to allow it.
 - If a bash command is blocked, explain why and suggest an alternative.
 - If research fails, report the error clearly and offer to retry or adjust.`;
-
-const RESERVED_TOKENS = 6000;
-const CHARS_PER_TOKEN = 4;
-
-function extractMessageText(msg: { content: unknown }): string {
-  if (typeof msg.content === "string") return msg.content;
-  if (Array.isArray(msg.content)) {
-    return (msg.content as Array<{ text?: string }>).map((c) => c?.text ?? "").join("");
-  }
-  return "";
-}
-
-function createTransformContext(modelId: string) {
-  const contextWindow = getContextWindow(modelId);
-  return async (messages: import("@mariozechner/pi-agent-core").AgentMessage[]) => {
-    const availableTokens = contextWindow - RESERVED_TOKENS;
-    let estimatedTokens = 0;
-    const pruned: import("@mariozechner/pi-agent-core").AgentMessage[] = [];
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
-      const text = extractMessageText(msg);
-      const msgTokens = Math.ceil(text.length / CHARS_PER_TOKEN);
-      if (estimatedTokens + msgTokens > availableTokens) {
-        if (msg.role === "user" && pruned.length === 0) pruned.unshift(msg);
-        break;
-      }
-      estimatedTokens += msgTokens;
-      pruned.unshift(msg);
-    }
-    return pruned;
-  };
-}
 
 export interface MessagePipelineOptions {
   projectId: string;
@@ -267,7 +236,8 @@ export class MessagePipeline {
         tools,
         messages: initialMessages,
       },
-      transformContext: createTransformContext(options.provider.model),
+      transformContext: async (messages) =>
+        pruneMessages(messages, getContextWindow(options.provider.model)),
       getApiKey: async () =>
         options.provider.type === "ollama" ? "ollama" : options.provider.apiKey,
       beforeToolCall: async (ctx) => {
