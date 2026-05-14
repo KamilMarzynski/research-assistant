@@ -2,9 +2,7 @@ import type { SkillInfo } from "./ipc-channels";
 import type { Artifact, Message, Project, ResearchTask } from "./types";
 
 /** Unified return shape for all ipcMain.handle handlers */
-export type IpcResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string; code: string };
+export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string; code: string };
 
 /** Typed request payloads for all invoke() channels */
 export interface IpcRequestMap {
@@ -202,4 +200,6 @@ export interface IpcResponseMap {
   RESOLVE_PATH_APPROVAL: undefined;
   CHECK_OLLAMA: CheckOllamaResponse;
   GET_PROVIDER_MODELS: GetProviderModelsResponse;
+  SEND_MESSAGE: { messageId: string };
+  ABORT_MESSAGE: undefined;
 }
