@@ -20,6 +20,7 @@ import type { SettingsService } from "../services/SettingsService";
 import type { ToolApprovalService } from "../services/ToolApprovalService";
 import { emitPush } from "./emit-push";
 import { parseOrThrow } from "./parse-util";
+import { SendThrottle } from "./send-throttle";
 import type { SessionManager } from "./session-manager";
 import { wrapIpc } from "./wrap-ipc";
 
@@ -71,9 +72,7 @@ export function registerChatHandler(
     }),
   );
 
-  const sendLocks = new Map<string, Promise<void>>();
-  const lastSendTimes = new Map<string, number>();
-  const THROTTLE_MS = 500;
+  const sendThrottle = new SendThrottle();
 
   ipcMain.handle(IPC.SEND_MESSAGE, (_event, payload: unknown) =>
     wrapIpc(async () => {
@@ -81,23 +80,7 @@ export function registerChatHandler(
       const projectId = parsed.projectId;
       const content = parsed.content;
 
-      // Per-project throttle: minimum interval between sends
-      const last = lastSendTimes.get(projectId) ?? 0;
-      const elapsed = Date.now() - last;
-      if (elapsed < THROTTLE_MS) {
-        await new Promise((resolve) => setTimeout(resolve, THROTTLE_MS - elapsed));
-      }
-      lastSendTimes.set(projectId, Date.now());
-
-      // Per-project mutex: serialize session creation and message sends
-      let releaseLock: (() => void) | undefined;
-      const lockPromise = new Promise<void>((resolve) => {
-        releaseLock = resolve;
-      });
-      const existing = sendLocks.get(projectId);
-      if (existing) await existing;
-      sendLocks.set(projectId, lockPromise);
-
+      const release = await sendThrottle.acquire(projectId);
       try {
         const settings = await settingsService.getSettings();
 
@@ -203,8 +186,7 @@ export function registerChatHandler(
         emitPush(win, { type: "MESSAGE_DONE", projectId });
         return { messageId: randomUUID() };
       } finally {
-        releaseLock?.();
-        sendLocks.delete(projectId);
+        release();
       }
     }),
   );
