@@ -28,7 +28,7 @@ describe("streamReducer", () => {
 
   it("START_STREAM creates project entry with processing=true", () => {
     const next = streamReducer(initialStreamState, { type: "START_STREAM", projectId: "p1" });
-    expect(next.states["p1"]).toEqual({ streamingSegments: [], processing: true });
+    expect(next.states.p1).toEqual({ streamingSegments: [], processing: true });
   });
 
   it("START_STREAM preserves existing segments", () => {
@@ -37,14 +37,14 @@ describe("streamReducer", () => {
       processing: false,
     });
     const next = streamReducer(base, { type: "START_STREAM", projectId: "p1" });
-    expect(next.states["p1"].streamingSegments).toEqual([{ type: "text", content: "hi" }]);
-    expect(next.states["p1"].processing).toBe(true);
+    expect(next.states.p1.streamingSegments).toEqual([{ type: "text", content: "hi" }]);
+    expect(next.states.p1.processing).toBe(true);
   });
 
   it("START_STREAM does not mutate other projects", () => {
     const base = stateWithProject("p2", { processing: false });
     const next = streamReducer(base, { type: "START_STREAM", projectId: "p1" });
-    expect(next.states["p2"]).toEqual(base.states["p2"]);
+    expect(next.states.p2).toEqual(base.states.p2);
   });
 
   // ─── END_STREAM ───────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ describe("streamReducer", () => {
       processing: true,
     });
     const next = streamReducer(base, { type: "END_STREAM", projectId: "p1" });
-    expect(next.states["p1"]).toEqual({ streamingSegments: [], processing: false });
+    expect(next.states.p1).toEqual({ streamingSegments: [], processing: false });
   });
 
   it("END_STREAM returns same state when project does not exist", () => {
@@ -71,8 +71,8 @@ describe("streamReducer", () => {
       projectId: "p1",
       delta: "Hello",
     });
-    expect(next.states["p1"].streamingSegments).toEqual([{ type: "text", content: "Hello" }]);
-    expect(next.states["p1"].processing).toBe(true);
+    expect(next.states.p1.streamingSegments).toEqual([{ type: "text", content: "Hello" }]);
+    expect(next.states.p1.processing).toBe(true);
   });
 
   it("APPEND_CHUNK appends to existing text segment", () => {
@@ -81,7 +81,7 @@ describe("streamReducer", () => {
       processing: true,
     });
     const next = streamReducer(base, { type: "APPEND_CHUNK", projectId: "p1", delta: " world" });
-    expect(next.states["p1"].streamingSegments).toEqual([{ type: "text", content: "Hello world" }]);
+    expect(next.states.p1.streamingSegments).toEqual([{ type: "text", content: "Hello world" }]);
   });
 
   it("APPEND_CHUNK starts new text segment after activity segment", () => {
@@ -98,8 +98,8 @@ describe("streamReducer", () => {
       processing: true,
     });
     const next = streamReducer(base, { type: "APPEND_CHUNK", projectId: "p1", delta: "result" });
-    expect(next.states["p1"].streamingSegments).toHaveLength(2);
-    expect(next.states["p1"].streamingSegments[1]).toEqual({ type: "text", content: "result" });
+    expect(next.states.p1.streamingSegments).toHaveLength(2);
+    expect(next.states.p1.streamingSegments[1]).toEqual({ type: "text", content: "result" });
   });
 
   // ─── TOOL_CALL_START ──────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ describe("streamReducer", () => {
       description: "Searching",
     };
     const next = streamReducer(initialStreamState, action);
-    expect(next.states["p1"].streamingSegments).toEqual([
+    expect(next.states.p1.streamingSegments).toEqual([
       {
         type: "activity",
         toolCallId: "tc-1",
@@ -133,7 +133,7 @@ describe("streamReducer", () => {
       toolName: "tool",
       description: "desc",
     });
-    expect(next.states["p1"].processing).toBe(false);
+    expect(next.states.p1.processing).toBe(false);
   });
 
   // ─── TOOL_CALL_END ────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ describe("streamReducer", () => {
       toolCallId: "tc-1",
       isError: false,
     });
-    expect(next.states["p1"].streamingSegments[0]).toMatchObject({
+    expect(next.states.p1.streamingSegments[0]).toMatchObject({
       type: "activity",
       toolCallId: "tc-1",
       status: "done",
@@ -183,7 +183,7 @@ describe("streamReducer", () => {
       toolCallId: "tc-1",
       isError: true,
     });
-    expect(next.states["p1"].streamingSegments[0]).toMatchObject({ status: "error" });
+    expect(next.states.p1.streamingSegments[0]).toMatchObject({ status: "error" });
   });
 
   it("TOOL_CALL_END does not mutate unrelated segments", () => {
@@ -213,8 +213,8 @@ describe("streamReducer", () => {
       toolCallId: "tc-1",
       isError: false,
     });
-    expect(next.states["p1"].streamingSegments[1]).toEqual({ type: "text", content: "hello" });
-    expect(next.states["p1"].streamingSegments[2]).toMatchObject({ status: "running" });
+    expect(next.states.p1.streamingSegments[1]).toEqual({ type: "text", content: "hello" });
+    expect(next.states.p1.streamingSegments[2]).toMatchObject({ status: "running" });
   });
 
   it("TOOL_CALL_END returns same state when project does not exist", () => {
@@ -234,7 +234,7 @@ describe("streamReducer", () => {
       segments: [{ type: "text", content: "existing" }],
       processing: true,
     });
-    const segmentsBefore = base.states["p1"].streamingSegments;
+    const segmentsBefore = base.states.p1.streamingSegments;
     streamReducer(base, { type: "APPEND_CHUNK", projectId: "p1", delta: " more" });
     // original array should be untouched
     expect(segmentsBefore).toHaveLength(1);
