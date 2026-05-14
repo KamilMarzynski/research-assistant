@@ -1,5 +1,6 @@
 import type { BrowserWindow } from "electron";
 import type { DependencyContainer } from "tsyringe";
+import { PathJailFactory } from "../agent/path-jail-factory";
 import { MEMORY_MANAGER_TOKEN } from "../di/tokens";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "../services/AllowlistService";
@@ -41,6 +42,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const outputNotificationService = container.resolve(OutputNotificationService);
   const memoryFileService = container.resolve(MemoryFileService);
   const allowlistService = container.resolve(AllowlistService);
+  const pathJailFactory = container.resolve(PathJailFactory);
   const observabilityService = container.resolve(ObservabilityService);
   const toolApprovalService = container.resolve(ToolApprovalService);
   const skillManagementService = container.resolve(SkillManagementService);
@@ -48,7 +50,7 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
 
   registerProjectHandlers(win, { projectService, sessionManager });
   registerSettingsHandlers(win, { settingsService, sessionManager, projectService });
-  registerArtifactHandlers(win, { projectService, artifactService, allowlistService });
+  registerArtifactHandlers(win, { projectService, artifactService, pathJailFactory });
   registerChatHandler(win, {
     sessionManager,
     settingsService,

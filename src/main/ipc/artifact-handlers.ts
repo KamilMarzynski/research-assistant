@@ -4,10 +4,9 @@ import { ipcMain, shell } from "electron";
 import { z } from "zod/v4";
 import { IPC } from "../../shared/ipc-channels";
 import type { FileNode } from "../../shared/ipc-types";
-import { PathJail } from "../agent/path-jail";
+import type { PathJailFactory } from "../agent/path-jail-factory";
 import { ProjectIdSchema, ReadArtifactFileSchema } from "../ipc-validation";
 import { getScholarHome } from "../paths";
-import type { AllowlistService } from "../services/AllowlistService";
 import type { ArtifactService } from "../services/ArtifactService";
 import type { ProjectService } from "../services/ProjectService";
 import { parseOrThrow } from "./parse-util";
@@ -43,10 +42,10 @@ export function registerArtifactHandlers(
   deps: {
     projectService: ProjectService;
     artifactService: ArtifactService;
-    allowlistService: AllowlistService;
+    pathJailFactory: PathJailFactory;
   },
 ): void {
-  const { projectService, artifactService, allowlistService } = deps;
+  const { projectService, artifactService, pathJailFactory } = deps;
 
   ipcMain.handle(IPC.GET_ARTIFACTS, (_event, payload: unknown) =>
     wrapIpc(async () => {
@@ -66,13 +65,7 @@ export function registerArtifactHandlers(
         throw new Error("Project not found");
       }
 
-      const jail = new PathJail(
-        project.id,
-        project.slug ?? project.id,
-        project.folderPath,
-        project.name,
-        allowlistService,
-      );
+      const jail = pathJailFactory.create(project);
       let count = 0;
 
       async function walk(dirPath: string, depth: number): Promise<FileNode[]> {
@@ -175,13 +168,7 @@ export function registerArtifactHandlers(
         throw new Error("Project not found");
       }
 
-      const jail = new PathJail(
-        projectId,
-        project.slug ?? project.id,
-        project.folderPath,
-        project.name,
-        allowlistService,
-      );
+      const jail = pathJailFactory.create(project);
 
       // PathJail validates the path is within allowed zones
       const resolvedPath = jail.validate(filePath, "read");
@@ -230,13 +217,7 @@ export function registerArtifactHandlers(
         throw new Error("Project not found");
       }
 
-      const jail = new PathJail(
-        projectId,
-        project.slug ?? project.id,
-        project.folderPath,
-        project.name,
-        allowlistService,
-      );
+      const jail = pathJailFactory.create(project);
       const resolvedPath = jail.validate(filePath, "read");
 
       shell.showItemInFolder(resolvedPath);
