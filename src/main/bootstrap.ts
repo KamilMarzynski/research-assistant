@@ -35,6 +35,7 @@ import { SkillManagementService } from "./services/SkillManagementService";
 import { SkillWatcherService } from "./services/SkillWatcherService";
 import { TaskPersistenceService } from "./services/TaskPersistenceService";
 import { ToolApprovalService } from "./services/ToolApprovalService";
+import { PathJailFactory } from "./agent/path-jail-factory";
 import { MonotonicClock } from "./utils/time";
 
 export async function bootstrap(): Promise<DependencyContainer> {
@@ -71,6 +72,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(HomeService);
   appContainer.registerSingleton(OutputNotificationService);
   appContainer.registerSingleton(AllowlistService);
+  appContainer.registerSingleton(PathJailFactory);
 
   appContainer.registerInstance(CLOCK_TOKEN, new MonotonicClock());
   appContainer.registerInstance(MEMORY_FILE_PATH_TOKEN, join(homePath, "app-memory"));
