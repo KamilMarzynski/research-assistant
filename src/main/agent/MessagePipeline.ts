@@ -16,6 +16,7 @@ import { buildSystemContext } from "./context";
 import type { SessionState } from "./handlers/types";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
+import { getContextWindow } from "./model-registry";
 import { createDefaultSkillRouter } from "./SkillRouter";
 import { createAgentTools } from "./tools";
 import { makeEvaluatorFn } from "./worker-agent";
@@ -66,17 +67,6 @@ If you discover a reusable pattern the user did not request, use propose_skill t
 
 const RESERVED_TOKENS = 6000;
 const CHARS_PER_TOKEN = 4;
-
-function getContextWindow(modelId: string): number {
-  if (modelId.includes("claude-3-opus")) return 200_000;
-  if (modelId.includes("claude-3-5-sonnet") || modelId.includes("claude-sonnet-4")) return 200_000;
-  if (modelId.includes("claude-3-haiku") || modelId.includes("claude-haiku-4")) return 200_000;
-  if (modelId.includes("gpt-4o")) return 128_000;
-  if (modelId.includes("gpt-4-turbo")) return 128_000;
-  if (modelId.includes("gpt-4")) return 8_192;
-  if (modelId.includes("gpt-3.5")) return 16_384;
-  return 128_000;
-}
 
 function extractMessageText(msg: { content: unknown }): string {
   if (typeof msg.content === "string") return msg.content;
