@@ -61,6 +61,30 @@ describe("AgentProgressEvent", () => {
     };
     expect(e.kind).toBe("tool_call_end");
   });
+
+  it("research_complete includes filePaths", () => {
+    const e: AgentProgressEvent = {
+      kind: "research_complete",
+      taskId: "t1",
+      projectId: "p1",
+      query: "test",
+      filePaths: ["/path/to/file.md"],
+    };
+    expect(e.kind).toBe("research_complete");
+    if (e.kind === "research_complete") expect(Array.isArray(e.filePaths)).toBe(true);
+  });
+
+  it("research_failed includes error", () => {
+    const e: AgentProgressEvent = {
+      kind: "research_failed",
+      taskId: "t1",
+      projectId: "p1",
+      query: "test",
+      error: "Connection timeout",
+    };
+    expect(e.kind).toBe("research_failed");
+    if (e.kind === "research_failed") expect(e.error).toBe("Connection timeout");
+  });
 });
 
 describe("IpcPushEvent", () => {
