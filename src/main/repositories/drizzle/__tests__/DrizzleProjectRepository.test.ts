@@ -256,7 +256,9 @@ describe("DrizzleProjectRepository", () => {
     });
 
     it("throws when project does not exist", async () => {
-      await expect(repo.setSlug("nonexistent-id", "test-slug")).rejects.toThrow("Project not found");
+      await expect(repo.setSlug("nonexistent-id", "test-slug")).rejects.toThrow(
+        "Project not found",
+      );
     });
   });
 });

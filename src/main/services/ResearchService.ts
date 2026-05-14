@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import { resolveProvider } from "../agent/model-provider";
@@ -25,9 +25,6 @@ interface RunResearchConfig {
 
 @injectable()
 export class ResearchService {
-  /** Workspace dirs older than this get cleaned up on next research start. */
-  private static readonly WORKSPACE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-
   constructor(
     @inject(EventBus) private readonly eventBus: EventBus,
     @inject(SettingsService) private readonly settingsService: SettingsService,
@@ -103,34 +100,6 @@ export class ResearchService {
     );
   }
 
-  /** Remove workspace directories older than WORKSPACE_MAX_AGE_MS. Fire-and-forget. */
-  private async cleanupOldWorkspaces(): Promise<void> {
-    try {
-      const homePath = this.homeService.getHomePath();
-      const workspaceRoot = join(homePath, "workspace");
-      let entries: string[];
-      try {
-        entries = await readdir(workspaceRoot);
-      } catch {
-        return; // No workspace dir yet
-      }
-      const now = Date.now();
-      for (const entry of entries) {
-        const fullPath = join(workspaceRoot, entry);
-        try {
-          const stats = await stat(fullPath);
-          if (stats.isDirectory() && now - stats.mtimeMs > ResearchService.WORKSPACE_MAX_AGE_MS) {
-            await rm(fullPath, { recursive: true, force: true });
-          }
-        } catch (err) {
-          console.error(`[ResearchService] workspace cleanup: skipping entry ${entry}:`, err);
-        }
-      }
-    } catch (err) {
-      console.error("[ResearchService] workspace cleanup failed:", err);
-    }
-  }
-
   private async _runResearch(
     config: RunResearchConfig,
     buildPartialConfig: (
@@ -141,12 +110,9 @@ export class ResearchService {
     const settings = await this.settingsService.getSettings();
 
     const homePath = this.homeService.getHomePath();
-    const workspacePath = join(homePath, "workspace", config.projectId, taskId);
-
-    // Fire cleanup in background — don't block research start
-    this.cleanupOldWorkspaces().catch((err) => {
-      console.error("[ResearchService] background workspace cleanup failed:", err);
-    });
+    const project = await this.projectService.getProject(config.projectId);
+    const slug = project.slug ?? config.projectId;
+    const workspacePath = join(homePath, "projects", slug, "workspace", taskId);
 
     await mkdir(workspacePath, { recursive: true });
 
@@ -174,7 +140,6 @@ export class ResearchService {
       }
     };
 
-    const project = await this.projectService.getProject(config.projectId);
     const provider = resolveProvider({ settings, projectModelOverride: project.modelOverride });
     if (provider.type !== "ollama" && !provider.apiKey) {
       throw new Error("No API key configured for the active provider");
@@ -182,6 +147,7 @@ export class ResearchService {
 
     const workerConfig: WorkerAgentConfig = {
       ...buildPartialConfig(workspacePath),
+      slug,
       provider,
       onProgress,
       webAccessEnabled: settings.webAccessEnabled,
@@ -222,7 +188,7 @@ export class ResearchService {
           let filePaths: string[] = [];
           try {
             const homePath = this.homeService.getHomePath();
-            const projectPath = config.projectPath ?? join(homePath, "projects", config.projectId);
+            const projectPath = config.projectPath ?? join(homePath, "projects", slug);
             let filesMdContent = "";
 
             try {
@@ -235,7 +201,7 @@ export class ResearchService {
             if (filesMdContent) {
               const jail = new PathJail(
                 config.projectId,
-                project.slug ?? config.projectId,
+                slug,
                 config.folderPath,
                 projectPath,
                 this.allowlistService,
@@ -249,7 +215,7 @@ export class ResearchService {
             if (conventions) {
               const jail = new PathJail(
                 config.projectId,
-                project.slug ?? config.projectId,
+                slug,
                 config.folderPath,
                 projectPath,
                 this.allowlistService,

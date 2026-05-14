@@ -1,10 +1,10 @@
 import { access, mkdir, readdir, readFile } from "node:fs/promises";
 import { join, normalize, resolve } from "node:path";
 import { inject, injectable } from "tsyringe";
-import { toSlug } from "../utils/slug";
 import { FALLBACK_MEMORY_PATH_TOKEN, MEMORY_FILE_PATH_TOKEN } from "../di/tokens";
 import { EventBus } from "../event-bus";
 import { parseFrontmatter } from "../utils/frontmatter";
+import { toSlug } from "../utils/slug";
 import { AllowlistService, ApprovalRequiredError } from "./AllowlistService";
 
 const VALID_CATEGORIES = [

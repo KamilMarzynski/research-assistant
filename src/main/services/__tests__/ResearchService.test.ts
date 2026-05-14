@@ -343,73 +343,6 @@ describe("ResearchService", () => {
     expect(progressCalls).toHaveLength(0);
   });
 
-  it("background cleanup removes old workspace directories", async () => {
-    const home = makeHomeService();
-    const workspaceRoot = join(home.getHomePath(), "workspace");
-    const oldDir = join(workspaceRoot, "old-proj");
-
-    const { mkdir: realMkdir, utimes, access } = await import("node:fs/promises");
-    await realMkdir(oldDir, { recursive: true });
-    const ancient = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
-    await utimes(oldDir, ancient, ancient);
-
-    const svc = new ResearchService(
-      makeEventBus() as never,
-      makeSettingsService() as never,
-      home as never,
-      new AllowlistService() as never,
-      {
-        getProject: vi
-          .fn()
-          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
-      } as never,
-      makeArtifactService() as never,
-      makeObservabilityService() as never,
-    );
-    await svc.startResearch("p1", "My Project", "research X", null);
-    await new Promise((r) => setTimeout(r, 200));
-
-    await expect(access(oldDir)).rejects.toThrow();
-  });
-
-  it("background cleanup skips entries where stat throws", async () => {
-    const home = makeHomeService();
-    const workspaceRoot = join(home.getHomePath(), "workspace");
-    const badLink = join(workspaceRoot, "bad-link");
-
-    const { mkdir: realMkdir, symlink } = await import("node:fs/promises");
-    await realMkdir(workspaceRoot, { recursive: true });
-    try {
-      await symlink("/nonexistent/path", badLink);
-    } catch {
-      // Skip if symlinks not supported
-      return;
-    }
-
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    const svc = new ResearchService(
-      makeEventBus() as never,
-      makeSettingsService() as never,
-      home as never,
-      new AllowlistService() as never,
-      {
-        getProject: vi
-          .fn()
-          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
-      } as never,
-      makeArtifactService() as never,
-      makeObservabilityService() as never,
-    );
-    await svc.startResearch("p1", "My Project", "research X", null);
-    await new Promise((r) => setTimeout(r, 200));
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("workspace cleanup: skipping entry"),
-      expect.any(Error),
-    );
-    consoleSpy.mockRestore();
-  });
 
   it("emits research:complete with empty filePaths on agent_end", async () => {
     const bus = makeEventBus();
@@ -687,33 +620,6 @@ describe("ResearchService – _runResearch internals", () => {
     expect(bus.emit).not.toHaveBeenCalled();
   });
 
-  it("logs workspace cleanup failure when getHomePath throws", async () => {
-    const home = makeHomeService();
-    home.getHomePath.mockReturnValueOnce("/tmp/home").mockImplementationOnce(() => {
-      throw new Error("home path gone");
-    });
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const svc = new ResearchService(
-      makeEventBus() as never,
-      makeSettingsService() as never,
-      home as never,
-      new AllowlistService() as never,
-      {
-        getProject: vi
-          .fn()
-          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
-      } as never,
-      makeArtifactService() as never,
-      makeObservabilityService() as never,
-    );
-    await svc.startResearch("p1", "My Project", "query", null);
-    await new Promise((r) => setTimeout(r, 50));
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "[ResearchService] workspace cleanup failed:",
-      expect.any(Error),
-    );
-    consoleSpy.mockRestore();
-  });
 });
 
 async function createTestDb() {

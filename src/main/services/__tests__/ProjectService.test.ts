@@ -82,7 +82,10 @@ describe("ProjectService", () => {
         projectPath: null,
       });
       expect(repo.setSlug).toHaveBeenCalledWith("proj-1", "new-proj1");
-      expect(repo.setProjectPath).toHaveBeenCalledWith("proj-1", "/tmp/.scholar/projects/new-proj1");
+      expect(repo.setProjectPath).toHaveBeenCalledWith(
+        "proj-1",
+        "/tmp/.scholar/projects/new-proj1",
+      );
       expect(result.projectPath).toBe("/tmp/.scholar/projects/new-proj1");
       expect(result.slug).toBe("new-proj1");
     });
@@ -137,7 +140,11 @@ describe("ProjectService", () => {
 
     it("cleans up projectPath after DB delete", async () => {
       vi.mocked(repo.get).mockResolvedValue(
-        makeProject({ id: "p1", name: "My Project", projectPath: "/tmp/.scholar/projects/my-project-p1" }),
+        makeProject({
+          id: "p1",
+          name: "My Project",
+          projectPath: "/tmp/.scholar/projects/my-project-p1",
+        }),
       );
 
       await service.deleteProject("p1");

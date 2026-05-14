@@ -23,7 +23,6 @@ export interface SessionState {
   turnSpanId: string | null;
   streamingMessageId: string | null;
   streamChunkCount: number;
-  pendingToolDescriptions: Map<string, string>;
 }
 
 /** Dependencies injected into every event handler. */

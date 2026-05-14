@@ -14,7 +14,13 @@ const allowlistService = new AllowlistService();
 
 describe("PathJail", () => {
   describe("with folderPath", () => {
-    const jail = new PathJail(PROJECT_ID, PROJECT_SLUG, FOLDER_PATH, PROJECT_PATH, allowlistService);
+    const jail = new PathJail(
+      PROJECT_ID,
+      PROJECT_SLUG,
+      FOLDER_PATH,
+      PROJECT_PATH,
+      allowlistService,
+    );
 
     it("allows read inside workspace", () => {
       const p = join(HOME, "projects", PROJECT_SLUG, "workspace", "output.md");
@@ -105,7 +111,13 @@ describe("PathJail", () => {
   });
 
   describe("returns resolved absolute path", () => {
-    const jail = new PathJail(PROJECT_ID, PROJECT_SLUG, FOLDER_PATH, PROJECT_PATH, allowlistService);
+    const jail = new PathJail(
+      PROJECT_ID,
+      PROJECT_SLUG,
+      FOLDER_PATH,
+      PROJECT_PATH,
+      allowlistService,
+    );
 
     it("resolves and returns the path", () => {
       const p = join(HOME, "projects", PROJECT_SLUG, "workspace", "output.md");
