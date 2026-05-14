@@ -8,10 +8,25 @@ import {
   useState,
 } from "react";
 import { IPC } from "../../shared/ipc-channels";
-import { decodeMessageChunk, decodeMessageDone } from "../../shared/ipc-guards";
+import {
+  decodeMessageChunk,
+  decodeMessageDone,
+  decodeToolEnd,
+  decodeToolStart,
+} from "../../shared/ipc-guards";
+
+export type StreamSegment =
+  | { type: "text"; content: string }
+  | {
+      type: "activity";
+      toolCallId: string;
+      toolName: string;
+      description: string;
+      status: "running" | "done" | "error";
+    };
 
 export interface ProjectStreamState {
-  streamingContent: string | null;
+  streamingSegments: StreamSegment[];
   processing: boolean;
 }
 
@@ -51,7 +66,7 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
         setStates((prev) => {
           const next = { ...prev };
           if (next[projectId]) {
-            next[projectId] = { ...next[projectId], streamingContent: null, processing: false };
+            next[projectId] = { ...next[projectId], streamingSegments: [], processing: false };
           }
           return next;
         });
@@ -67,7 +82,7 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           [projectId]: {
-            streamingContent: existing?.streamingContent ?? null,
+            streamingSegments: existing?.streamingSegments ?? [],
             processing: true,
           },
         };
@@ -83,7 +98,7 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
       setStates((prev) => {
         const next = { ...prev };
         if (next[projectId]) {
-          next[projectId] = { ...next[projectId], streamingContent: null, processing: false };
+          next[projectId] = { ...next[projectId], streamingSegments: [], processing: false };
         }
         return next;
       });
@@ -100,19 +115,18 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
 
       setStates((prev) => {
         const existing = prev[projectId];
-        if (!existing) {
-          return {
-            ...prev,
-            [projectId]: { streamingContent: delta, processing: true },
-          };
+        const segments: StreamSegment[] = existing?.streamingSegments
+          ? [...existing.streamingSegments]
+          : [];
+        const last = segments[segments.length - 1];
+        if (last?.type === "text") {
+          segments[segments.length - 1] = { type: "text", content: last.content + delta };
+        } else {
+          segments.push({ type: "text", content: delta });
         }
         return {
           ...prev,
-          [projectId]: {
-            ...existing,
-            streamingContent: (existing.streamingContent ?? "") + delta,
-            processing: true,
-          },
+          [projectId]: { streamingSegments: segments, processing: true },
         };
       });
       startTimer(projectId);
@@ -126,9 +140,52 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
       endStream(projectId);
     });
 
+    const unsubToolStart = window.electronAPI.on(IPC.TOOL_START, (data) => {
+      const payload = decodeToolStart(data);
+      if (payload === null) return;
+      const { projectId, toolCallId, toolName, description } = payload;
+
+      setStates((prev) => {
+        const existing = prev[projectId];
+        const segments: StreamSegment[] = existing?.streamingSegments
+          ? [...existing.streamingSegments]
+          : [];
+        segments.push({ type: "activity", toolCallId, toolName, description, status: "running" });
+        return {
+          ...prev,
+          [projectId]: {
+            streamingSegments: segments,
+            processing: existing?.processing ?? true,
+          },
+        };
+      });
+    });
+
+    const unsubToolEnd = window.electronAPI.on(IPC.TOOL_END, (data) => {
+      const payload = decodeToolEnd(data);
+      if (payload === null) return;
+      const { projectId, toolCallId, isError } = payload;
+
+      setStates((prev) => {
+        const existing = prev[projectId];
+        if (!existing) return prev;
+        const segments: StreamSegment[] = existing.streamingSegments.map((seg) =>
+          seg.type === "activity" && seg.toolCallId === toolCallId
+            ? { ...seg, status: isError ? ("error" as const) : ("done" as const) }
+            : seg,
+        );
+        return {
+          ...prev,
+          [projectId]: { ...existing, streamingSegments: segments },
+        };
+      });
+    });
+
     return () => {
       unsubChunk();
       unsubDone();
+      unsubToolStart();
+      unsubToolEnd();
       for (const timer of Object.values(timersRef.current)) {
         clearTimeout(timer);
       }

@@ -50,6 +50,11 @@ export async function buildSystemContext(
     "This is the assistant's workspace — where the assistant stores its own work: research outputs, generated reports, skills, project configuration (GOAL.md, FILES.md), and temporary workspace files.",
   );
 
+  parts.push(
+    "<!-- Tool Usage — Always fill the _description argument -->",
+    'When calling any tool, always provide `_description` with a short, user-facing sentence describing what you are doing — e.g. "Searching for papers on prompt caching" or "Writing summary to research/output.md". This is shown to the user in real time.',
+  );
+
   // 1. config.md
   try {
     const config = await readFile(join(scholarHome, "config.md"), "utf-8");

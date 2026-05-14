@@ -116,58 +116,24 @@ export function decodeMessageDone(data: unknown): { projectId: string } | null {
   return null;
 }
 
+const ToolStartPayloadSchema = z.object({
+  projectId: z.string(),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  description: z.string(),
+});
+
+const ToolEndPayloadSchema = z.object({
+  projectId: z.string(),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  isError: z.boolean(),
+});
+
 export function decodeToolStart(data: unknown): ToolStartPayload | null {
-  if (
-    typeof data === "object" &&
-    data !== null &&
-    "projectId" in data &&
-    "toolCallId" in data &&
-    "toolName" in data &&
-    "description" in data
-  ) {
-    const d = data as Record<string, unknown>;
-    if (
-      typeof d.projectId === "string" &&
-      typeof d.toolCallId === "string" &&
-      typeof d.toolName === "string" &&
-      typeof d.description === "string"
-    ) {
-      return {
-        projectId: d.projectId,
-        toolCallId: d.toolCallId,
-        toolName: d.toolName,
-        description: d.description,
-      };
-    }
-  }
-  console.warn("[ipc-guard] Invalid TOOL_START payload");
-  return null;
+  return tryDecode(ToolStartPayloadSchema, data, "TOOL_START");
 }
 
 export function decodeToolEnd(data: unknown): ToolEndPayload | null {
-  if (
-    typeof data === "object" &&
-    data !== null &&
-    "projectId" in data &&
-    "toolCallId" in data &&
-    "toolName" in data &&
-    "isError" in data
-  ) {
-    const d = data as Record<string, unknown>;
-    if (
-      typeof d.projectId === "string" &&
-      typeof d.toolCallId === "string" &&
-      typeof d.toolName === "string" &&
-      typeof d.isError === "boolean"
-    ) {
-      return {
-        projectId: d.projectId,
-        toolCallId: d.toolCallId,
-        toolName: d.toolName,
-        isError: d.isError,
-      };
-    }
-  }
-  console.warn("[ipc-guard] Invalid TOOL_END payload");
-  return null;
+  return tryDecode(ToolEndPayloadSchema, data, "TOOL_END");
 }

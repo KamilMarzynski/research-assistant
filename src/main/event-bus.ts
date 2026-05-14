@@ -43,8 +43,24 @@ type AppEvent =
     }
   | { type: "agent:chunk"; payload: { projectId: string; delta: string } }
   | { type: "agent:done"; payload: { projectId: string } }
-  | { type: "agent:tool_start"; payload: { projectId: string; toolCallId: string; toolName: string; description: string } }
-  | { type: "agent:tool_end"; payload: { projectId: string; toolCallId: string; toolName: string; isError: boolean } };
+  | {
+      type: "agent:tool_start";
+      payload: {
+        projectId: string;
+        toolCallId: string;
+        toolName: string;
+        description: string;
+      };
+    }
+  | {
+      type: "agent:tool_end";
+      payload: {
+        projectId: string;
+        toolCallId: string;
+        toolName: string;
+        isError: boolean;
+      };
+    };
 
 @injectable()
 export class EventBus {

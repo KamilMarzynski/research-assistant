@@ -277,6 +277,13 @@ export class MessagePipeline {
         if (!allowed.has(ctx.toolCall.name)) {
           return { block: true, reason: `Tool "${ctx.toolCall.name}" is not registered.` };
         }
+        const args = ctx.args as Record<string, unknown> | undefined;
+        const tool = tools.find((t) => t.name === ctx.toolCall.name);
+        const description =
+          typeof args?._description === "string" && args._description.trim()
+            ? args._description.trim()
+            : (tool?.label ?? ctx.toolCall.name);
+        this.state.pendingToolDescriptions.set(ctx.toolCall.id, description);
         return undefined;
       },
     });

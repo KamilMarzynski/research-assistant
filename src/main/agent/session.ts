@@ -46,6 +46,7 @@ export class AgentSession {
       processing: false,
       pendingFollowUp: null as string | null,
       pendingSkillDeltas: [] as Array<{ skillName: string; summary: string }>,
+      pendingToolDescriptions: new Map<string, string>(),
       skillRouterReady: false,
       activeTurnSpan: null as import("../services/ObservabilityService").ObservationSpan | null,
       activeGenerationSpan: null as

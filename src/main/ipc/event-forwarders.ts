@@ -78,4 +78,12 @@ export function registerEventForwarders(
   eventBus.on("path:approval_required", (payload) => {
     win.webContents.send(IPC.PATH_APPROVAL_REQUIRED, payload);
   });
+
+  eventBus.on("agent:tool_start", (payload) => {
+    win.webContents.send(IPC.TOOL_START, payload);
+  });
+
+  eventBus.on("agent:tool_end", (payload) => {
+    win.webContents.send(IPC.TOOL_END, payload);
+  });
 }

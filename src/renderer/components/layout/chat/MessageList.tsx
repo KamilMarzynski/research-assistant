@@ -1,24 +1,23 @@
 import { useEffect, useRef } from "react";
 import type { Message } from "../../../../shared/types";
+import type { StreamSegment } from "../../../contexts/StreamStateContext";
+import ActivityPill from "../../shared/ActivityPill";
 import MarkdownRenderer from "../../shared/MarkdownRenderer";
 
 interface MessageListProps {
   messages: Message[];
-  streamingContent: string | null;
+  streamingSegments: StreamSegment[];
   processing?: boolean;
 }
 
-export default function MessageList({ messages, streamingContent, processing }: MessageListProps) {
+export default function MessageList({ messages, streamingSegments, processing }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when messages or streaming content changes to auto-scroll
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when messages or streaming segments change to auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingContent]);
+  }, [messages, streamingSegments]);
 
-  // Hide empty assistant placeholders after the last user message.
-  // Also hide all post-user assistant messages during active streaming
-  // to avoid showing both the DB partial and the live stream overlay.
   let lastUserIndex = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role === "user") {
@@ -31,10 +30,19 @@ export default function MessageList({ messages, streamingContent, processing }: 
       ? messages.filter((m, i) => {
           if (i <= lastUserIndex) return true;
           if (m.role === "assistant" && m.content.trim() === "") return false;
-          if (streamingContent !== null && m.role === "assistant") return false;
+          if (streamingSegments.length > 0 && m.role === "assistant") return false;
           return true;
         })
       : messages;
+
+  const hasRunningTool = streamingSegments.some(
+    (s) => s.type === "activity" && s.status === "running",
+  );
+  const lastSeg = streamingSegments[streamingSegments.length - 1];
+  const showThinkingSpinner =
+    !!processing &&
+    !hasRunningTool &&
+    (streamingSegments.length === 0 || lastSeg?.type === "activity");
 
   return (
     <div
@@ -93,43 +101,60 @@ export default function MessageList({ messages, streamingContent, processing }: 
           </div>
         ))}
 
-        {streamingContent !== null && (
+        {streamingSegments.length > 0 && (
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 4,
+              gap: 8,
               maxWidth: 640,
             }}
           >
-            <div
-              style={{
-                padding: "12px 16px",
-                borderRadius: "14px 14px 14px 4px",
-                background: "var(--surface)",
-                border: "1px solid var(--line)",
-                fontSize: 13.5,
-                lineHeight: 1.55,
-              }}
-            >
-              <MarkdownRenderer content={streamingContent} />
-              <span
-                data-testid="streaming-cursor"
-                style={{
-                  display: "inline-block",
-                  width: 8,
-                  height: "1em",
-                  background: "var(--ink)",
-                  marginLeft: 4,
-                  verticalAlign: "text-bottom",
-                  animation: "blink 1s step-end infinite",
-                }}
-              />
-            </div>
+            {streamingSegments.map((seg, i) =>
+              seg.type === "text" ? (
+                <div
+                  // biome-ignore lint/suspicious/noArrayIndexKey: segments are append-only within a single stream
+                  key={i}
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: "14px 14px 14px 4px",
+                    background: "var(--surface)",
+                    border: "1px solid var(--line)",
+                    fontSize: 13.5,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  <MarkdownRenderer content={seg.content} />
+                  {i === streamingSegments.length - 1 && processing && (
+                    <span
+                      data-testid="streaming-cursor"
+                      style={{
+                        display: "inline-block",
+                        width: 8,
+                        height: "1em",
+                        background: "var(--ink)",
+                        marginLeft: 4,
+                        verticalAlign: "text-bottom",
+                        animation: "blink 1s step-end infinite",
+                      }}
+                    />
+                  )}
+                </div>
+              ) : (
+                <ActivityPill
+                  // biome-ignore lint/suspicious/noArrayIndexKey: segments are append-only within a single stream
+                  key={i}
+                  toolCallId={seg.toolCallId}
+                  toolName={seg.toolName}
+                  description={seg.description}
+                  status={seg.status}
+                />
+              ),
+            )}
           </div>
         )}
 
-        {processing && !streamingContent && (
+        {showThinkingSpinner && (
           <div
             style={{
               display: "flex",
@@ -156,7 +181,7 @@ export default function MessageList({ messages, streamingContent, processing }: 
         )}
 
         {/* empty state */}
-        {displayMessages.length === 0 && !streamingContent && !processing && (
+        {displayMessages.length === 0 && streamingSegments.length === 0 && !processing && (
           <div
             style={{
               display: "flex",
@@ -190,8 +215,7 @@ export default function MessageList({ messages, streamingContent, processing }: 
             </div>
           </div>
         )}
-      </div>{" "}
-      {/* close centered column */}
+      </div>
       <div ref={bottomRef} />
     </div>
   );
