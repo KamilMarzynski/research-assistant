@@ -79,9 +79,10 @@ export class CompressionService {
     const fullPath = await this.saveFullContent(raw, tool);
     let summary: string;
     if (this.summarizeFn) {
-      summary = await this.summarizeFn(raw, 200);
+      const summaryText = await this.summarizeFn(raw, 200);
+      summary = `${summaryText}\n\n[Full content (${raw.length} chars) saved at: ${fullPath}. Use read_file on this path to access the complete content.]`;
     } else {
-      summary = `[Content too long (${raw.length} chars). Full content saved to ${fullPath}]`;
+      summary = `[Content too long (${raw.length} chars). Full content saved to ${fullPath}. Use read_file on this path to access the complete content.]`;
     }
     return {
       content: summary,

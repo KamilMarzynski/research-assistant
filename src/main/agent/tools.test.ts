@@ -233,27 +233,12 @@ describe("createAgentTools – request_evaluation execute path", () => {
 });
 
 describe("createAgentTools – compression", () => {
-  it("includes compress tool when compressionService is provided", () => {
+  it("never includes compress tool (auto-compression only)", () => {
     const compressionService = new CompressionService("/tmp/.compressed");
     const tools = createAgentTools({
       ...BASE,
       compressionService,
     });
-    expect(tools.map((t) => t.name)).toContain("compress");
-  });
-
-  it("excludes compress tool when compressionService is not provided", () => {
-    const tools = createAgentTools(BASE);
     expect(tools.map((t) => t.name)).not.toContain("compress");
-  });
-
-  it("filters compress tool by toolNames", () => {
-    const compressionService = new CompressionService("/tmp/.compressed");
-    const tools = createAgentTools({
-      ...BASE,
-      toolNames: ["read_file"],
-      compressionService,
-    });
-    expect(tools.map((t) => t.name)).toEqual(["read_file"]);
   });
 });

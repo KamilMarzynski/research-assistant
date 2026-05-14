@@ -1,10 +1,8 @@
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { CompressionService } from "./CompressionService";
 import { PathJail } from "./path-jail";
-import { createCompressTool } from "./tools/compress-tool";
 import { createDockerTool } from "./tools/docker-tool";
 import { createRequestEvaluationTool } from "./tools/eval-tools";
 import { createListDirTool, createReadFileTool, createWriteFileTool } from "./tools/file-tools";
@@ -30,8 +28,7 @@ export type AgentToolName =
   | "spawn_agents_parallel"
   | "propose_skill"
   | "save_memory"
-  | "read_memory"
-  | "compress";
+  | "read_memory";
 
 export type SpawnResult = { outputPath: string; summary: string };
 export type AgentType = "researcher" | "coder" | "orchestrator";
@@ -49,7 +46,6 @@ export interface ToolCapabilities {
   evaluation: boolean;
   spawn: boolean;
   proposeSkill: boolean;
-  compression: boolean;
 }
 
 export interface ToolContext {
@@ -119,7 +115,6 @@ function capabilitiesToToolNames(caps: ToolCapabilities): AgentToolName[] {
   ];
   if (caps.webAccess) names.push("fetch_url", "web_search");
   if (caps.memory) names.push("save_memory", "read_memory");
-  if (caps.compression) names.push("compress");
   if (caps.research) names.push("start_research");
   if (caps.evaluation) names.push("request_evaluation");
   if (caps.spawn) names.push("spawn_agent", "spawn_agents_parallel");
@@ -152,20 +147,6 @@ function buildTools(ctx: ToolContext): AgentTool<any>[] {
   if (ctx.webAccessEnabled !== false) {
     tools.push(createFetchUrlTool(ctx.compressionService));
     tools.push(createWebSearchTool(ctx.compressionService));
-  }
-
-  const compressionService = ctx.compressionService;
-  if (compressionService) {
-    tools.push(
-      createCompressTool(async (path, _maxWords) => {
-        const resolved = jail.validate(path, "read");
-        const content = await readFile(resolved, "utf-8");
-        const result = await compressionService.compress("compress", content, [
-          { tool: "compress", thresholdChars: 0, strategy: "summarize" },
-        ]);
-        return result.content;
-      }),
-    );
   }
 
   tools.push(createDockerTool(jail));

@@ -193,7 +193,7 @@ export function createReadFileTool(
         const compressed = await compressionService.compress("read_file", content);
         content = compressed.content;
         if (compressed.wasCompressed) {
-          const note = `Content compressed via ${compressed.strategy}.`;
+          const note = `Content summarized (too large). Use read_file with startLine/maxLines to read specific sections of this file.`;
           hint = hint ? `${hint} ${note}` : note;
         }
       }

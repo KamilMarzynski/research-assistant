@@ -51,15 +51,12 @@ export class MessagePipeline {
   readonly agent: Agent;
   readonly tracer: AgentTracer;
   private readonly projectId: string;
-  private readonly projectName: string;
   private readonly slug: string;
   private readonly projectPath: string | null;
   private readonly folderPath: string | null;
-  private readonly provider: ModelProvider;
   private readonly messageService: MessageService;
   private readonly memoryManager: IMemoryManager;
   private readonly eventBus: EventBus;
-  private readonly observabilityService?: ObservabilityService;
   private readonly skillRouter: ReturnType<typeof createDefaultSkillRouter>;
   private readonly homePath: string;
 
@@ -69,14 +66,11 @@ export class MessagePipeline {
   ) {
     this.projectId = options.projectId;
     this.slug = options.slug;
-    this.projectName = options.projectName;
     this.projectPath = options.projectPath;
     this.folderPath = options.folderPath;
-    this.provider = options.provider;
     this.messageService = options.messageService;
     this.memoryManager = options.memoryManager;
     this.eventBus = options.eventBus;
-    this.observabilityService = options.observabilityService;
 
     this.tracer = new AgentTracer({
       observabilityService: options.observabilityService,

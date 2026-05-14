@@ -166,7 +166,7 @@ Do not guess. A quick research task is always better than a wrong answer.
 - run_in_docker: Execute isolated or untrusted code (Python scripts, data processing). Prefer safe_bash for project-native operations.
 - fetch_url / web_search: Get current information or verify claims.
 - save_memory / read_memory: Persist important facts across conversations. Read memories when context from past turns would help.
-- compress: Use when reading very large files that might exceed context limits.
+- Large files are auto-summarized when they exceed context limits. The summary includes the path to the full saved content — use read_file with startLine/maxLines to read specific sections.
 
 ## Skills
 

@@ -81,7 +81,9 @@ describe("CompressionService", () => {
 
     expect(result.wasCompressed).toBe(true);
     expect(result.strategy).toBe("summarize");
-    expect(result.content).toBe("Custom summary");
+    expect(result.content).toContain("Custom summary");
+    expect(result.content).toContain("Full content");
+    expect(result.content).toContain(result.fullPath!);
     expect(summarizeFn).toHaveBeenCalledWith(raw, 200);
     expect(result.fullPath).toBeDefined();
 
