@@ -23,6 +23,7 @@ export default function PendingToolModal({
   onReject,
   onClose,
 }: PendingToolModalProps) {
+  const isUpdate = tool.update === true;
   return (
     <Dialog
       open
@@ -36,13 +37,27 @@ export default function PendingToolModal({
         },
       }}
     >
-      <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--line)" }}>
-        <span style={{ fontSize: 17, fontWeight: 600 }}>Review proposed tool: {tool.name}</span>
+      <div
+        style={{
+          padding: "18px 22px",
+          borderBottom: "1px solid var(--line)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span style={{ fontSize: 17, fontWeight: 600 }}>
+          {isUpdate ? "Update proposed skill" : "Review proposed skill"}: {tool.name}
+        </span>
+        <span className={isUpdate ? "chip chip--warning" : "chip chip--accent"}>
+          {isUpdate ? "update" : "new"}
+        </span>
       </div>
       <div style={{ padding: "22px 26px", flex: 1, overflow: "auto" }}>
         <p style={{ color: "var(--ink-2)", fontSize: 13.5, marginBottom: 8 }}>
-          An agent has proposed this tool for your approval. Once approved, it will be available as
-          a skill in future sessions.
+          {isUpdate
+            ? "An agent has proposed an update to this skill. Approving will replace the existing skill entirely."
+            : "An agent has proposed this new skill. Once approved, it will be available in future sessions."}
         </p>
         <pre
           className="thin-scroll"
@@ -86,7 +101,7 @@ export default function PendingToolModal({
           onClick={onApprove}
           data-testid="approve-tool-btn"
         >
-          Approve
+          {isUpdate ? "Approve Update" : "Approve"}
         </button>
       </div>
     </Dialog>
