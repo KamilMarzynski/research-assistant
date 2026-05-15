@@ -47,9 +47,9 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("requires approval for write inside ~/.scholar/skills", () => {
+    it("blocks write inside ~/.scholar/skills with clear message", () => {
       const p = join(HOME, "skills", "start_research", "SKILL.md");
-      expect(() => jail.validate(p, "write")).toThrow(ApprovalRequiredError);
+      expect(() => jail.validate(p, "write")).toThrow("Cannot write to skills directory");
     });
 
     it("allows read inside ~/.scholar/projects/<slug>/skills", () => {
@@ -57,9 +57,9 @@ describe("PathJail", () => {
       expect(() => jail.validate(p, "read")).not.toThrow();
     });
 
-    it("allows write inside ~/.scholar/projects/<slug>/skills", () => {
+    it("blocks write inside ~/.scholar/projects/<slug>/skills", () => {
       const p = join(HOME, "projects", "test-project", "skills", "my-skill", "SKILL.md");
-      expect(() => jail.validate(p, "write")).not.toThrow();
+      expect(() => jail.validate(p, "write")).toThrow("Cannot write to skills directory");
     });
 
     it("allows write inside ~/.scholar/projects/<slug>", () => {
