@@ -1,0 +1,152 @@
+import { spawn } from "node:child_process";
+import { access, appendFile } from "node:fs/promises";
+import { basename, join } from "node:path";
+import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
+import { Type } from "@sinclair/typebox";
+
+interface RunSkillScriptResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  error?: string;
+}
+
+const MAX_OUTPUT_CHARS = 65536;
+const TIMEOUT_MS = 60_000;
+
+async function runScript(
+  scriptPath: string,
+  args: string[],
+  intent: string,
+  projectId: string,
+  auditLogPath: string,
+): Promise<RunSkillScriptResult> {
+  return new Promise((resolve) => {
+    const interpreter = scriptPath.endsWith(".py") ? "python3" : "bash";
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    const proc = spawn(interpreter, [scriptPath, ...args], {
+      env: process.env,
+      signal: controller.signal,
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    proc.stdout.on("data", (chunk: Buffer) => {
+      if (Buffer.byteLength(stdout) < MAX_OUTPUT_CHARS) stdout += chunk.toString();
+    });
+
+    proc.stderr.on("data", (chunk: Buffer) => {
+      if (Buffer.byteLength(stderr) < MAX_OUTPUT_CHARS) stderr += chunk.toString();
+    });
+
+    proc.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ exitCode: 1, stdout, stderr, error: err.message });
+    });
+
+    proc.on("close", (code) => {
+      clearTimeout(timer);
+      const entry = JSON.stringify({
+        ts: new Date().toISOString(),
+        projectId,
+        type: "skill_script",
+        script: basename(scriptPath),
+        intent,
+        exitCode: code ?? 1,
+      });
+      void appendFile(auditLogPath, `${entry}\n`, "utf-8").catch(() => {});
+      resolve({ exitCode: code ?? 1, stdout, stderr });
+    });
+  });
+}
+
+const runSkillScriptParameters = Type.Object({
+  skillName: Type.String({
+    description: "Name of the approved skill whose script to run (must exist in skills directory)",
+  }),
+  scope: Type.Union([Type.Literal("global"), Type.Literal("project")], {
+    description:
+      "Look in global skills directory ('global') or project-specific skills ('project')",
+  }),
+  intent: Type.String({ description: "What you are trying to accomplish with this script" }),
+  args: Type.Optional(
+    Type.Array(Type.String(), {
+      description: "Command-line arguments to pass to the script",
+    }),
+  ),
+});
+
+export function createRunSkillScriptTool(
+  projectSlug: string,
+  homePath: string,
+  auditLogPath: string,
+): AgentTool<typeof runSkillScriptParameters, RunSkillScriptResult> {
+  return {
+    name: "run_skill_script",
+    label: "Run approved skill script",
+    description:
+      "Execute a shell script bundled with an approved skill. " +
+      "Scripts run with host environment variables — only use for trusted, user-approved skills. " +
+      "Scripts must be located in an approved skills directory; use propose_skill to add new ones.",
+    parameters: runSkillScriptParameters,
+    execute: async (
+      _id,
+      { skillName, scope, args, intent },
+    ): Promise<AgentToolResult<RunSkillScriptResult>> => {
+      const skillsDir =
+        scope === "project"
+          ? join(homePath, "projects", projectSlug, "skills")
+          : join(homePath, "skills");
+
+      const skillDir = join(skillsDir, skillName);
+      let scriptPath: string | null = null;
+
+      for (const ext of [".sh", ".py"]) {
+        const candidate = join(skillDir, `script${ext}`);
+        try {
+          await access(candidate);
+          scriptPath = candidate;
+          break;
+        } catch {
+          // try next extension
+        }
+      }
+
+      if (!scriptPath) {
+        const notFound: RunSkillScriptResult = {
+          exitCode: 1,
+          stdout: "",
+          stderr: "",
+          error: "script not found",
+        };
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No script found for skill "${skillName}" in ${scope} skills directory.`,
+            },
+          ],
+          details: notFound,
+        };
+      }
+
+      const result = await runScript(scriptPath, args ?? [], intent, projectSlug, auditLogPath);
+      const summary = [
+        `Exit code: ${result.exitCode}`,
+        result.stdout ? `stdout:\n${result.stdout}` : "",
+        result.stderr ? `stderr:\n${result.stderr}` : "",
+        result.error ? `error: ${result.error}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      return {
+        content: [{ type: "text" as const, text: summary }],
+        details: result,
+      };
+    },
+  };
+}
