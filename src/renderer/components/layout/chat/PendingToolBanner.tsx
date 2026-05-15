@@ -25,7 +25,7 @@ export default function PendingToolBanner({ projectSlug }: Props) {
     });
     if (projectSlug) {
       void ipc.invoke(IPC.GET_PROJECT_PENDING_TOOLS, { projectSlug }).then((tools) => {
-        for (const tool of tools) add(tool);
+        for (const tool of tools) add({ ...tool, scope: "project" as const, projectSlug });
       });
     }
   }, [add, projectSlug]);
@@ -48,13 +48,17 @@ export default function PendingToolBanner({ projectSlug }: Props) {
   };
 
   const handleReject = async (tool: PendingTool) => {
-    if (tool.scope === "project" && tool.projectSlug) {
-      await ipc.invoke(IPC.REJECT_PROJECT_TOOL, {
-        projectSlug: tool.projectSlug,
-        name: tool.name,
-      });
-    } else {
-      await ipc.invoke(IPC.REJECT_TOOL, { name: tool.name });
+    try {
+      if (tool.scope === "project" && tool.projectSlug) {
+        await ipc.invoke(IPC.REJECT_PROJECT_TOOL, {
+          projectSlug: tool.projectSlug,
+          name: tool.name,
+        });
+      } else {
+        await ipc.invoke(IPC.REJECT_TOOL, { name: tool.name });
+      }
+    } catch {
+      // File may not exist (e.g. in test context); proceed with UI update
     }
     remove(tool);
     setSelectedTool(null);

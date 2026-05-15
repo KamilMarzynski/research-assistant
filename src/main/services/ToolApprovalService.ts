@@ -15,7 +15,16 @@ export class ToolApprovalService {
     return join(this.homePath, "skills");
   }
 
+  private assertSafePathComponent(value: string, field: string): void {
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(value)) {
+      throw new Error(
+        `Invalid ${field} "${value}": only lowercase letters, digits, and hyphens allowed, must start with a letter or digit`,
+      );
+    }
+  }
+
   async savePendingTool(name: string, skillContent: string, script?: string): Promise<void> {
+    this.assertSafePathComponent(name, "name");
     const dir = join(this.pendingToolsDir, name);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "SKILL.md"), skillContent, "utf-8");
@@ -49,12 +58,14 @@ export class ToolApprovalService {
   }
 
   async approvePendingTool(name: string): Promise<void> {
+    this.assertSafePathComponent(name, "name");
     const src = join(this.pendingToolsDir, name);
     const dst = join(this.skillsDir, name);
     await rename(src, dst);
   }
 
   async rejectPendingTool(name: string): Promise<void> {
+    this.assertSafePathComponent(name, "name");
     await rm(join(this.pendingToolsDir, name), { recursive: true, force: true });
   }
 
@@ -72,6 +83,8 @@ export class ToolApprovalService {
     skillContent: string,
     script?: string,
   ): Promise<void> {
+    this.assertSafePathComponent(slug, "slug");
+    this.assertSafePathComponent(name, "name");
     const dir = join(this.projectPendingToolsDir(slug), name);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "SKILL.md"), skillContent, "utf-8");
@@ -84,6 +97,7 @@ export class ToolApprovalService {
   async getProjectPendingTools(
     slug: string,
   ): Promise<Array<{ name: string; skillContent: string }>> {
+    this.assertSafePathComponent(slug, "slug");
     const dir = this.projectPendingToolsDir(slug);
     let entries: string[] = [];
     try {
@@ -107,12 +121,16 @@ export class ToolApprovalService {
   }
 
   async approveProjectPendingTool(slug: string, name: string): Promise<void> {
+    this.assertSafePathComponent(slug, "slug");
+    this.assertSafePathComponent(name, "name");
     const src = join(this.projectPendingToolsDir(slug), name);
     const dst = join(this.projectSkillsDir(slug), name);
     await rename(src, dst);
   }
 
   async rejectProjectPendingTool(slug: string, name: string): Promise<void> {
+    this.assertSafePathComponent(slug, "slug");
+    this.assertSafePathComponent(name, "name");
     await rm(join(this.projectPendingToolsDir(slug), name), { recursive: true, force: true });
   }
 }

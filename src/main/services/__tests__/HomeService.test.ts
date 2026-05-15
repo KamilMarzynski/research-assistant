@@ -383,6 +383,21 @@ describe("ToolApprovalService — project-scoped", () => {
     expect(tools.map((t) => t.name).sort()).toEqual(["tool-a", "tool-b"]);
   });
 
+  it("getProjectPendingTools skips entries without SKILL.md", async () => {
+    const toolApproval = makeToolApproval();
+    // Create valid tool
+    await toolApproval.saveProjectPendingTool(PROJECT_SLUG, "valid-tool", "# valid");
+    // Create malformed entry: directory exists but no SKILL.md
+    const { mkdir } = await import("node:fs/promises");
+    await mkdir(
+      join(tmpHome, ".scholar", "projects", PROJECT_SLUG, "pending-tools", "malformed-tool"),
+      { recursive: true },
+    );
+    const tools = await toolApproval.getProjectPendingTools(PROJECT_SLUG);
+    expect(tools).toHaveLength(1);
+    expect(tools[0].name).toBe("valid-tool");
+  });
+
   it("approveProjectPendingTool moves to projects/<slug>/skills", async () => {
     const toolApproval = makeToolApproval();
     await mkdir(join(tmpHome, ".scholar", "projects", PROJECT_SLUG, "skills"), { recursive: true });

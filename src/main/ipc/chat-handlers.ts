@@ -128,7 +128,7 @@ export function registerChatHandler(
             observabilityService,
             proposeSkillFn: async (name, skillContent, script, scope) => {
               if (scope === "project") {
-                const slug = project.slug ?? project.id;
+                const slug = project.slug ?? projectId;
                 await toolApprovalService.saveProjectPendingTool(slug, name, skillContent, script);
                 eventBus.emit({
                   type: "tool:pending",
