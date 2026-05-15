@@ -157,6 +157,7 @@ export interface PendingTool {
   skillContent: string;
   scope: "global" | "project";
   projectSlug?: string;
+  update: boolean;
 }
 
 /** Payload for BASH_BLOCKED push event */

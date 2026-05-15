@@ -22,6 +22,7 @@ type AppEvent =
         skillContent: string;
         scope: "global" | "project";
         projectSlug?: string;
+        update: boolean;
       };
     }
   | {

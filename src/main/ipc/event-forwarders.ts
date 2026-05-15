@@ -89,6 +89,7 @@ export function registerEventForwarders(
       skillContent: payload.skillContent,
       scope: payload.scope,
       projectSlug: payload.projectSlug,
+      update: payload.update,
     });
   });
 

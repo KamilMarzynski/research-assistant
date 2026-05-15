@@ -20,6 +20,7 @@ const PendingToolSchema = z.object({
   skillContent: z.string(),
   scope: z.enum(["global", "project"]),
   projectSlug: z.string().optional(),
+  update: z.boolean(),
 });
 
 const ResearchStatusUpdatePayloadSchema = z.union([
