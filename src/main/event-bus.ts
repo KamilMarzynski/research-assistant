@@ -16,16 +16,6 @@ type AppEvent =
       payload: { taskId: string; projectId: string; query: string; error: string };
     }
   | {
-      type: "tool:pending";
-      payload: {
-        name: string;
-        skillContent: string;
-        scope: "global" | "project";
-        projectSlug?: string;
-        update: boolean;
-      };
-    }
-  | {
       type: "bash:blocked";
       payload: {
         commandId: string;
@@ -51,7 +41,7 @@ type AppEvent =
   | { type: "skill:changed"; payload: { skillName: string; summary: string } }
   | {
       type: "path:approval_required";
-      payload: { path: string; mode: "read" | "write"; projectId: string };
+      payload: { path: string; mode: "read" | "write"; projectId: string; intent?: string };
     }
   | { type: "agent:chunk"; payload: { projectId: string; delta: string } }
   | { type: "agent:done"; payload: { projectId: string } }

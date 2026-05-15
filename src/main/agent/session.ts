@@ -30,13 +30,6 @@ export interface AgentSessionOptions {
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   memoryFileService?: MemoryFileService;
   allowlistService: AllowlistService;
-  proposeSkillFn?: (
-    name: string,
-    skillContent: string,
-    script: string | undefined,
-    scope: "global" | "project",
-    update: boolean,
-  ) => Promise<void>;
   observabilityService?: ObservabilityService;
 }
 

@@ -13,13 +13,7 @@ export class HomeService {
   async ensureDirectories(): Promise<void> {
     const home = this.getHomePath();
 
-    const dirs = [
-      home,
-      join(home, "skills"),
-      join(home, "projects"),
-      join(home, "tasks"),
-      join(home, "pending-tools"),
-    ];
+    const dirs = [home, join(home, "skills"), join(home, "projects"), join(home, "tasks")];
 
     for (const dir of dirs) {
       await mkdir(dir, { recursive: true });
@@ -41,7 +35,6 @@ export class HomeService {
     const home = this.getHomePath();
     const workspaceDir = join(home, "projects", slug, "workspace");
     await mkdir(workspaceDir, { recursive: true });
-    await mkdir(join(home, "projects", slug, "pending-tools"), { recursive: true });
     return workspaceDir;
   }
 

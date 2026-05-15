@@ -39,13 +39,6 @@ export interface MessagePipelineOptions {
   researchService: ResearchService;
   memoryFileService?: MemoryFileService;
   allowlistService: AllowlistService;
-  proposeSkillFn?: (
-    name: string,
-    skillContent: string,
-    script: string | undefined,
-    scope: "global" | "project",
-    update: boolean,
-  ) => Promise<void>;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   initialMemoryContext: MemoryContext;
   isFirstRun: boolean;
@@ -184,7 +177,6 @@ export class MessagePipeline {
         : undefined,
       compressionService,
       allowlistService: options.allowlistService,
-      proposeSkillFn: options.proposeSkillFn,
     });
 
     this.agent = new Agent({

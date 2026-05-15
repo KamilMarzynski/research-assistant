@@ -55,6 +55,7 @@ export default function PendingPathBanner() {
           <span className="chip chip--warn">privilege</span>
           <span style={{ flex: 1, fontSize: 12, color: "var(--ink-2)" }}>
             Blocked path: <strong>{req.path}</strong> — {req.mode} access required
+            {req.intent ? ` — ${req.intent}` : ""}
           </span>
           <button
             type="button"

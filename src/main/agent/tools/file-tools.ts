@@ -236,17 +236,18 @@ export function createWriteFileTool(
     path: string;
     mode: "read" | "write";
     projectId: string;
+    intent?: string;
   }) => void,
 ): AgentTool<typeof writeFileParameters, null> {
   return {
     name: "write_file",
     label: "Write file",
     description:
-      "Write content to a file, creating parent directories as needed. Write to userProjectDir for artifacts and project files. Write to assistantDir for project metadata (GOAL.md, FILES.md, skills). Writing to ~/.scholar/skills requires user approval.",
+      "Write content to a file. State your intent — it is shown to the user when approval is needed.",
     parameters: writeFileParameters,
     execute: async (
       _id,
-      { path, content, start_line, end_line, expected_hash },
+      { path, content, intent, start_line, end_line, expected_hash },
     ): Promise<AgentToolResult<null>> => {
       let resolved: string;
       try {
@@ -254,7 +255,12 @@ export function createWriteFileTool(
       } catch (err) {
         if (err instanceof ApprovalRequiredError) {
           if (emitApprovalRequired) {
-            emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
+            emitApprovalRequired({
+              path: err.path,
+              mode: err.mode,
+              projectId: jail.projectId,
+              intent,
+            });
           }
           const approved = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
           if (!approved) {
@@ -374,6 +380,10 @@ export function createWriteFileTool(
 
 const writeFileParameters = Type.Object({
   path: Type.String({ description: "Absolute path to the file" }),
+  intent: Type.String({
+    description:
+      "What you are trying to accomplish with this write — shown to the user when approval is needed.",
+  }),
   content: Type.String({ description: "Content to write" }),
   start_line: Type.Optional(
     Type.Integer({

@@ -35,7 +35,6 @@ import { SettingsService } from "./services/SettingsService";
 import { SkillManagementService } from "./services/SkillManagementService";
 import { SkillWatcherService } from "./services/SkillWatcherService";
 import { TaskPersistenceService } from "./services/TaskPersistenceService";
-import { ToolApprovalService } from "./services/ToolApprovalService";
 import { MonotonicClock } from "./utils/time";
 
 export async function bootstrap(): Promise<DependencyContainer> {
@@ -68,7 +67,6 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.register<IMemoryManager>(MEMORY_MANAGER_TOKEN, { useClass: MemoryManager });
   appContainer.registerSingleton(TaskPersistenceService);
   appContainer.registerSingleton(SkillManagementService);
-  appContainer.registerSingleton(ToolApprovalService);
   appContainer.registerSingleton(HomeService);
   appContainer.registerSingleton(OutputNotificationService);
   appContainer.registerSingleton(AllowlistService);

@@ -81,10 +81,6 @@ export const ResolvePathApprovalSchema = z.object({
   projectId: z.string(),
 });
 
-export const ApproveRejectToolSchema = z.object({
-  name: z.string(),
-});
-
 export const ToggleSkillSchema = z.object({
   name: z.string(),
   enabled: z.boolean(),
@@ -96,13 +92,4 @@ export const DeleteSkillSchema = z.object({
 
 export const AbortMessageSchema = z.object({
   projectId: z.string(),
-});
-
-export const GetProjectPendingToolsSchema = z.object({
-  projectSlug: z.string(),
-});
-
-export const ApproveRejectProjectToolSchema = z.object({
-  projectSlug: z.string(),
-  name: z.string(),
 });

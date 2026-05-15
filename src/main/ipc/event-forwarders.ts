@@ -82,17 +82,6 @@ export function registerEventForwarders(
     });
   });
 
-  eventBus.on("tool:pending", (payload) => {
-    emitPush(win, {
-      type: "TOOL_PENDING",
-      name: payload.name,
-      skillContent: payload.skillContent,
-      scope: payload.scope,
-      projectSlug: payload.projectSlug,
-      update: payload.update,
-    });
-  });
-
   eventBus.on("bash:blocked", (payload) => {
     emitPush(win, { type: "BASH_BLOCKED", ...payload });
   });

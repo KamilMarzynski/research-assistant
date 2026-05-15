@@ -99,14 +99,12 @@ export class PathJail {
       );
     }
 
-    // Skills dirs are read-only — agents must use propose_skill to add new skills
+    // Writes to skills dirs require explicit user approval
     if (
       mode === "write" &&
       (this.isInZone(resolved, [this.projectSkills]) || this.isInZone(resolved, [this.homeSkills]))
     ) {
-      throw new Error(
-        `Cannot write to skills directory "${resolved}". Use propose_skill to suggest new skills for user review.`,
-      );
+      throw new ApprovalRequiredError(resolved, mode);
     }
 
     // Cross-project write protection (hard block, no allowlist override)

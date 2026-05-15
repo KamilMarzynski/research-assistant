@@ -47,7 +47,11 @@ describe("createWriteFileTool", () => {
       const tool = createWriteFileTool(jail, projectDir, onFileWrite);
 
       const filePath = join(projectDir, "src", "main.ts");
-      const result = await tool.execute("test-id", { path: filePath, content: "hello" });
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        intent: "test write",
+        content: "hello",
+      });
 
       expect(getText(result)).toBe(`Written: ${filePath}`);
       expect(onFileWrite).toHaveBeenCalledTimes(1);
@@ -62,6 +66,7 @@ describe("createWriteFileTool", () => {
       const filePath = join(tempDir, "workspace", "test.txt");
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "hello",
       });
 
@@ -77,7 +82,11 @@ describe("createWriteFileTool", () => {
       const tool = createWriteFileTool(jail, projectDir, onFileWrite);
 
       const filePath = join(otherDir, "test.txt");
-      const result = await tool.execute("test-id", { path: filePath, content: "hello" });
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        intent: "test write",
+        content: "hello",
+      });
 
       expect(getText(result)).toBe(`Written: ${filePath}`);
       expect(onFileWrite).not.toHaveBeenCalled();
@@ -90,7 +99,11 @@ describe("createWriteFileTool", () => {
       const tool = createWriteFileTool(jail, projectDir, onFileWrite);
 
       const filePath = join(projectDir, "deeply", "nested", "file.txt");
-      await tool.execute("test-id", { path: filePath, content: "nested content" });
+      await tool.execute("test-id", {
+        path: filePath,
+        intent: "test write",
+        content: "nested content",
+      });
 
       expect(onFileWrite).toHaveBeenCalledWith(filePath, "deeply/nested/file.txt", "file.txt");
     });
@@ -102,7 +115,11 @@ describe("createWriteFileTool", () => {
       const tool = createWriteFileTool(jail, `${projectDir}/`, onFileWrite);
 
       const filePath = join(projectDir, "file.txt");
-      await tool.execute("test-id", { path: filePath, content: "hello" });
+      await tool.execute("test-id", {
+        path: filePath,
+        intent: "test write",
+        content: "hello",
+      });
 
       expect(onFileWrite).toHaveBeenCalledWith(filePath, "file.txt", "file.txt");
     });
@@ -114,6 +131,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "hello",
         expected_hash: "abc123",
       });
@@ -128,6 +146,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "hello",
         start_line: 1,
       });
@@ -143,6 +162,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "x",
         end_line: 1,
       });
@@ -159,6 +179,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "replaced",
         expected_hash: sha256(originalContent),
       });
@@ -176,6 +197,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "new",
         expected_hash: "wronghash",
       });
@@ -195,6 +217,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "X",
         start_line: 2,
         end_line: 2,
@@ -213,6 +236,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "X\nY",
         start_line: 2,
         end_line: 3,
@@ -231,6 +255,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "X\nY",
         start_line: 2,
       });
@@ -248,6 +273,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "c",
         start_line: 10,
       });
@@ -265,6 +291,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "x",
         start_line: 0,
       });
@@ -280,6 +307,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "x",
         start_line: 2,
         end_line: 1,
@@ -296,6 +324,7 @@ describe("createWriteFileTool", () => {
 
       const result = await tool.execute("test-id", {
         path: filePath,
+        intent: "test write",
         content: "new",
       });
 

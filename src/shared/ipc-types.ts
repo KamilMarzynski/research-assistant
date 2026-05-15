@@ -44,7 +44,6 @@ export type IpcPushEvent =
   | { type: "NEW_MESSAGE"; projectId: string; message: Message }
   | { type: "SETTINGS_UPDATED"; settings: SettingsResponse }
   | ({ type: "BASH_BLOCKED" } & BlockedCommandPayload)
-  | ({ type: "TOOL_PENDING" } & PendingTool)
   | ({ type: "PATH_APPROVAL_REQUIRED" } & PathApprovalPayload);
 
 /** Typed request payloads for all invoke() channels */
@@ -73,12 +72,6 @@ export interface IpcRequestMap {
   READ_ARTIFACT_FILE: { filePath: string; projectId: string };
   GET_FILE_TREE: { projectId: string };
   REVEAL_IN_FOLDER: { filePath: string; projectId: string };
-  GET_PENDING_TOOLS: undefined;
-  APPROVE_TOOL: { name: string };
-  REJECT_TOOL: { name: string };
-  GET_PROJECT_PENDING_TOOLS: { projectSlug: string };
-  APPROVE_PROJECT_TOOL: { projectSlug: string; name: string };
-  REJECT_PROJECT_TOOL: { projectSlug: string; name: string };
   GET_SKILLS: undefined;
   TOGGLE_SKILL: { name: string; enabled: boolean };
   DELETE_SKILL: { name: string };
@@ -151,15 +144,6 @@ export interface AuditLogEntry {
   blockCategory?: string;
 }
 
-/** Pending tool from GET_PENDING_TOOLS */
-export interface PendingTool {
-  name: string;
-  skillContent: string;
-  scope: "global" | "project";
-  projectSlug?: string;
-  update: boolean;
-}
-
 /** Payload for BASH_BLOCKED push event */
 export interface BlockedCommandPayload {
   commandId: string;
@@ -177,6 +161,7 @@ export interface PathApprovalPayload {
   path: string;
   mode: "read" | "write";
   projectId: string;
+  intent?: string;
 }
 
 /** @deprecated Superseded by AgentProgressEvent. Remove when ipc-guards.ts is migrated. */
@@ -236,12 +221,6 @@ export interface IpcResponseMap {
   READ_ARTIFACT_FILE: string;
   GET_FILE_TREE: FileNode;
   REVEAL_IN_FOLDER: undefined;
-  GET_PENDING_TOOLS: PendingTool[];
-  APPROVE_TOOL: undefined;
-  REJECT_TOOL: undefined;
-  GET_PROJECT_PENDING_TOOLS: PendingTool[];
-  APPROVE_PROJECT_TOOL: undefined;
-  REJECT_PROJECT_TOOL: undefined;
   GET_SKILLS: SkillInfo[];
   TOGGLE_SKILL: undefined;
   DELETE_SKILL: undefined;

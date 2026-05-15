@@ -37,6 +37,11 @@ export default function PendingPathModal({
       <p style={{ color: "var(--ink-2)", fontSize: 13.5, marginBottom: 8 }}>
         The agent tried to access a path outside the allowed zones. Review before approving.
       </p>
+      {request.intent && (
+        <p style={{ color: "var(--ink-2)", fontSize: 13.5, marginBottom: 8 }}>
+          <strong>Why:</strong> {request.intent}
+        </p>
+      )}
       <pre
         className="thin-scroll"
         style={{

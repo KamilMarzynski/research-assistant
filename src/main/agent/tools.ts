@@ -8,7 +8,6 @@ import { createExecuteCodeTool } from "./tools/execute-code-tool";
 import { createListDirTool, createReadFileTool, createWriteFileTool } from "./tools/file-tools";
 import { createReadMemoryTool, createSaveMemoryTool } from "./tools/memory-tools";
 import { createSpawnAgentsParallelTool, createSpawnAgentTool } from "./tools/orchestrator-tools";
-import { createProposeSkillTool } from "./tools/propose-skill";
 import { createStartResearchTool } from "./tools/research-tools";
 import { createRunSkillScriptTool } from "./tools/run-skill-script-tool";
 import { createSafeBashTool } from "./tools/safe-bash-tool";
@@ -27,7 +26,6 @@ export type AgentToolName =
   | "execute_code"
   | "spawn_agent"
   | "spawn_agents_parallel"
-  | "propose_skill"
   | "run_skill_script"
   | "save_memory"
   | "read_memory";
@@ -47,7 +45,6 @@ export interface ToolCapabilities {
   research: boolean;
   evaluation: boolean;
   spawn: boolean;
-  proposeSkill: boolean;
 }
 
 export interface ToolContext {
@@ -71,13 +68,6 @@ export interface ToolContext {
   spawnAgentsParallelFn?: (
     agents: Array<{ type: AgentType; query: string; outputPath: string }>,
   ) => Promise<SpawnResult[]>;
-  proposeSkillFn?: (
-    name: string,
-    skillContent: string,
-    script: string | undefined,
-    scope: "global" | "project",
-    update: boolean,
-  ) => Promise<void>;
   saveMemoryFn?: (
     category: string,
     title: string,
@@ -105,6 +95,7 @@ export interface ToolContext {
     path: string;
     mode: "read" | "write";
     projectId: string;
+    intent?: string;
   }) => void;
   compressionService?: CompressionService;
   allowlistService: AllowlistService;
@@ -127,7 +118,6 @@ function capabilitiesToToolNames(caps: ToolCapabilities): AgentToolName[] {
   if (caps.research) names.push("start_research");
   if (caps.evaluation) names.push("request_evaluation");
   if (caps.spawn) names.push("spawn_agent", "spawn_agents_parallel");
-  if (caps.proposeSkill) names.push("propose_skill");
   return names;
 }
 
@@ -175,10 +165,6 @@ function buildTools(ctx: ToolContext): AgentTool<any>[] {
 
   if (ctx.spawnAgentsParallelFn) {
     tools.push(createSpawnAgentsParallelTool(jail, ctx.spawnAgentsParallelFn));
-  }
-
-  if (ctx.proposeSkillFn) {
-    tools.push(createProposeSkillTool(ctx.proposeSkillFn));
   }
 
   if (ctx.toolNames) {

@@ -2,7 +2,6 @@ import { z } from "zod/v4";
 import type {
   BlockedCommandPayload,
   PathApprovalPayload,
-  PendingTool,
   ResearchCompletePayload,
   ResearchStatusUpdatePayload,
   ToolEndPayload,
@@ -13,14 +12,7 @@ const PathApprovalPayloadSchema = z.object({
   path: z.string(),
   mode: z.enum(["read", "write"]),
   projectId: z.string(),
-});
-
-const PendingToolSchema = z.object({
-  name: z.string(),
-  skillContent: z.string(),
-  scope: z.enum(["global", "project"]),
-  projectSlug: z.string().optional(),
-  update: z.boolean(),
+  intent: z.string().optional(),
 });
 
 const ResearchStatusUpdatePayloadSchema = z.union([
@@ -73,10 +65,6 @@ function tryDecode<T>(schema: z.ZodType<T>, data: unknown, label: string): T | n
 
 export function decodePathApprovalPayload(data: unknown): PathApprovalPayload | null {
   return tryDecode(PathApprovalPayloadSchema, data, "PATH_APPROVAL_REQUIRED");
-}
-
-export function decodePendingTool(data: unknown): PendingTool | null {
-  return tryDecode(PendingToolSchema, data, "TOOL_PENDING");
 }
 
 export function decodeResearchStatusUpdatePayload(

@@ -108,7 +108,6 @@ function makeDeps() {
   const memoryFileService = {};
   const allowlistService = {};
   const observabilityService = {};
-  const toolApprovalService = { savePendingTool: vi.fn().mockResolvedValue(undefined) };
 
   return {
     sessionManager,
@@ -123,7 +122,6 @@ function makeDeps() {
     memoryFileService,
     allowlistService,
     observabilityService,
-    toolApprovalService,
   } as never;
 }
 

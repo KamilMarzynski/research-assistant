@@ -11,4 +11,3 @@ export * from "./SettingsService";
 export * from "./SkillManagementService";
 export * from "./SkillWatcherService";
 export * from "./TaskPersistenceService";
-export * from "./ToolApprovalService";

@@ -13,6 +13,7 @@ export function createExecuteCodeTool(
     description:
       "Execute code in an isolated Docker container with no access to host environment variables. " +
       "Use for running Python, JavaScript, TypeScript, or Bash code safely. " +
+      "Always state your intent. " +
       "Pass input files via workspaceFiles (absolute paths validated by jail) or inline via files. " +
       "Write output files to /workspace/output/ to receive them back as outputFiles.",
     parameters: executeCodeParameters,
@@ -47,6 +48,7 @@ export function createExecuteCodeTool(
 }
 
 const executeCodeParameters = Type.Object({
+  intent: Type.String({ description: "What you are trying to accomplish with this code" }),
   code: Type.String({ description: "Code to execute" }),
   language: Type.Union(
     [

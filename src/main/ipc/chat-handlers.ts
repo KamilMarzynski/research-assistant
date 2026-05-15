@@ -17,7 +17,6 @@ import type { OutputNotificationService } from "../services/OutputNotificationSe
 import type { ProjectService } from "../services/ProjectService";
 import type { ResearchService } from "../services/ResearchService";
 import type { SettingsService } from "../services/SettingsService";
-import type { ToolApprovalService } from "../services/ToolApprovalService";
 import { emitPush } from "./emit-push";
 import { parseOrThrow } from "./parse-util";
 import { SendThrottle } from "./send-throttle";
@@ -39,7 +38,6 @@ export function registerChatHandler(
     memoryFileService: MemoryFileService;
     allowlistService: AllowlistService;
     observabilityService: ObservabilityService;
-    toolApprovalService: ToolApprovalService;
   },
 ): void {
   const {
@@ -55,7 +53,6 @@ export function registerChatHandler(
     memoryFileService,
     allowlistService,
     observabilityService,
-    toolApprovalService,
   } = deps;
 
   eventBus.on("agent:chunk", (payload) => {
@@ -126,50 +123,6 @@ export function registerChatHandler(
             memoryFileService,
             allowlistService,
             observabilityService,
-            proposeSkillFn: async (name, skillContent, script, scope, update) => {
-              if (scope === "project") {
-                const slug = project.slug ?? projectId;
-                const exists = await toolApprovalService.projectSkillExists(slug, name);
-                if (!update && exists) {
-                  throw new Error(
-                    `Skill "${name}" already exists in this project. Set update: true to propose an update.`,
-                  );
-                }
-                if (update && !exists) {
-                  throw new Error(
-                    `Skill "${name}" does not exist in this project. Remove update: true to propose a new skill.`,
-                  );
-                }
-                await toolApprovalService.saveProjectPendingTool(
-                  slug,
-                  name,
-                  skillContent,
-                  script,
-                  update,
-                );
-                eventBus.emit({
-                  type: "tool:pending",
-                  payload: { name, skillContent, scope: "project", projectSlug: slug, update },
-                });
-              } else {
-                const exists = await toolApprovalService.skillExists(name);
-                if (!update && exists) {
-                  throw new Error(
-                    `Skill "${name}" already exists. Set update: true to propose an update.`,
-                  );
-                }
-                if (update && !exists) {
-                  throw new Error(
-                    `Skill "${name}" does not exist. Remove update: true to propose a new skill.`,
-                  );
-                }
-                await toolApprovalService.savePendingTool(name, skillContent, script, update);
-                eventBus.emit({
-                  type: "tool:pending",
-                  payload: { name, skillContent, scope: "global", update },
-                });
-              }
-            },
             onFileWrite: (absolutePath, relativePath, fileName) => {
               void outputNotificationService.recordWrite(
                 projectId,
