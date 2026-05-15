@@ -48,7 +48,12 @@ export interface WorkerAgentConfig {
   filesMdContent?: string;
   provider: ModelProvider;
   remainingDepth?: number; // defaults to 0 (leaf)
-  proposeSkillFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  proposeSkillFn?: (
+    name: string,
+    skillContent: string,
+    script: string | undefined,
+    scope: "global" | "project",
+  ) => Promise<void>;
   agentLabel?: string;
   onProgress?: (label: string, delta: string) => void;
   webAccessEnabled?: boolean;

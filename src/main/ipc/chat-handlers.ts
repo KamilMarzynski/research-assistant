@@ -126,9 +126,21 @@ export function registerChatHandler(
             memoryFileService,
             allowlistService,
             observabilityService,
-            proposeSkillFn: async (name, skillContent, script) => {
-              await toolApprovalService.savePendingTool(name, skillContent, script);
-              eventBus.emit({ type: "tool:pending", payload: { name, skillContent } });
+            proposeSkillFn: async (name, skillContent, script, scope) => {
+              if (scope === "project") {
+                const slug = project.slug ?? project.id;
+                await toolApprovalService.saveProjectPendingTool(slug, name, skillContent, script);
+                eventBus.emit({
+                  type: "tool:pending",
+                  payload: { name, skillContent, scope: "project", projectSlug: slug },
+                });
+              } else {
+                await toolApprovalService.savePendingTool(name, skillContent, script);
+                eventBus.emit({
+                  type: "tool:pending",
+                  payload: { name, skillContent, scope: "global" },
+                });
+              }
             },
             onFileWrite: (absolutePath, relativePath, fileName) => {
               void outputNotificationService.recordWrite(

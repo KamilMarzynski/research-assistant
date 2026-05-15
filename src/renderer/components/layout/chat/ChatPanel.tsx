@@ -61,6 +61,7 @@ export default function ChatPanel() {
   }, [processing, activeProjectId]);
 
   const activeProject = projects.find((p) => p.id === activeProjectId);
+  const activeProjectSlug = activeProject?.slug ?? undefined;
 
   const handleSend = (content: string) => {
     if (!activeProjectId || processing) return;
@@ -108,7 +109,7 @@ export default function ChatPanel() {
       <ChatHeader />
       <PendingCommandBanner />
       <PendingPathBanner />
-      <PendingToolBanner />
+      <PendingToolBanner projectSlug={activeProjectSlug} />
       <MessageList
         messages={messages}
         streamingSegments={streamingSegments}

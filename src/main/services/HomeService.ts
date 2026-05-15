@@ -38,9 +38,11 @@ export class HomeService {
   }
 
   async ensureWorkspaceForProject(slug: string): Promise<string> {
-    const dir = join(this.getHomePath(), "projects", slug, "workspace");
-    await mkdir(dir, { recursive: true });
-    return dir;
+    const home = this.getHomePath();
+    const workspaceDir = join(home, "projects", slug, "workspace");
+    await mkdir(workspaceDir, { recursive: true });
+    await mkdir(join(home, "projects", slug, "pending-tools"), { recursive: true });
+    return workspaceDir;
   }
 
   private async copyBuiltinSkillsIfNeeded(): Promise<void> {

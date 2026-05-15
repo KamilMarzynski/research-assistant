@@ -18,6 +18,8 @@ const PathApprovalPayloadSchema = z.object({
 const PendingToolSchema = z.object({
   name: z.string(),
   skillContent: z.string(),
+  scope: z.enum(["global", "project"]),
+  projectSlug: z.string().optional(),
 });
 
 const ResearchStatusUpdatePayloadSchema = z.union([

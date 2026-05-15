@@ -15,7 +15,15 @@ type AppEvent =
       type: "research:failed";
       payload: { taskId: string; projectId: string; query: string; error: string };
     }
-  | { type: "tool:pending"; payload: { name: string; skillContent: string } }
+  | {
+      type: "tool:pending";
+      payload: {
+        name: string;
+        skillContent: string;
+        scope: "global" | "project";
+        projectSlug?: string;
+      };
+    }
   | {
       type: "bash:blocked";
       payload: {

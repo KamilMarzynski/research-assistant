@@ -76,6 +76,9 @@ export interface IpcRequestMap {
   GET_PENDING_TOOLS: undefined;
   APPROVE_TOOL: { name: string };
   REJECT_TOOL: { name: string };
+  GET_PROJECT_PENDING_TOOLS: { projectSlug: string };
+  APPROVE_PROJECT_TOOL: { projectSlug: string; name: string };
+  REJECT_PROJECT_TOOL: { projectSlug: string; name: string };
   GET_SKILLS: undefined;
   TOGGLE_SKILL: { name: string; enabled: boolean };
   DELETE_SKILL: { name: string };
@@ -152,6 +155,8 @@ export interface AuditLogEntry {
 export interface PendingTool {
   name: string;
   skillContent: string;
+  scope: "global" | "project";
+  projectSlug?: string;
 }
 
 /** Payload for BASH_BLOCKED push event */
@@ -233,6 +238,9 @@ export interface IpcResponseMap {
   GET_PENDING_TOOLS: PendingTool[];
   APPROVE_TOOL: undefined;
   REJECT_TOOL: undefined;
+  GET_PROJECT_PENDING_TOOLS: PendingTool[];
+  APPROVE_PROJECT_TOOL: undefined;
+  REJECT_PROJECT_TOOL: undefined;
   GET_SKILLS: SkillInfo[];
   TOGGLE_SKILL: undefined;
   DELETE_SKILL: undefined;

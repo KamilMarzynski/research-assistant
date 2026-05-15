@@ -97,3 +97,12 @@ export const DeleteSkillSchema = z.object({
 export const AbortMessageSchema = z.object({
   projectId: z.string(),
 });
+
+export const GetProjectPendingToolsSchema = z.object({
+  projectSlug: z.string(),
+});
+
+export const ApproveRejectProjectToolSchema = z.object({
+  projectSlug: z.string(),
+  name: z.string(),
+});

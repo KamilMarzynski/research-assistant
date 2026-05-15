@@ -69,7 +69,12 @@ export interface ToolContext {
   spawnAgentsParallelFn?: (
     agents: Array<{ type: AgentType; query: string; outputPath: string }>,
   ) => Promise<SpawnResult[]>;
-  proposeSkillFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  proposeSkillFn?: (
+    name: string,
+    skillContent: string,
+    script: string | undefined,
+    scope: "global" | "project",
+  ) => Promise<void>;
   saveMemoryFn?: (
     category: string,
     title: string,

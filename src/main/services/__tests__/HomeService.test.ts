@@ -331,6 +331,83 @@ describe("pending tools", () => {
   });
 });
 
+describe("ToolApprovalService — project-scoped", () => {
+  const PROJECT_SLUG = "my-project";
+
+  beforeEach(async () => {
+    tmpHome = await mkdtemp(join(tmpdir(), "home-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpHome, { recursive: true, force: true });
+  });
+
+  it("saveProjectPendingTool writes SKILL.md under projects/<slug>/pending-tools", async () => {
+    const toolApproval = makeToolApproval();
+    await toolApproval.saveProjectPendingTool(PROJECT_SLUG, "my-skill", "# my-skill");
+    const { readFile } = await import("node:fs/promises");
+    const content = await readFile(
+      join(tmpHome, ".scholar", "projects", PROJECT_SLUG, "pending-tools", "my-skill", "SKILL.md"),
+      "utf-8",
+    );
+    expect(content).toBe("# my-skill");
+  });
+
+  it("saveProjectPendingTool writes script.sh for bash script", async () => {
+    const toolApproval = makeToolApproval();
+    await toolApproval.saveProjectPendingTool(
+      PROJECT_SLUG,
+      "run-bash",
+      "# run-bash",
+      "#!/bin/bash\necho hello",
+    );
+    const { readFile } = await import("node:fs/promises");
+    const script = await readFile(
+      join(tmpHome, ".scholar", "projects", PROJECT_SLUG, "pending-tools", "run-bash", "script.sh"),
+      "utf-8",
+    );
+    expect(script).toContain("echo hello");
+  });
+
+  it("getProjectPendingTools returns empty when no tools", async () => {
+    const toolApproval = makeToolApproval();
+    expect(await toolApproval.getProjectPendingTools(PROJECT_SLUG)).toEqual([]);
+  });
+
+  it("getProjectPendingTools returns saved tools", async () => {
+    const toolApproval = makeToolApproval();
+    await toolApproval.saveProjectPendingTool(PROJECT_SLUG, "tool-a", "# tool-a");
+    await toolApproval.saveProjectPendingTool(PROJECT_SLUG, "tool-b", "# tool-b");
+    const tools = await toolApproval.getProjectPendingTools(PROJECT_SLUG);
+    expect(tools).toHaveLength(2);
+    expect(tools.map((t) => t.name).sort()).toEqual(["tool-a", "tool-b"]);
+  });
+
+  it("approveProjectPendingTool moves to projects/<slug>/skills", async () => {
+    const toolApproval = makeToolApproval();
+    await mkdir(join(tmpHome, ".scholar", "projects", PROJECT_SLUG, "skills"), { recursive: true });
+    await toolApproval.saveProjectPendingTool(PROJECT_SLUG, "my-tool", "# my-tool");
+    await toolApproval.approveProjectPendingTool(PROJECT_SLUG, "my-tool");
+    const { access } = await import("node:fs/promises");
+    await expect(
+      access(join(tmpHome, ".scholar", "projects", PROJECT_SLUG, "skills", "my-tool", "SKILL.md")),
+    ).resolves.toBeUndefined();
+    await expect(
+      access(join(tmpHome, ".scholar", "projects", PROJECT_SLUG, "pending-tools", "my-tool")),
+    ).rejects.toThrow();
+  });
+
+  it("rejectProjectPendingTool deletes the dir", async () => {
+    const toolApproval = makeToolApproval();
+    await toolApproval.saveProjectPendingTool(PROJECT_SLUG, "bad-tool", "# bad-tool");
+    await toolApproval.rejectProjectPendingTool(PROJECT_SLUG, "bad-tool");
+    const { access } = await import("node:fs/promises");
+    await expect(
+      access(join(tmpHome, ".scholar", "projects", PROJECT_SLUG, "pending-tools", "bad-tool")),
+    ).rejects.toThrow();
+  });
+});
+
 describe("builtin skills", () => {
   beforeEach(async () => {
     tmpHome = await mkdtemp(join(tmpdir(), "home-test-"));

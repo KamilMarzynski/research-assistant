@@ -2,7 +2,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
-import { ApproveRejectToolSchema, DeleteSkillSchema, ToggleSkillSchema } from "../ipc-validation";
+import {
+  ApproveRejectProjectToolSchema,
+  ApproveRejectToolSchema,
+  DeleteSkillSchema,
+  GetProjectPendingToolsSchema,
+  ToggleSkillSchema,
+} from "../ipc-validation";
 import type { HomeService } from "../services/HomeService";
 import type { SkillManagementService } from "../services/SkillManagementService";
 import type { ToolApprovalService } from "../services/ToolApprovalService";
@@ -36,6 +42,39 @@ export function registerAdminHandlers(
     wrapIpc(async () => {
       const { name } = parseOrThrow(ApproveRejectToolSchema, payload, "REJECT_TOOL");
       await toolApprovalService.rejectPendingTool(name);
+    }),
+  );
+
+  ipcMain.handle(IPC.GET_PROJECT_PENDING_TOOLS, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { projectSlug } = parseOrThrow(
+        GetProjectPendingToolsSchema,
+        payload,
+        "GET_PROJECT_PENDING_TOOLS",
+      );
+      return toolApprovalService.getProjectPendingTools(projectSlug);
+    }),
+  );
+
+  ipcMain.handle(IPC.APPROVE_PROJECT_TOOL, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { projectSlug, name } = parseOrThrow(
+        ApproveRejectProjectToolSchema,
+        payload,
+        "APPROVE_PROJECT_TOOL",
+      );
+      await toolApprovalService.approveProjectPendingTool(projectSlug, name);
+    }),
+  );
+
+  ipcMain.handle(IPC.REJECT_PROJECT_TOOL, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { projectSlug, name } = parseOrThrow(
+        ApproveRejectProjectToolSchema,
+        payload,
+        "REJECT_PROJECT_TOOL",
+      );
+      await toolApprovalService.rejectProjectPendingTool(projectSlug, name);
     }),
   );
 

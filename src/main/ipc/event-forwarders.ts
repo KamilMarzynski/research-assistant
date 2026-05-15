@@ -83,7 +83,13 @@ export function registerEventForwarders(
   });
 
   eventBus.on("tool:pending", (payload) => {
-    emitPush(win, { type: "TOOL_PENDING", name: payload.name, skillContent: payload.skillContent });
+    emitPush(win, {
+      type: "TOOL_PENDING",
+      name: payload.name,
+      skillContent: payload.skillContent,
+      scope: payload.scope,
+      projectSlug: payload.projectSlug,
+    });
   });
 
   eventBus.on("bash:blocked", (payload) => {

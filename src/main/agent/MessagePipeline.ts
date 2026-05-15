@@ -39,7 +39,12 @@ export interface MessagePipelineOptions {
   researchService: ResearchService;
   memoryFileService?: MemoryFileService;
   allowlistService: AllowlistService;
-  proposeSkillFn?: (name: string, skillContent: string, script?: string) => Promise<void>;
+  proposeSkillFn?: (
+    name: string,
+    skillContent: string,
+    script: string | undefined,
+    scope: "global" | "project",
+  ) => Promise<void>;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   initialMemoryContext: MemoryContext;
   isFirstRun: boolean;
