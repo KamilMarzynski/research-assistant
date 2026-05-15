@@ -155,6 +155,7 @@ describe("createAgentTools – spawn + orchestrator tools", () => {
       "# fetch-arxiv\n\nFetches arxiv papers.",
       undefined,
       "global",
+      false,
     );
   });
 });

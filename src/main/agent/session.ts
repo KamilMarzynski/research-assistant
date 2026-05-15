@@ -35,6 +35,7 @@ export interface AgentSessionOptions {
     skillContent: string,
     script: string | undefined,
     scope: "global" | "project",
+    update: boolean,
   ) => Promise<void>;
   observabilityService?: ObservabilityService;
 }

@@ -44,6 +44,7 @@ export interface MessagePipelineOptions {
     skillContent: string,
     script: string | undefined,
     scope: "global" | "project",
+    update: boolean,
   ) => Promise<void>;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   initialMemoryContext: MemoryContext;

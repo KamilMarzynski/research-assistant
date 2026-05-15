@@ -126,19 +126,47 @@ export function registerChatHandler(
             memoryFileService,
             allowlistService,
             observabilityService,
-            proposeSkillFn: async (name, skillContent, script, scope) => {
+            proposeSkillFn: async (name, skillContent, script, scope, update) => {
               if (scope === "project") {
                 const slug = project.slug ?? projectId;
-                await toolApprovalService.saveProjectPendingTool(slug, name, skillContent, script);
+                const exists = await toolApprovalService.projectSkillExists(slug, name);
+                if (!update && exists) {
+                  throw new Error(
+                    `Skill "${name}" already exists in this project. Set update: true to propose an update.`,
+                  );
+                }
+                if (update && !exists) {
+                  throw new Error(
+                    `Skill "${name}" does not exist in this project. Remove update: true to propose a new skill.`,
+                  );
+                }
+                await toolApprovalService.saveProjectPendingTool(
+                  slug,
+                  name,
+                  skillContent,
+                  script,
+                  update,
+                );
                 eventBus.emit({
                   type: "tool:pending",
-                  payload: { name, skillContent, scope: "project", projectSlug: slug },
+                  payload: { name, skillContent, scope: "project", projectSlug: slug, update },
                 });
               } else {
-                await toolApprovalService.savePendingTool(name, skillContent, script);
+                const exists = await toolApprovalService.skillExists(name);
+                if (!update && exists) {
+                  throw new Error(
+                    `Skill "${name}" already exists. Set update: true to propose an update.`,
+                  );
+                }
+                if (update && !exists) {
+                  throw new Error(
+                    `Skill "${name}" does not exist. Remove update: true to propose a new skill.`,
+                  );
+                }
+                await toolApprovalService.savePendingTool(name, skillContent, script, update);
                 eventBus.emit({
                   type: "tool:pending",
-                  payload: { name, skillContent, scope: "global" },
+                  payload: { name, skillContent, scope: "global", update },
                 });
               }
             },

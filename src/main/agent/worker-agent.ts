@@ -53,6 +53,7 @@ export interface WorkerAgentConfig {
     skillContent: string,
     script: string | undefined,
     scope: "global" | "project",
+    update: boolean,
   ) => Promise<void>;
   agentLabel?: string;
   onProgress?: (label: string, delta: string) => void;
