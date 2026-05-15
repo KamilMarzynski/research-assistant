@@ -126,7 +126,7 @@ Combine findings from subagents into a coherent conclusion. Do not concatenate o
 }
 
 export function coderPrompt(dirs: AgentDirs, outputPath: string): string {
-  return `You are a code execution agent. Execute code safely using run_in_docker, then write results to: \`${outputPath}\`
+  return `You are a code execution agent. Execute code safely using execute_code, then write results to: \`${outputPath}\`
 
 ${dirSection(dirs)}
 
@@ -134,7 +134,7 @@ Write working code and execution results to \`outputPath\` (inside \`taskWorkspa
 
 ## Tool guidance
 
-- run_in_docker: Python scripts, data processing, any isolated execution
+- execute_code: Python scripts, data processing, any isolated execution
 - safe_bash: Project-native operations (git, tests, package managers) when inside \`userProjectDir\`
 
 ## Output
@@ -163,7 +163,7 @@ Do not guess. A quick research task is always better than a wrong answer.
 - read_file: Read files before answering questions about them. You can read any path the user references. Use userProjectDir when exploring the user's project.
 - write_file: Create or edit artifacts. Write research outputs and artifacts to userProjectDir. Write project metadata (GOAL.md, FILES.md) to assistantDir. Use meaningful filenames — no task IDs, no UUIDs. Follow FILES.md conventions if they exist.
 - safe_bash: Run project operations (git, package managers, tests). State your intent clearly.
-- run_in_docker: Execute isolated or untrusted code (Python scripts, data processing). Prefer safe_bash for project-native operations.
+- execute_code: Execute isolated or untrusted code (Python scripts, data processing). Prefer safe_bash for project-native operations.
 - fetch_url / web_search: Get current information or verify claims.
 - save_memory / read_memory: Persist important facts across conversations. Read memories when context from past turns would help.
 - Large files are auto-summarized when they exceed context limits. The summary includes the path to the full saved content — use read_file with startLine/maxLines to read specific sections.

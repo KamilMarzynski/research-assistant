@@ -269,7 +269,7 @@ describe("runSafeBash", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toBe("");
     expect(result.truncated).toBe(false);
-    expect(result.stdout).toContain("run_in_docker");
+    expect(result.stdout).toContain("execute_code");
     expect(result.stdout).toContain("python");
     expect(result.stdout).toContain('"language": "python"');
   });
@@ -285,7 +285,7 @@ describe("runSafeBash", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toBe("");
     expect(result.truncated).toBe(false);
-    expect(result.stdout).toContain("run_in_docker");
+    expect(result.stdout).toContain("execute_code");
     expect(result.stdout).toContain("javascript");
     expect(result.stdout).toContain('"language": "javascript"');
   });
@@ -301,7 +301,7 @@ describe("runSafeBash", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toBe("");
     expect(result.truncated).toBe(false);
-    expect(result.stdout).toContain("run_in_docker");
+    expect(result.stdout).toContain("execute_code");
     expect(result.stdout).toContain("typescript");
     expect(result.stdout).toContain('"language": "typescript"');
   });

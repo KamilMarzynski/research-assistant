@@ -658,14 +658,14 @@ function buildFileExecutionHint(interpreter: string): string {
 
 function buildInlineCodeHint(hint: InlineCodeHint): string {
   const example = {
-    tool: "run_in_docker",
+    tool: "execute_code",
     language: hint.language,
     code: "<your code here>",
   };
   return [
     `Inline ${hint.language} code execution detected (${hint.reason}).`,
     "For security, inline code execution is not allowed in safe_bash.",
-    "Please use run_in_docker instead.",
+    "Please use execute_code instead.",
     "",
     "Example:",
     JSON.stringify(example, null, 2),

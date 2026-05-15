@@ -1,27 +1,28 @@
 import { basename } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { runInDocker } from "../extensions/docker-sandbox";
+import { runExecuteCode } from "../extensions/docker-sandbox";
 import type { PathJail } from "../path-jail";
 
-export function createDockerTool(
+export function createExecuteCodeTool(
   jail: PathJail,
-): AgentTool<typeof dockerParameters, Awaited<ReturnType<typeof runInDocker>>> {
+): AgentTool<typeof executeCodeParameters, Awaited<ReturnType<typeof runExecuteCode>>> {
   return {
-    name: "run_in_docker",
-    label: "Run code in Docker",
+    name: "execute_code",
+    label: "Execute code in sandbox",
     description:
-      "Execute code in an isolated Docker container. Use for running Python, JavaScript, TypeScript, or Bash code safely. " +
+      "Execute code in an isolated Docker container with no access to host environment variables. " +
+      "Use for running Python, JavaScript, TypeScript, or Bash code safely. " +
       "Pass input files via workspaceFiles (absolute paths validated by jail) or inline via files. " +
       "Write output files to /workspace/output/ to receive them back as outputFiles.",
-    parameters: dockerParameters,
+    parameters: executeCodeParameters,
     execute: async (_id, { code, language, files, workspaceFiles, networkEnabled }) => {
       const resolvedWorkspaceFiles =
         workspaceFiles?.map((p) => {
           const validated = jail.validate(p, "read");
           return { name: basename(validated), sourcePath: validated };
         }) ?? [];
-      const result = await runInDocker({
+      const result = await runExecuteCode({
         code,
         language,
         files,
@@ -45,7 +46,7 @@ export function createDockerTool(
   };
 }
 
-const dockerParameters = Type.Object({
+const executeCodeParameters = Type.Object({
   code: Type.String({ description: "Code to execute" }),
   language: Type.Union(
     [

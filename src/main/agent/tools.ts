@@ -3,8 +3,8 @@ import type { AgentTool } from "@mariozechner/pi-agent-core";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { CompressionService } from "./CompressionService";
 import { PathJail } from "./path-jail";
-import { createDockerTool } from "./tools/docker-tool";
 import { createRequestEvaluationTool } from "./tools/eval-tools";
+import { createExecuteCodeTool } from "./tools/execute-code-tool";
 import { createListDirTool, createReadFileTool, createWriteFileTool } from "./tools/file-tools";
 import { createReadMemoryTool, createSaveMemoryTool } from "./tools/memory-tools";
 import { createSpawnAgentsParallelTool, createSpawnAgentTool } from "./tools/orchestrator-tools";
@@ -23,7 +23,7 @@ export type AgentToolName =
   | "web_search"
   | "request_evaluation"
   | "start_research"
-  | "run_in_docker"
+  | "execute_code"
   | "spawn_agent"
   | "spawn_agents_parallel"
   | "propose_skill"
@@ -111,7 +111,7 @@ function capabilitiesToToolNames(caps: ToolCapabilities): AgentToolName[] {
     "write_file",
     "list_dir",
     "safe_bash",
-    "run_in_docker",
+    "execute_code",
   ];
   if (caps.webAccess) names.push("fetch_url", "web_search");
   if (caps.memory) names.push("save_memory", "read_memory");
@@ -149,7 +149,7 @@ function buildTools(ctx: ToolContext): AgentTool<any>[] {
     tools.push(createWebSearchTool(ctx.compressionService));
   }
 
-  tools.push(createDockerTool(jail));
+  tools.push(createExecuteCodeTool(jail));
 
   if (startResearchFn) {
     tools.push(createStartResearchTool(startResearchFn));

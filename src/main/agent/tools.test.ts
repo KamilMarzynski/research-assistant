@@ -64,15 +64,15 @@ describe("createAgentTools – toolNames filter", () => {
   });
 });
 
-describe("createAgentTools – run_in_docker", () => {
-  it("includes run_in_docker when in toolNames", () => {
-    const tools = createAgentTools({ ...BASE, toolNames: ["run_in_docker"] });
-    expect(tools.map((t) => t.name)).toContain("run_in_docker");
+describe("createAgentTools – execute_code", () => {
+  it("includes execute_code when in toolNames", () => {
+    const tools = createAgentTools({ ...BASE, toolNames: ["execute_code"] });
+    expect(tools.map((t) => t.name)).toContain("execute_code");
   });
 
-  it("excludes run_in_docker when not in toolNames", () => {
+  it("excludes execute_code when not in toolNames", () => {
     const tools = createAgentTools({ ...BASE, toolNames: ["read_file"] });
-    expect(tools.map((t) => t.name)).not.toContain("run_in_docker");
+    expect(tools.map((t) => t.name)).not.toContain("execute_code");
   });
 });
 

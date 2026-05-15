@@ -42,7 +42,7 @@ const COMMANDS: Record<DockerSandboxInput["language"], string[]> = {
 
 const TIMEOUT_MS = 60_000;
 
-export async function runInDocker(input: DockerSandboxInput): Promise<DockerSandboxOutput> {
+export async function runExecuteCode(input: DockerSandboxInput): Promise<DockerSandboxOutput> {
   const docker = new Docker();
   let tmpDir: string | null = null;
   let container: Docker.Container | null = null;

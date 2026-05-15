@@ -39,7 +39,7 @@ vi.mock("../../agent/worker-agent", () => {
       "write_file",
       "list_dir",
       "safe_bash",
-      "run_in_docker",
+      "execute_code",
       "spawn_agent",
       "spawn_agents_parallel",
     ],
@@ -58,7 +58,7 @@ vi.mock("../../agent/worker-agent", () => {
       }),
       coder: (base: Record<string, unknown>, outputPath: string) => ({
         ...base,
-        toolNames: ["read_file", "run_in_docker"],
+        toolNames: ["read_file", "execute_code"],
         systemPromptAddition: `You are a code executor. Output: ${outputPath}.`,
         remainingDepth: 0,
       }),

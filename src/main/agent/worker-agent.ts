@@ -27,7 +27,7 @@ export const ORCHESTRATOR_TOOL_NAMES: readonly AgentToolName[] = [
   "write_file",
   "list_dir",
   "safe_bash",
-  "run_in_docker",
+  "execute_code",
   "spawn_agent",
   "spawn_agents_parallel",
 ] as const;
@@ -196,7 +196,7 @@ export const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
     });
     return {
       ...base,
-      toolNames: ["read_file", "write_file", "run_in_docker"],
+      toolNames: ["read_file", "write_file", "execute_code"],
       systemPromptAddition: coderPrompt(dirs, outputPath),
       remainingDepth: 0,
     };
