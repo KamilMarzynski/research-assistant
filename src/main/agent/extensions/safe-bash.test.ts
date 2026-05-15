@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +6,7 @@ import {
   BlockedCommandError,
   checkBlocklist,
   clearAllowlists,
+  detectFileExecution,
   detectInlineCode,
   resolveBlockedCommand,
   runSafeBash,
@@ -364,10 +365,9 @@ describe("runSafeBash", () => {
   });
 
   it("truncates stdout when output exceeds MAX_OUTPUT_CHARS", async () => {
-    const bigStdoutFile = join(workDir, "big-stdout.js");
-    await writeFile(bigStdoutFile, "console.log('x'.repeat(70000))", "utf-8");
+    // Generate ~70000 bytes of output via bash head -c to trigger truncation
     const result = await runSafeBash({
-      command: `node ${bigStdoutFile}`,
+      command: "head -c 70000 /dev/zero",
       intent: "test truncation",
       projectId: "p1",
       workspacePath: workDir,
@@ -379,10 +379,9 @@ describe("runSafeBash", () => {
   });
 
   it("truncates stderr when output exceeds MAX_OUTPUT_CHARS", async () => {
-    const bigStderrFile = join(workDir, "big-stderr.js");
-    await writeFile(bigStderrFile, "console.error('x'.repeat(70000))", "utf-8");
+    // Generate ~70000 bytes on stderr via bash redirect to trigger truncation
     const result = await runSafeBash({
-      command: `node ${bigStderrFile}`,
+      command: "head -c 70000 /dev/zero >&2",
       intent: "test stderr truncation",
       projectId: "p1",
       workspacePath: workDir,
@@ -585,5 +584,133 @@ describe("approval gate", () => {
 
   it("resolveBlockedCommand silently returns for unknown commandId", () => {
     expect(() => resolveBlockedCommand("nonexistent-id", "deny")).not.toThrow();
+  });
+});
+
+describe("detectFileExecution", () => {
+  describe("detection cases — returns hint", () => {
+    it("detects python3 script.py", () => {
+      const result = detectFileExecution("python3 script.py");
+      expect(result).not.toBeNull();
+      expect(result?.interpreter).toBe("python3");
+    });
+
+    it("detects python3 with absolute path", () => {
+      expect(detectFileExecution("python3 /home/user/analysis.py")).not.toBeNull();
+    });
+
+    it("detects python3 with relative path", () => {
+      expect(detectFileExecution("python3 ./run.py")).not.toBeNull();
+    });
+
+    it("detects python script.py", () => {
+      expect(detectFileExecution("python script.py")).not.toBeNull();
+    });
+
+    it("detects node server.js", () => {
+      const result = detectFileExecution("node server.js");
+      expect(result).not.toBeNull();
+      expect(result?.interpreter).toBe("node");
+    });
+
+    it("detects node with absolute path", () => {
+      expect(detectFileExecution("node /workspace/index.js")).not.toBeNull();
+    });
+
+    it("detects bun script.ts", () => {
+      const result = detectFileExecution("bun script.ts");
+      expect(result).not.toBeNull();
+      expect(result?.interpreter).toBe("bun");
+    });
+
+    it("detects bun ./runner.ts", () => {
+      expect(detectFileExecution("bun ./runner.ts")).not.toBeNull();
+    });
+
+    it("detects python3.11 script.py", () => {
+      expect(detectFileExecution("python3.11 script.py")).not.toBeNull();
+    });
+  });
+
+  describe("non-detection cases — returns null", () => {
+    it("returns null for python3 -m pytest", () => {
+      expect(detectFileExecution("python3 -m pytest")).toBeNull();
+    });
+
+    it("returns null for python3 -m pytest with extra args", () => {
+      expect(detectFileExecution("python3 -m pytest tests/")).toBeNull();
+    });
+
+    it("returns null for python -m module", () => {
+      expect(detectFileExecution("python -m http.server")).toBeNull();
+    });
+
+    it("returns null for bun install", () => {
+      expect(detectFileExecution("bun install")).toBeNull();
+    });
+
+    it("returns null for bun run dev", () => {
+      expect(detectFileExecution("bun run dev")).toBeNull();
+    });
+
+    it("returns null for bun test", () => {
+      expect(detectFileExecution("bun test")).toBeNull();
+    });
+
+    it("returns null for bun build", () => {
+      expect(detectFileExecution("bun build")).toBeNull();
+    });
+
+    it("returns null for bun add package", () => {
+      expect(detectFileExecution("bun add typescript")).toBeNull();
+    });
+
+    it("returns null for bun with global flag before subcommand", () => {
+      expect(detectFileExecution("bun --smol run dev")).toBeNull();
+    });
+
+    it("returns null for node with only flags", () => {
+      expect(detectFileExecution("node --version")).toBeNull();
+    });
+
+    it("returns null for node -v", () => {
+      expect(detectFileExecution("node -v")).toBeNull();
+    });
+
+    it("returns null for bare python3 (no args)", () => {
+      expect(detectFileExecution("python3")).toBeNull();
+    });
+
+    it("returns null for non-interpreter commands", () => {
+      expect(detectFileExecution("ls -la")).toBeNull();
+      expect(detectFileExecution("git status")).toBeNull();
+      expect(detectFileExecution("grep -r foo .")).toBeNull();
+    });
+  });
+
+  describe("integration: runSafeBash blocks file execution", () => {
+    it("returns exitCode 1 and hint when running python3 file.py", async () => {
+      const result = await runSafeBash({
+        command: "python3 analysis.py",
+        intent: "run analysis",
+        projectId: "p1",
+        workspacePath: "/tmp",
+        auditLogPath: "/tmp/audit.log",
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout).toContain("execute_code");
+    });
+
+    it("returns exitCode 1 and hint when running node server.js", async () => {
+      const result = await runSafeBash({
+        command: "node server.js",
+        intent: "start server",
+        projectId: "p1",
+        workspacePath: "/tmp",
+        auditLogPath: "/tmp/audit.log",
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout).toContain("execute_code");
+    });
   });
 });

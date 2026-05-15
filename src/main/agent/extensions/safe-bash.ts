@@ -94,6 +94,88 @@ const INTERPRETER_META: Record<
   bun: { language: "typescript", flagReason: "bun -e flag", replReason: "interactive REPL" },
 };
 
+const SCRIPT_INTERPRETERS = new Set(["python3", "python", "node", "bun"]);
+
+const BUN_SUBCOMMANDS = new Set([
+  "install",
+  "run",
+  "add",
+  "remove",
+  "update",
+  "link",
+  "unlink",
+  "test",
+  "build",
+  "init",
+  "create",
+  "x",
+  "pm",
+]);
+
+export interface FileExecutionHint {
+  detected: true;
+  interpreter: string;
+  reason: string;
+}
+
+export function detectFileExecution(command: string): FileExecutionHint | null {
+  const stripped = stripRedirects(command).trim();
+  if (!stripped) return null;
+
+  const tokens = tokenize(stripped);
+  if (tokens.length < 2) return null;
+
+  const rawBinary = tokens[0].split("/").pop() ?? tokens[0];
+  // Normalize python3.11, python3.12 → "python3"
+  const binary = /^python3(\.\d+)?$/.test(rawBinary) ? "python3" : rawBinary;
+
+  if (!SCRIPT_INTERPRETERS.has(binary)) return null;
+
+  let i = 1;
+  let hasModuleFlag = false;
+  let hasSeenPositional = false;
+
+  while (i < tokens.length) {
+    const token = tokens[i];
+
+    if (token.startsWith("-")) {
+      if (token === "-m" || token === "--module") hasModuleFlag = true;
+      // VALUE_FLAGS consume the next token as their value — skip both
+      const flagKey = token.includes("=") ? token.split("=")[0] : token;
+      if (VALUE_FLAGS.has(flagKey) && !token.includes("=")) {
+        i += 2;
+        continue;
+      }
+      i++;
+      continue;
+    }
+
+    // First positional argument reached
+
+    // python3 -m <module>: not file execution
+    if (hasModuleFlag && (binary === "python3" || binary === "python")) {
+      return null;
+    }
+
+    // bun subcommands (bun install, bun test, bun run, etc.): not file execution
+    // Check on first positional arg regardless of index (global flags may precede it)
+    if (binary === "bun" && !hasSeenPositional && BUN_SUBCOMMANDS.has(token)) {
+      return null;
+    }
+
+    hasSeenPositional = true;
+
+    // Positional arg to any other interpreter = file execution
+    return {
+      detected: true,
+      interpreter: rawBinary,
+      reason: `${rawBinary} file argument: "${token}"`,
+    };
+  }
+
+  return null;
+}
+
 // Dangerous commands always blocked
 const DANGEROUS_COMMANDS = [
   {
@@ -554,6 +636,26 @@ export function resolveBlockedCommand(
 
 // --- Public API ---
 
+function buildFileExecutionHint(interpreter: string): string {
+  const normalizedBin = /^python3/.test(interpreter) ? "python3" : interpreter;
+  const langMap: Record<string, string> = {
+    python3: "python",
+    python: "python",
+    node: "javascript",
+    bun: "typescript",
+  };
+  const language = langMap[normalizedBin] ?? "python";
+  const example = { tool: "execute_code", language, code: "<paste file contents here>" };
+  return [
+    `Script file execution detected (${interpreter} <file>).`,
+    "For security, running script files is not allowed in safe_bash.",
+    "Use execute_code with the script contents instead.",
+    "",
+    "Example:",
+    JSON.stringify(example, null, 2),
+  ].join("\n");
+}
+
 function buildInlineCodeHint(hint: InlineCodeHint): string {
   const example = {
     tool: "run_in_docker",
@@ -578,6 +680,16 @@ export async function runSafeBash(opts: SafeBashOptions): Promise<SafeBashResult
       stderr: "",
       truncated: false,
       stdout: buildInlineCodeHint(inlineHint),
+    };
+  }
+
+  const fileHint = detectFileExecution(opts.command);
+  if (fileHint) {
+    return {
+      exitCode: 1,
+      stderr: "",
+      truncated: false,
+      stdout: buildFileExecutionHint(fileHint.interpreter),
     };
   }
 
