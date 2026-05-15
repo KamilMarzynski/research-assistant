@@ -23,6 +23,16 @@ export class ToolApprovalService {
     }
   }
 
+  private async readUpdateFlag(dir: string): Promise<boolean> {
+    try {
+      const raw = await readFile(join(dir, "META.json"), "utf-8");
+      const meta = JSON.parse(raw) as { update?: boolean };
+      return typeof meta.update === "boolean" ? meta.update : false;
+    } catch {
+      return false;
+    }
+  }
+
   async skillExists(name: string): Promise<boolean> {
     this.assertSafePathComponent(name, "name");
     try {
@@ -73,14 +83,7 @@ export class ToolApprovalService {
     for (const name of entries) {
       try {
         const skillContent = await readFile(join(dir, name, "SKILL.md"), "utf-8");
-        let update = false;
-        try {
-          const raw = await readFile(join(dir, name, "META.json"), "utf-8");
-          const meta = JSON.parse(raw) as { update?: boolean };
-          if (typeof meta.update === "boolean") update = meta.update;
-        } catch {
-          // Old entry without META.json — default to false
-        }
+        const update = await this.readUpdateFlag(join(dir, name));
         tools.push({ name, skillContent, update });
       } catch (err) {
         console.error(
@@ -96,14 +99,7 @@ export class ToolApprovalService {
     this.assertSafePathComponent(name, "name");
     const src = join(this.pendingToolsDir, name);
     const dst = join(this.skillsDir, name);
-    let update = false;
-    try {
-      const raw = await readFile(join(src, "META.json"), "utf-8");
-      const meta = JSON.parse(raw) as { update?: boolean };
-      if (typeof meta.update === "boolean") update = meta.update;
-    } catch {
-      // No META.json
-    }
+    const update = await this.readUpdateFlag(src);
     if (update) {
       await rm(dst, { recursive: true, force: true });
     }
@@ -157,14 +153,7 @@ export class ToolApprovalService {
     for (const name of entries) {
       try {
         const skillContent = await readFile(join(dir, name, "SKILL.md"), "utf-8");
-        let update = false;
-        try {
-          const raw = await readFile(join(dir, name, "META.json"), "utf-8");
-          const meta = JSON.parse(raw) as { update?: boolean };
-          if (typeof meta.update === "boolean") update = meta.update;
-        } catch {
-          // Old entry without META.json
-        }
+        const update = await this.readUpdateFlag(join(dir, name));
         tools.push({ name, skillContent, update });
       } catch (err) {
         console.error(
@@ -181,14 +170,7 @@ export class ToolApprovalService {
     this.assertSafePathComponent(name, "name");
     const src = join(this.projectPendingToolsDir(slug), name);
     const dst = join(this.projectSkillsDir(slug), name);
-    let update = false;
-    try {
-      const raw = await readFile(join(src, "META.json"), "utf-8");
-      const meta = JSON.parse(raw) as { update?: boolean };
-      if (typeof meta.update === "boolean") update = meta.update;
-    } catch {
-      // No META.json
-    }
+    const update = await this.readUpdateFlag(src);
     if (update) {
       await rm(dst, { recursive: true, force: true });
     }

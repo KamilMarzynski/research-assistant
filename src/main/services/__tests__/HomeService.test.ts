@@ -683,4 +683,19 @@ describe("ToolApprovalService — update semantics", () => {
     const tools = await svc.getProjectPendingTools("my-proj");
     expect(tools[0].update).toBe(true);
   });
+
+  it("approveProjectPendingTool replaces existing project skill dir when update=true", async () => {
+    const svc = makeToolApproval();
+    const skillsDir = join(tmpHome, ".scholar", "projects", "my-proj", "skills");
+    await mkdir(skillsDir, { recursive: true });
+    const existingSkillDir = join(skillsDir, "proj-skill");
+    await mkdir(existingSkillDir, { recursive: true });
+    await writeFile(join(existingSkillDir, "SKILL.md"), "# old", "utf-8");
+    await writeFile(join(existingSkillDir, "stale.txt"), "stale", "utf-8");
+    await svc.saveProjectPendingTool("my-proj", "proj-skill", "# new", undefined, true);
+    await svc.approveProjectPendingTool("my-proj", "proj-skill");
+    const content = await readFile(join(skillsDir, "proj-skill", "SKILL.md"), "utf-8");
+    expect(content).toBe("# new");
+    await expect(access(join(skillsDir, "proj-skill", "stale.txt"))).rejects.toThrow();
+  });
 });
