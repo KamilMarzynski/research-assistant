@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import { AGENT_HOME_PATH_TOKEN } from "../di/tokens";
@@ -23,18 +23,45 @@ export class ToolApprovalService {
     }
   }
 
-  async savePendingTool(name: string, skillContent: string, script?: string): Promise<void> {
+  async skillExists(name: string): Promise<boolean> {
+    this.assertSafePathComponent(name, "name");
+    try {
+      await access(join(this.skillsDir, name));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async projectSkillExists(slug: string, name: string): Promise<boolean> {
+    this.assertSafePathComponent(slug, "slug");
+    this.assertSafePathComponent(name, "name");
+    try {
+      await access(join(this.projectSkillsDir(slug), name));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async savePendingTool(
+    name: string,
+    skillContent: string,
+    script?: string,
+    update = false,
+  ): Promise<void> {
     this.assertSafePathComponent(name, "name");
     const dir = join(this.pendingToolsDir, name);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "SKILL.md"), skillContent, "utf-8");
+    await writeFile(join(dir, "META.json"), JSON.stringify({ update }), "utf-8");
     if (script) {
       const ext = script.trimStart().startsWith("#!/bin/bash") ? ".sh" : ".py";
       await writeFile(join(dir, `script${ext}`), script, "utf-8");
     }
   }
 
-  async getPendingTools(): Promise<Array<{ name: string; skillContent: string }>> {
+  async getPendingTools(): Promise<Array<{ name: string; skillContent: string; update: boolean }>> {
     const dir = this.pendingToolsDir;
     let entries: string[] = [];
     try {
@@ -42,11 +69,19 @@ export class ToolApprovalService {
     } catch {
       return [];
     }
-    const tools: Array<{ name: string; skillContent: string }> = [];
+    const tools: Array<{ name: string; skillContent: string; update: boolean }> = [];
     for (const name of entries) {
       try {
         const skillContent = await readFile(join(dir, name, "SKILL.md"), "utf-8");
-        tools.push({ name, skillContent });
+        let update = false;
+        try {
+          const raw = await readFile(join(dir, name, "META.json"), "utf-8");
+          const meta = JSON.parse(raw) as { update?: boolean };
+          if (typeof meta.update === "boolean") update = meta.update;
+        } catch {
+          // Old entry without META.json — default to false
+        }
+        tools.push({ name, skillContent, update });
       } catch (err) {
         console.error(
           `[ToolApprovalService] getPendingTools: skipping malformed entry ${name}:`,
@@ -61,6 +96,17 @@ export class ToolApprovalService {
     this.assertSafePathComponent(name, "name");
     const src = join(this.pendingToolsDir, name);
     const dst = join(this.skillsDir, name);
+    let update = false;
+    try {
+      const raw = await readFile(join(src, "META.json"), "utf-8");
+      const meta = JSON.parse(raw) as { update?: boolean };
+      if (typeof meta.update === "boolean") update = meta.update;
+    } catch {
+      // No META.json
+    }
+    if (update) {
+      await rm(dst, { recursive: true, force: true });
+    }
     await rename(src, dst);
   }
 
@@ -82,12 +128,14 @@ export class ToolApprovalService {
     name: string,
     skillContent: string,
     script?: string,
+    update = false,
   ): Promise<void> {
     this.assertSafePathComponent(slug, "slug");
     this.assertSafePathComponent(name, "name");
     const dir = join(this.projectPendingToolsDir(slug), name);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "SKILL.md"), skillContent, "utf-8");
+    await writeFile(join(dir, "META.json"), JSON.stringify({ update }), "utf-8");
     if (script) {
       const ext = script.trimStart().startsWith("#!/bin/bash") ? ".sh" : ".py";
       await writeFile(join(dir, `script${ext}`), script, "utf-8");
@@ -96,7 +144,7 @@ export class ToolApprovalService {
 
   async getProjectPendingTools(
     slug: string,
-  ): Promise<Array<{ name: string; skillContent: string }>> {
+  ): Promise<Array<{ name: string; skillContent: string; update: boolean }>> {
     this.assertSafePathComponent(slug, "slug");
     const dir = this.projectPendingToolsDir(slug);
     let entries: string[] = [];
@@ -105,11 +153,19 @@ export class ToolApprovalService {
     } catch {
       return [];
     }
-    const tools: Array<{ name: string; skillContent: string }> = [];
+    const tools: Array<{ name: string; skillContent: string; update: boolean }> = [];
     for (const name of entries) {
       try {
         const skillContent = await readFile(join(dir, name, "SKILL.md"), "utf-8");
-        tools.push({ name, skillContent });
+        let update = false;
+        try {
+          const raw = await readFile(join(dir, name, "META.json"), "utf-8");
+          const meta = JSON.parse(raw) as { update?: boolean };
+          if (typeof meta.update === "boolean") update = meta.update;
+        } catch {
+          // Old entry without META.json
+        }
+        tools.push({ name, skillContent, update });
       } catch (err) {
         console.error(
           `[ToolApprovalService] getProjectPendingTools: skipping malformed entry ${name}:`,
@@ -125,6 +181,17 @@ export class ToolApprovalService {
     this.assertSafePathComponent(name, "name");
     const src = join(this.projectPendingToolsDir(slug), name);
     const dst = join(this.projectSkillsDir(slug), name);
+    let update = false;
+    try {
+      const raw = await readFile(join(src, "META.json"), "utf-8");
+      const meta = JSON.parse(raw) as { update?: boolean };
+      if (typeof meta.update === "boolean") update = meta.update;
+    } catch {
+      // No META.json
+    }
+    if (update) {
+      await rm(dst, { recursive: true, force: true });
+    }
     await rename(src, dst);
   }
 

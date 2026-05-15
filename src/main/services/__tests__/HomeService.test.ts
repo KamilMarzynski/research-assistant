@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { access, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -601,5 +601,86 @@ describe("skill management", () => {
     await svc.ensureDirectories();
     const skillMgmt = makeSkillManagement();
     await expect(skillMgmt.deleteSkill("evaluate-research")).rejects.toThrow("protected");
+  });
+});
+
+describe("ToolApprovalService — update semantics", () => {
+  beforeEach(async () => {
+    tmpHome = await mkdtemp(join(tmpdir(), "home-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpHome, { recursive: true, force: true });
+  });
+
+  it("skillExists returns false when skill is absent", async () => {
+    const svc = makeToolApproval();
+    expect(await svc.skillExists("no-such-skill")).toBe(false);
+  });
+
+  it("skillExists returns true after approvePendingTool", async () => {
+    const svc = makeToolApproval();
+    await mkdir(join(tmpHome, ".scholar", "skills"), { recursive: true });
+    await svc.savePendingTool("my-skill", "# my-skill");
+    await svc.approvePendingTool("my-skill");
+    expect(await svc.skillExists("my-skill")).toBe(true);
+  });
+
+  it("projectSkillExists returns false when skill is absent", async () => {
+    const svc = makeToolApproval();
+    expect(await svc.projectSkillExists("proj", "no-such-skill")).toBe(false);
+  });
+
+  it("projectSkillExists returns true after approveProjectPendingTool", async () => {
+    const svc = makeToolApproval();
+    await mkdir(join(tmpHome, ".scholar", "projects", "proj", "skills"), { recursive: true });
+    await svc.saveProjectPendingTool("proj", "proj-skill", "# proj-skill");
+    await svc.approveProjectPendingTool("proj", "proj-skill");
+    expect(await svc.projectSkillExists("proj", "proj-skill")).toBe(true);
+  });
+
+  it("getPendingTools includes update: false by default", async () => {
+    const svc = makeToolApproval();
+    await svc.savePendingTool("tool-a", "# tool-a");
+    const tools = await svc.getPendingTools();
+    expect(tools[0].update).toBe(false);
+  });
+
+  it("getPendingTools includes update: true when saved with update=true", async () => {
+    const svc = makeToolApproval();
+    await svc.savePendingTool("tool-a", "# tool-a", undefined, true);
+    const tools = await svc.getPendingTools();
+    expect(tools[0].update).toBe(true);
+  });
+
+  it("getPendingTools returns update: false for old entries missing META.json", async () => {
+    const svc = makeToolApproval();
+    const dir = join(tmpHome, ".scholar", "pending-tools", "legacy-tool");
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "SKILL.md"), "# legacy", "utf-8");
+    const tools = await svc.getPendingTools();
+    expect(tools[0].update).toBe(false);
+  });
+
+  it("approvePendingTool replaces existing skill dir when update=true", async () => {
+    const svc = makeToolApproval();
+    const skillsDir = join(tmpHome, ".scholar", "skills");
+    await mkdir(skillsDir, { recursive: true });
+    const existingSkillDir = join(skillsDir, "evolving-skill");
+    await mkdir(existingSkillDir, { recursive: true });
+    await writeFile(join(existingSkillDir, "SKILL.md"), "# old content", "utf-8");
+    await writeFile(join(existingSkillDir, "old-file.txt"), "old", "utf-8");
+    await svc.savePendingTool("evolving-skill", "# new content", undefined, true);
+    await svc.approvePendingTool("evolving-skill");
+    const content = await readFile(join(skillsDir, "evolving-skill", "SKILL.md"), "utf-8");
+    expect(content).toBe("# new content");
+    await expect(access(join(skillsDir, "evolving-skill", "old-file.txt"))).rejects.toThrow();
+  });
+
+  it("getProjectPendingTools includes update field", async () => {
+    const svc = makeToolApproval();
+    await svc.saveProjectPendingTool("my-proj", "proj-tool", "# proj-tool", undefined, true);
+    const tools = await svc.getProjectPendingTools("my-proj");
+    expect(tools[0].update).toBe(true);
   });
 });
