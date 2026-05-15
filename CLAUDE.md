@@ -12,6 +12,7 @@ bun run check        # Biome lint + format check (auto-fixes) — must be clean 
 bun run lint         # Biome lint only (no fix)
 bun run format       # Biome format only (with --write)
 bun run test         # Run all Vitest tests
+bun run test:coverage  # Run tests with coverage report (enforces 90% thresholds)
 ```
 
 **Always use `bun` and `bunx`. Never `npm`, `npx`, or `yarn`.**
@@ -41,49 +42,21 @@ src/shared/     — Types and constants shared across all three processes
 - Reused for subsequent messages (preserves Pi conversation history)
 - `beforeToolCall` blocks all tool calls until Run 6
 
-Event mapping:
-| Pi event | IPC channel |
-|---|---|
-| `message_update` + `text_delta` | `MESSAGE_CHUNK` |
-| `agent_end` | `MESSAGE_DONE` |
-
 ## IPC Contract (`src/shared/ipc-channels.ts`)
 
-| Channel | Direction | Pattern | Purpose |
-|---|---|---|---|
-| `GET_PROJECTS` | renderer→main | `invoke` | Fetch project list |
-| `CREATE_PROJECT` | renderer→main | `invoke` | Create project |
-| `GET_ARTIFACTS` | renderer→main | `invoke` | Fetch artifacts |
-| `GET_MESSAGES` | renderer→main | `invoke` | Fetch message history for project |
-| `GET_SETTINGS` | renderer→main | `invoke` | Read current settings |
-| `SAVE_SETTINGS` | renderer→main | `invoke` | Save API key + model |
-| `SEND_MESSAGE` | renderer→main | `send` (fire-and-forget) | Submit chat message |
-| `MESSAGE_CHUNK` | main→renderer | `webContents.send` | Stream LLM token |
-| `MESSAGE_DONE` | main→renderer | `webContents.send` | Stream complete |
-| `NEW_MESSAGE` | main→renderer | `webContents.send` | Push new message |
-| `RESEARCH_STATUS_UPDATE` | main→renderer | `webContents.send` | Research progress |
-| `RESEARCH_COMPLETE` | main→renderer | `webContents.send` | Research done |
+renderer→main: `ipcMain.handle` (invoke) for queries/mutations; `ipcMain.on` for fire-and-forget (`SEND_MESSAGE`).
+main→renderer: `webContents.send` for push events (streaming chunks, status updates, approvals).
 
-**`ipcMain.handle` is global** — register handlers once at startup only (`app.whenReady`), never inside `activate`.
+**`ipcMain.handle` is global** — register once at startup (`app.whenReady`), never inside `activate`.
 
-**Streaming pattern:** `ipcMain.on` + `event.sender.send(IPC.MESSAGE_CHUNK, token)` per chunk.
-
-## Settings
-
-`SettingsService` (`src/main/services/SettingsService.ts`) persists to `app.getPath('userData')/settings.json`:
-- API key encrypted via `electron.safeStorage` (stored as base64)
-- Model stored plain
+**Streaming:** `ipcMain.on(SEND_MESSAGE)` → `event.sender.send(MESSAGE_CHUNK, token)` per chunk → `MESSAGE_DONE`.
 
 ## Langfuse (Local)
-
-A local Langfuse stack is available via `docker-compose.langfuse.yml` for observability during development.
 
 ```bash
 docker compose -f docker-compose.langfuse.yml up -d   # start
 docker compose -f docker-compose.langfuse.yml down   # stop
 ```
-
-Services: `langfuse-web` (port 3000), `postgres`, `clickhouse`, `redis`, `minio`. See `docs/langfuse-local-setup.md` for full instructions.
 
 ## Agent Home Directory
 
@@ -105,30 +78,31 @@ Services: `langfuse-web` (port 3000), `postgres`, `clickhouse`, `redis`, `minio`
 
 ## Code Execution Model
 
-Three tiers — Tiers 1 and 2 implemented:
-- **Tier 1**: Path-jailed `read_file`/`write_file`/`list_dir` via `src/main/agent/path-jail.ts` — workspace, project dir, and optionally linked folder
-- **Tier 2**: `safe_bash` — fenced shell execution with blocklist, timeout, and audit log; detects inline code and hints `run_in_docker`
-- **Tier 3**: `run_in_docker` — isolated Docker container; supports Python, JavaScript, bash; not E2B
+- **Tier 1**: Path-jailed `read_file`/`write_file`/`list_dir` (`src/main/agent/path-jail.ts`) — workspace, project dir, optionally linked folder
+- **Tier 2**: `safe_bash` — shell with blocklist, timeout, audit log; blocked cmds trigger approve-once/session/deny flow
+- **Tier 2.5**: `run_skill_script` — runs `script.{sh,py}` from skills dirs only; 60s timeout, 64 KB cap, audit log
+- **Tier 3**: `execute_code` — Docker container; Python, JavaScript, bash; not E2B
 
-## Toolchain
+## Clean Code
 
-| Concern | Tool |
-|---|---|
-| Runtime / package manager | Bun |
-| Build | electron-vite |
-| Linting + formatting | Biome v2 (no ESLint, no Prettier) |
-| UI | React 19 + Scholar design system (custom tokens/components); MUI v9 used sparingly |
-| Language | TypeScript strict throughout |
-| DI | TSyringe (`@injectable()`, `@inject()`) |
-| DB | Drizzle ORM + `@libsql/client` (NOT `bun:sqlite`) |
+**UI:** Scholar design system (custom tokens/components) + MUI v9 used sparingly — not vanilla MUI.
 
-## TypeScript Path Aliases
+- **Services own one domain** — IPC handlers only route, no business logic
+- **React components** — no business logic; talk to main only via `window.electronAPI`
+- **Early returns** over nested conditionals
+- **No magic strings** — use constants from `src/shared/`
+- **TSyringe** — `@injectable()` on every service; inject interfaces, not concretes
+- **Types** — each feature gets a `*.types.ts` file (e.g. `session.types.ts`, `tools.types.ts`); no inline type sprawl in implementation files
 
-```
-@main/*    → src/main/*
-@renderer/* → src/renderer/*
-@shared/*  → src/shared/*
-```
+## Quality Standards
+
+Before claiming any task done, run in order:
+1. `bun run typecheck` — zero errors
+2. `bun run check` — zero lint/format issues
+3. `bun run test` — all tests pass
+4. `bun run test:coverage` — 90% branches/functions/lines/statements enforced
+
+New code must maintain coverage — add tests for every new service, tool, or handler. Never leave broken tests behind.
 
 ## What NOT to do
 
