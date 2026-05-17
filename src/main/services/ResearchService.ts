@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
+import type { ExecuteCodeApprovalPayload } from "../../shared/ipc-types";
 import { resolveProvider } from "../agent/model-provider";
 import { OutputRouter } from "../agent/OutputRouter";
 import { PathJail } from "../agent/path-jail";
@@ -135,6 +136,8 @@ export class ResearchService {
       provider,
       onProgress,
       webAccessEnabled: settings.webAccessEnabled,
+      emitExecuteCodeApprovalRequired: (payload: ExecuteCodeApprovalPayload) =>
+        this.eventBus.emit({ type: "execute_code:approval_required", payload }),
       allowlistService: this.allowlistService,
       observabilityService: this.observabilityService,
       parentSpanContext,

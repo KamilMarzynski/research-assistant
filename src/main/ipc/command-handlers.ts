@@ -1,9 +1,14 @@
 import { ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import type { PathApprovalPayload } from "../../shared/ipc-types";
+import { resolveExecuteCodeApproval } from "../agent/extensions/execute-code-approval";
 import { resolvePathApprovalGate } from "../agent/extensions/path-approval";
 import { resolveBlockedCommand } from "../agent/extensions/safe-bash";
-import { ResolveBlockedCommandSchema, ResolvePathApprovalSchema } from "../ipc-validation";
+import {
+  ResolveBlockedCommandSchema,
+  ResolveExecuteCodeApprovalSchema,
+  ResolvePathApprovalSchema,
+} from "../ipc-validation";
 import type { AllowlistService } from "../services/AllowlistService";
 import { parseOrThrow } from "./parse-util";
 import { wrapIpc } from "./wrap-ipc";
@@ -22,6 +27,17 @@ export function registerCommandHandlers(
         "RESOLVE_BLOCKED_COMMAND",
       );
       resolveBlockedCommand(commandId, action, projectId);
+    }),
+  );
+
+  ipcMain.handle(IPC.RESOLVE_EXECUTE_CODE_APPROVAL, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { executionId, action } = parseOrThrow(
+        ResolveExecuteCodeApprovalSchema,
+        payload,
+        "RESOLVE_EXECUTE_CODE_APPROVAL",
+      );
+      resolveExecuteCodeApproval(executionId, action);
     }),
   );
 

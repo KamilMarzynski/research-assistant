@@ -5,6 +5,13 @@ function getStatus(entry: AuditLogEntry): string {
   return "executed";
 }
 
+function getActionText(entry: AuditLogEntry): string {
+  if (entry.tool === "execute_code") {
+    return `${entry.language ?? "code"}: ${entry.intent}`;
+  }
+  return entry.command ?? entry.intent;
+}
+
 interface AuditTabProps {
   entries: AuditLogEntry[];
   filter: "all" | "executed" | "blocked";
@@ -139,7 +146,7 @@ export default function AuditTab({
                     color: "var(--ink-3)",
                   }}
                 >
-                  Command
+                  Action
                 </th>
                 <th
                   style={{
@@ -159,7 +166,7 @@ export default function AuditTab({
             <tbody>
               {filtered.map((entry, i) => {
                 const status = getStatus(entry);
-                const entryKey = `${entry.ts}-${entry.command}-${i}`;
+                const entryKey = `${entry.ts}-${getActionText(entry)}-${i}`;
                 return (
                   <tr key={entryKey} style={{ borderBottom: "1px solid var(--line)" }}>
                     <td
@@ -185,7 +192,7 @@ export default function AuditTab({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {entry.command}
+                        {getActionText(entry)}
                       </span>
                     </td>
                     <td

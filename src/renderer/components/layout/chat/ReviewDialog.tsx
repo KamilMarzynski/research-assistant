@@ -13,7 +13,7 @@ interface ReviewDialogProps {
   title: string;
   children: React.ReactNode;
   onApproveOnce: () => void;
-  onApproveSession: () => void;
+  onApproveSession?: () => void;
   onDeny: () => void;
   onClose: () => void;
   dataTestid: string;
@@ -57,14 +57,16 @@ export default function ReviewDialog({
         <button type="button" className="btn btn--danger" onClick={onDeny} data-testid="deny-btn">
           Deny
         </button>
-        <button
-          type="button"
-          className="btn btn--outline"
-          onClick={onApproveSession}
-          data-testid="approve-session-btn"
-        >
-          Approve Session
-        </button>
+        {onApproveSession && (
+          <button
+            type="button"
+            className="btn btn--outline"
+            onClick={onApproveSession}
+            data-testid="approve-session-btn"
+          >
+            Approve Session
+          </button>
+        )}
         <button
           type="button"
           className="btn btn--primary"

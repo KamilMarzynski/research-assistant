@@ -120,6 +120,9 @@ export class MessagePipeline {
         addPendingPathApproval(payload);
         options.eventBus.emit({ type: "path:approval_required", payload });
       },
+      emitExecuteCodeApprovalRequired: (payload) => {
+        options.eventBus.emit({ type: "execute_code:approval_required", payload });
+      },
       startResearchFn: (query, deep) =>
         deep === true
           ? options.researchService.startOrchestratedResearch(
@@ -230,7 +233,6 @@ export class MessagePipeline {
         }
 
         const memoryContext = await this.memoryManager.buildContext(this.projectId);
-        console.log(JSON.stringify(memoryContext.summary, null, 2));
         const systemContext = await buildSystemContext(
           this.projectPath ?? join(this.homePath, "projects", this.slug),
           this.folderPath,

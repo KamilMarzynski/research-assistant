@@ -97,6 +97,19 @@ export interface ToolContext {
     projectId: string;
     intent?: string;
   }) => void;
+  emitExecuteCodeApprovalRequired?: (payload: {
+    executionId: string;
+    projectId: string;
+    intent: string;
+    language: "python" | "bash" | "typescript" | "javascript";
+    code: string;
+    codeHash: string;
+    networkEnabled: boolean;
+    workspaceFiles: string[];
+    inlineFiles: string[];
+    requestedPaths: Array<{ path: string; mode: "read" }>;
+    timestamp: string;
+  }) => void;
   compressionService?: CompressionService;
   allowlistService: AllowlistService;
 }
@@ -149,7 +162,14 @@ function buildTools(ctx: ToolContext): AgentTool<any>[] {
     tools.push(createWebSearchTool(ctx.compressionService));
   }
 
-  tools.push(createExecuteCodeTool(jail));
+  tools.push(
+    createExecuteCodeTool(jail, {
+      projectId,
+      auditLogPath,
+      allowlistService: ctx.allowlistService,
+      emitApprovalRequired: ctx.emitExecuteCodeApprovalRequired,
+    }),
+  );
 
   if (startResearchFn) {
     tools.push(createStartResearchTool(startResearchFn));

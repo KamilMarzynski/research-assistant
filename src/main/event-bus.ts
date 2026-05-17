@@ -28,6 +28,22 @@ type AppEvent =
         timestamp: string;
       };
     }
+  | {
+      type: "execute_code:approval_required";
+      payload: {
+        executionId: string;
+        projectId: string;
+        intent: string;
+        language: "python" | "bash" | "typescript" | "javascript";
+        code: string;
+        codeHash: string;
+        networkEnabled: boolean;
+        workspaceFiles: string[];
+        inlineFiles: string[];
+        requestedPaths: Array<{ path: string; mode: "read" }>;
+        timestamp: string;
+      };
+    }
   | { type: "startup:error"; payload: { phase: string; error: string } }
   | {
       type: "file:written";

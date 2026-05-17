@@ -74,6 +74,11 @@ export const ResolveBlockedCommandSchema = z.object({
   projectId: z.string().optional(),
 });
 
+export const ResolveExecuteCodeApprovalSchema = z.object({
+  executionId: z.string(),
+  action: z.enum(["approve_once", "deny"]),
+});
+
 export const ResolvePathApprovalSchema = z.object({
   path: z.string(),
   mode: z.enum(["read", "write"]),

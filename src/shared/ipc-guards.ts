@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import type {
   BlockedCommandPayload,
+  ExecuteCodeApprovalPayload,
   PathApprovalPayload,
   ResearchCompletePayload,
   ResearchStatusUpdatePayload,
@@ -56,6 +57,20 @@ const BlockedCommandPayloadSchema = z.object({
   timestamp: z.string(),
 });
 
+const ExecuteCodeApprovalPayloadSchema = z.object({
+  executionId: z.string(),
+  projectId: z.string(),
+  intent: z.string(),
+  language: z.enum(["python", "bash", "typescript", "javascript"]),
+  code: z.string(),
+  codeHash: z.string(),
+  networkEnabled: z.boolean(),
+  workspaceFiles: z.array(z.string()),
+  inlineFiles: z.array(z.string()),
+  requestedPaths: z.array(z.object({ path: z.string(), mode: z.literal("read") })),
+  timestamp: z.string(),
+});
+
 function tryDecode<T>(schema: z.ZodType<T>, data: unknown, label: string): T | null {
   const result = schema.safeParse(data);
   if (result.success) return result.data;
@@ -79,6 +94,12 @@ export function decodeResearchCompletePayload(data: unknown): ResearchCompletePa
 
 export function decodeBlockedCommandPayload(data: unknown): BlockedCommandPayload | null {
   return tryDecode(BlockedCommandPayloadSchema, data, "BASH_BLOCKED");
+}
+
+export function decodeExecuteCodeApprovalPayload(
+  data: unknown,
+): ExecuteCodeApprovalPayload | null {
+  return tryDecode(ExecuteCodeApprovalPayloadSchema, data, "EXECUTE_CODE_APPROVAL_REQUIRED");
 }
 
 export function decodeMessageChunk(data: unknown): { projectId: string; delta: string } | null {

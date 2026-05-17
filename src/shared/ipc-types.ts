@@ -44,6 +44,7 @@ export type IpcPushEvent =
   | { type: "NEW_MESSAGE"; projectId: string; message: Message }
   | { type: "SETTINGS_UPDATED"; settings: SettingsResponse }
   | ({ type: "BASH_BLOCKED" } & BlockedCommandPayload)
+  | ({ type: "EXECUTE_CODE_APPROVAL_REQUIRED" } & ExecuteCodeApprovalPayload)
   | ({ type: "PATH_APPROVAL_REQUIRED" } & PathApprovalPayload);
 
 /** Typed request payloads for all invoke() channels */
@@ -81,6 +82,10 @@ export interface IpcRequestMap {
     commandId: string;
     action: "approve_once" | "approve_session" | "deny";
     projectId?: string;
+  };
+  RESOLVE_EXECUTE_CODE_APPROVAL: {
+    executionId: string;
+    action: "approve_once" | "deny";
   };
   GET_PENDING_PATH_APPROVALS: undefined;
   RESOLVE_PATH_APPROVAL: {
@@ -136,7 +141,15 @@ export interface AuditLogEntry {
   ts: string;
   projectId: string;
   intent: string;
-  command: string;
+  command?: string;
+  tool?: "safe_bash" | "execute_code";
+  language?: "python" | "bash" | "typescript" | "javascript";
+  code?: string;
+  codeHash?: string;
+  networkEnabled?: boolean;
+  workspaceFiles?: string[];
+  inlineFiles?: string[];
+  outputFiles?: string[];
   exitCode: number | null;
   blocked?: boolean;
   blockReason?: string;
@@ -153,6 +166,21 @@ export interface BlockedCommandPayload {
   key: string;
   projectId: string;
   intent: string;
+  timestamp: string;
+}
+
+/** Payload for EXECUTE_CODE_APPROVAL_REQUIRED push event */
+export interface ExecuteCodeApprovalPayload {
+  executionId: string;
+  projectId: string;
+  intent: string;
+  language: "python" | "bash" | "typescript" | "javascript";
+  code: string;
+  codeHash: string;
+  networkEnabled: boolean;
+  workspaceFiles: string[];
+  inlineFiles: string[];
+  requestedPaths: Array<{ path: string; mode: "read" }>;
   timestamp: string;
 }
 
@@ -227,6 +255,7 @@ export interface IpcResponseMap {
   GET_AUDIT_LOG: AuditLogEntry[];
   CLEAR_AUDIT_LOG: undefined;
   RESOLVE_BLOCKED_COMMAND: undefined;
+  RESOLVE_EXECUTE_CODE_APPROVAL: undefined;
   GET_PENDING_PATH_APPROVALS: PathApprovalPayload[];
   RESOLVE_PATH_APPROVAL: undefined;
   CHECK_OLLAMA: CheckOllamaResponse;

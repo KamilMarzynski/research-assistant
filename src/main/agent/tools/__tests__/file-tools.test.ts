@@ -158,13 +158,15 @@ describe("createWriteFileTool", () => {
       const jail = makeJail();
       const tool = createWriteFileTool(jail, null);
       const filePath = join(tempDir, "existing.txt");
-      await writeFile(filePath, "a\nb", "utf-8");
+      const originalContent = "a\nb";
+      await writeFile(filePath, originalContent, "utf-8");
 
       const result = await tool.execute("test-id", {
         path: filePath,
         intent: "test write",
         content: "x",
         end_line: 1,
+        expected_hash: sha256(originalContent),
       });
 
       expect(getText(result)).toBe("end_line requires start_line");
@@ -204,7 +206,26 @@ describe("createWriteFileTool", () => {
 
       expect(getText(result)).toContain("File changed since last read");
       expect(getText(result)).toContain("Re-read file and retry");
-      expect(getText(result)).toContain(sha256("original"));
+      expect(getText(result)).not.toContain(sha256("original"));
+      const final = await readFile(filePath, "utf-8");
+      expect(final).toBe("original");
+    });
+
+    it("blocks write to existing file when hash is missing", async () => {
+      const jail = makeJail();
+      const tool = createWriteFileTool(jail, null);
+      const filePath = join(tempDir, "existing.txt");
+      await writeFile(filePath, "original", "utf-8");
+
+      const result = await tool.execute("test-id", {
+        path: filePath,
+        intent: "test write",
+        content: "new",
+      });
+
+      expect(getText(result)).toContain("expected_hash is required");
+      expect(getText(result)).toContain("read_file");
+      expect(getText(result)).not.toContain(sha256("original"));
       const final = await readFile(filePath, "utf-8");
       expect(final).toBe("original");
     });
@@ -213,7 +234,8 @@ describe("createWriteFileTool", () => {
       const jail = makeJail();
       const tool = createWriteFileTool(jail, null);
       const filePath = join(tempDir, "lines.txt");
-      await writeFile(filePath, "a\nb\nc", "utf-8");
+      const originalContent = "a\nb\nc";
+      await writeFile(filePath, originalContent, "utf-8");
 
       const result = await tool.execute("test-id", {
         path: filePath,
@@ -221,6 +243,7 @@ describe("createWriteFileTool", () => {
         content: "X",
         start_line: 2,
         end_line: 2,
+        expected_hash: sha256(originalContent),
       });
 
       expect(getText(result)).toBe(`Edited: ${filePath} (lines 2-2)`);
@@ -232,7 +255,8 @@ describe("createWriteFileTool", () => {
       const jail = makeJail();
       const tool = createWriteFileTool(jail, null);
       const filePath = join(tempDir, "lines.txt");
-      await writeFile(filePath, "a\nb\nc\nd", "utf-8");
+      const originalContent = "a\nb\nc\nd";
+      await writeFile(filePath, originalContent, "utf-8");
 
       const result = await tool.execute("test-id", {
         path: filePath,
@@ -240,6 +264,7 @@ describe("createWriteFileTool", () => {
         content: "X\nY",
         start_line: 2,
         end_line: 3,
+        expected_hash: sha256(originalContent),
       });
 
       expect(getText(result)).toBe(`Edited: ${filePath} (lines 2-3)`);
@@ -251,13 +276,15 @@ describe("createWriteFileTool", () => {
       const jail = makeJail();
       const tool = createWriteFileTool(jail, null);
       const filePath = join(tempDir, "lines.txt");
-      await writeFile(filePath, "a\nb\nc", "utf-8");
+      const originalContent = "a\nb\nc";
+      await writeFile(filePath, originalContent, "utf-8");
 
       const result = await tool.execute("test-id", {
         path: filePath,
         intent: "test write",
         content: "X\nY",
         start_line: 2,
+        expected_hash: sha256(originalContent),
       });
 
       expect(getText(result)).toBe(`Inserted: ${filePath} at line 2`);
@@ -269,13 +296,15 @@ describe("createWriteFileTool", () => {
       const jail = makeJail();
       const tool = createWriteFileTool(jail, null);
       const filePath = join(tempDir, "lines.txt");
-      await writeFile(filePath, "a\nb", "utf-8");
+      const originalContent = "a\nb";
+      await writeFile(filePath, originalContent, "utf-8");
 
       const result = await tool.execute("test-id", {
         path: filePath,
         intent: "test write",
         content: "c",
         start_line: 10,
+        expected_hash: sha256(originalContent),
       });
 
       expect(getText(result)).toBe(`Inserted: ${filePath} at line 10`);
@@ -287,13 +316,15 @@ describe("createWriteFileTool", () => {
       const jail = makeJail();
       const tool = createWriteFileTool(jail, null);
       const filePath = join(tempDir, "lines.txt");
-      await writeFile(filePath, "a\nb", "utf-8");
+      const originalContent = "a\nb";
+      await writeFile(filePath, originalContent, "utf-8");
 
       const result = await tool.execute("test-id", {
         path: filePath,
         intent: "test write",
         content: "x",
         start_line: 0,
+        expected_hash: sha256(originalContent),
       });
 
       expect(getText(result)).toBe("start_line must be >= 1");
@@ -303,7 +334,8 @@ describe("createWriteFileTool", () => {
       const jail = makeJail();
       const tool = createWriteFileTool(jail, null);
       const filePath = join(tempDir, "lines.txt");
-      await writeFile(filePath, "a\nb", "utf-8");
+      const originalContent = "a\nb";
+      await writeFile(filePath, originalContent, "utf-8");
 
       const result = await tool.execute("test-id", {
         path: filePath,
@@ -311,21 +343,24 @@ describe("createWriteFileTool", () => {
         content: "x",
         start_line: 2,
         end_line: 1,
+        expected_hash: sha256(originalContent),
       });
 
       expect(getText(result)).toBe("end_line must be >= start_line");
     });
 
-    it("overwrites entire file when no line params provided (backward compat)", async () => {
+    it("overwrites entire file when hash is provided", async () => {
       const jail = makeJail();
       const tool = createWriteFileTool(jail, null);
       const filePath = join(tempDir, "lines.txt");
-      await writeFile(filePath, "old", "utf-8");
+      const originalContent = "old";
+      await writeFile(filePath, originalContent, "utf-8");
 
       const result = await tool.execute("test-id", {
         path: filePath,
         intent: "test write",
         content: "new",
+        expected_hash: sha256(originalContent),
       });
 
       expect(getText(result)).toBe(`Written: ${filePath}`);

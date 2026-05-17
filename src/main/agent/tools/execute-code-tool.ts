@@ -1,34 +1,127 @@
 import { basename } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
+import { ApprovalRequiredError, type AllowlistService } from "../../services/AllowlistService";
+import {
+  appendAuditEntry,
+  enterExecuteCodeApprovalGate,
+  hashCode,
+} from "../extensions/execute-code-approval";
 import { runExecuteCode } from "../extensions/docker-sandbox";
 import type { PathJail } from "../path-jail";
 
+interface ExecuteCodeToolOptions {
+  projectId: string;
+  auditLogPath: string;
+  allowlistService: AllowlistService;
+  emitApprovalRequired?: Parameters<typeof enterExecuteCodeApprovalGate>[1];
+}
+
 export function createExecuteCodeTool(
   jail: PathJail,
+  options: ExecuteCodeToolOptions,
 ): AgentTool<typeof executeCodeParameters, Awaited<ReturnType<typeof runExecuteCode>>> {
   return {
     name: "execute_code",
     label: "Execute code in sandbox",
     description:
       "Execute code in an isolated Docker container with no access to host environment variables. " +
-      "Use for running Python, JavaScript, TypeScript, or Bash code safely. " +
+      "Use for isolated, untrusted, or data-processing code (Python scripts, analysis, one-off computations). " +
+      "Prefer safe_bash for project-native operations (git, tests, package managers). " +
       "Always state your intent. " +
       "Pass input files via workspaceFiles (absolute paths validated by jail) or inline via files. " +
       "Write output files to /workspace/output/ to receive them back as outputFiles.",
     parameters: executeCodeParameters,
-    execute: async (_id, { code, language, files, workspaceFiles, networkEnabled }) => {
-      const resolvedWorkspaceFiles =
-        workspaceFiles?.map((p) => {
-          const validated = jail.validate(p, "read");
-          return { name: basename(validated), sourcePath: validated };
-        }) ?? [];
+    execute: async (_id, { intent, code, language, files, workspaceFiles, networkEnabled }) => {
+      const requestedPaths: Array<{ path: string; mode: "read" }> = [];
+      const codeHash = hashCode(code);
+      const startedAt = new Date().toISOString();
+      const requestedWorkspaceFiles = workspaceFiles ?? [];
+      const inlineFileNames = (files ?? []).map((f) => f.name);
+      for (const path of requestedWorkspaceFiles) {
+        try {
+          jail.validate(path, "read");
+        } catch (err) {
+          if (err instanceof ApprovalRequiredError) {
+            requestedPaths.push({ path: err.path, mode: "read" });
+            continue;
+          }
+          throw err;
+        }
+      }
+
+      if (!options.emitApprovalRequired) {
+        throw new Error("execute_code approval is not configured");
+      }
+
+      const approval = await enterExecuteCodeApprovalGate(
+        {
+          projectId: options.projectId,
+          intent,
+          language,
+          code,
+          codeHash,
+          networkEnabled: networkEnabled === true,
+          workspaceFiles: requestedWorkspaceFiles,
+          inlineFiles: inlineFileNames,
+          requestedPaths,
+        },
+        options.emitApprovalRequired,
+      );
+
+      if (!approval.approved) {
+        await appendAuditEntry(options.auditLogPath, {
+          ts: startedAt,
+          projectId: options.projectId,
+          tool: "execute_code",
+          intent,
+          language,
+          code,
+          codeHash,
+          networkEnabled: networkEnabled === true,
+          workspaceFiles: requestedWorkspaceFiles,
+          inlineFiles: inlineFileNames,
+          exitCode: null,
+          blocked: true,
+          blockReason: "User denied code execution.",
+          blockKey: "execute_code_denied",
+          blockCategory: "code_execution",
+        });
+        return {
+          content: [{ type: "text" as const, text: "User denied code execution." }],
+          details: { stdout: "", outputFiles: [], error: "User denied code execution." },
+        };
+      }
+
+      for (const pathApproval of requestedPaths) {
+        options.allowlistService.approveSession(options.projectId, pathApproval.path);
+      }
+
+      const approvedWorkspaceFiles = requestedWorkspaceFiles.map((p) => {
+        const validated = jail.validate(p, "read");
+        return { name: basename(validated), sourcePath: validated };
+      });
       const result = await runExecuteCode({
         code,
         language,
         files,
-        workspaceFiles: resolvedWorkspaceFiles,
+        workspaceFiles: approvedWorkspaceFiles,
         networkEnabled,
+      });
+      await appendAuditEntry(options.auditLogPath, {
+        ts: startedAt,
+        projectId: options.projectId,
+        tool: "execute_code",
+        intent,
+        language,
+        code,
+        codeHash,
+        networkEnabled: networkEnabled === true,
+        workspaceFiles: requestedWorkspaceFiles,
+        inlineFiles: inlineFileNames,
+        outputFiles: result.outputFiles.map((f) => f.name),
+        exitCode: result.error ? 1 : 0,
+        blockReason: result.error,
       });
       const text = [
         result.stdout ? `stdout:\n${result.stdout}` : "",

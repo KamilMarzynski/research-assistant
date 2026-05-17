@@ -1,6 +1,7 @@
 import { dirname } from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { z } from "zod/v4";
+import type { ExecuteCodeApprovalPayload } from "../../shared/ipc-types";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { ObservabilityService } from "../services/ObservabilityService";
 import { AgentTracer } from "./AgentTracer";
@@ -51,6 +52,7 @@ export interface WorkerAgentConfig {
   agentLabel?: string;
   onProgress?: (label: string, delta: string) => void;
   webAccessEnabled?: boolean;
+  emitExecuteCodeApprovalRequired?: (payload: ExecuteCodeApprovalPayload) => void;
   allowlistService: AllowlistService;
   observabilityService?: ObservabilityService;
   parentSpanContext?: { traceId: string; spanId: string };
@@ -268,6 +270,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       onProgress,
       webAccessEnabled,
       allowlistService,
+      emitExecuteCodeApprovalRequired: config.emitExecuteCodeApprovalRequired,
     };
 
     const spawnAgentImpl = async (
@@ -342,6 +345,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     spawnAgentFn,
     spawnAgentsParallelFn,
     allowlistService,
+    emitExecuteCodeApprovalRequired: config.emitExecuteCodeApprovalRequired,
   });
 
   const agent = new Agent({
@@ -371,6 +375,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
             }
           } else if (e.type === "agent_end") {
             unsubscribe();
+            unsubscribeTracer();
             tracer.endTurn({ summary: output });
             resolve(output);
           }

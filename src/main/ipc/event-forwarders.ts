@@ -86,6 +86,10 @@ export function registerEventForwarders(
     emitPush(win, { type: "BASH_BLOCKED", ...payload });
   });
 
+  eventBus.on("execute_code:approval_required", (payload) => {
+    emitPush(win, { type: "EXECUTE_CODE_APPROVAL_REQUIRED", ...payload });
+  });
+
   eventBus.on("path:approval_required", (payload) => {
     emitPush(win, { type: "PATH_APPROVAL_REQUIRED", ...payload });
   });

@@ -9,6 +9,7 @@ import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
 import PendingCommandBanner from "./PendingCommandBanner";
+import PendingExecuteCodeBanner from "./PendingExecuteCodeBanner";
 import PendingPathBanner from "./PendingPathBanner";
 
 export default function ChatPanel() {
@@ -106,6 +107,7 @@ export default function ChatPanel() {
       <WindowDragBar />
       <ChatHeader />
       <PendingCommandBanner />
+      <PendingExecuteCodeBanner />
       <PendingPathBanner />
       <MessageList
         messages={messages}

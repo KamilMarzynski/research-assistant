@@ -105,7 +105,9 @@ export function createReadFileTool(
     name: "read_file",
     label: "Read file",
     description:
-      "Read the contents of a file with smart pagination and mime detection. You can read any path — use userProjectDir when exploring the user's project.",
+      "Read the contents of a file. Read before answering any question about file contents — do not guess. " +
+      "Supports smart pagination (startLine/maxLines) and returns a SHA-256 hash for write conflict detection. " +
+      "Use userProjectDir when exploring the user's project.",
     parameters: readFileParameters,
     execute: async (
       _id,
@@ -243,7 +245,10 @@ export function createWriteFileTool(
     name: "write_file",
     label: "Write file",
     description:
-      "Write content to a file. State your intent — it is shown to the user when approval is needed.",
+      "Write or edit a file. " +
+      "Write research outputs and artifacts to userProjectDir; write project metadata (GOAL.md, FILES.md) to assistantProjectDir. " +
+      "Use meaningful filenames — no task IDs, no UUIDs. Follow FILES.md conventions if they exist. " +
+      "State your intent — it is shown to the user when approval is needed.",
     parameters: writeFileParameters,
     execute: async (
       _id,
@@ -328,12 +333,24 @@ export function createWriteFileTool(
       const existingContent = await readFile(resolved, "utf-8");
       const currentHash = sha256(existingContent);
 
+      if (expected_hash === undefined) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "expected_hash is required when writing an existing file. Re-read file and retry with the hash returned by read_file.",
+            },
+          ],
+          details: null,
+        };
+      }
+
       if (expected_hash !== undefined && expected_hash !== currentHash) {
         return {
           content: [
             {
               type: "text" as const,
-              text: `File changed since last read. Current hash: ${currentHash}. Re-read file and retry.`,
+              text: "File changed since last read. Re-read file and retry with the hash returned by read_file.",
             },
           ],
           details: null,
