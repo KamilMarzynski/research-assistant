@@ -132,7 +132,7 @@ export function createRunSkillScriptTool(
     description:
       "Execute a shell script bundled with an approved skill. " +
       "Scripts run with host environment variables — only use for trusted, user-approved skills. " +
-      "Scripts must be located in an approved skills directory; use propose_skill to add new ones.",
+      "Scripts must be located in an approved skills directory; use write_file to add new ones.",
     parameters: runSkillScriptParameters,
     execute: async (
       _id,

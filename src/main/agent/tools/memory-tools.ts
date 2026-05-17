@@ -13,7 +13,9 @@ export function createSaveMemoryTool(
     name: "save_memory",
     label: "Save memory",
     description:
-      "Save a structured memory as a markdown file with YAML frontmatter. Use for important facts, decisions, conventions, or tool usage patterns the agent should remember.",
+      "Persist an important fact, decision, convention, or finding across conversations. " +
+      "Use when the user shares preferences or context that should survive session restarts. " +
+      "Choose scope=app for universal facts, scope=project for project-specific ones.",
     parameters: saveMemoryParameters,
     execute: async (
       _id,
@@ -50,7 +52,9 @@ export function createReadMemoryTool(
     name: "read_memory",
     label: "Read memory",
     description:
-      "Read saved memories by category or text search. Returns matching memories with title, category, and excerpt.",
+      "Read saved memories by category or text search. " +
+      "Call when past context might be relevant — user preferences, prior decisions, known conventions. " +
+      "Returns matching memories with title, category, timestamp, and excerpt.",
     parameters: readMemoryParameters,
     execute: async (_id, { category, query, scope }): Promise<AgentToolResult<string>> => {
       const text = await readMemoryFn({ category, query, scope });
