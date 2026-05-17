@@ -73,15 +73,14 @@ docker compose -f docker-compose.langfuse.yml down   # stop
 ├── skills/                 — global skills
 ├── tasks/                  — persisted research task records
 ├── app-memory/             — app-level memory files (cross-project)
-└── audit.log               — append-only JSON log of bash + skill script executions
+└── audit.log               — append-only JSON log of bash + execute_code executions
 ```
 
 ## Code Execution Model
 
 - **Tier 1**: Path-jailed `read_file`/`write_file`/`list_dir` (`src/main/agent/path-jail.ts`) — workspace, project dir, optionally linked folder
 - **Tier 2**: `safe_bash` — shell with blocklist, timeout, audit log; blocked cmds trigger approve-once/session/deny flow
-- **Tier 2.5**: `run_skill_script` — runs `script.{sh,py}` from skills dirs only; 60s timeout, 64 KB cap, audit log
-- **Tier 3**: `execute_code` — Docker container; Python, JavaScript, bash; not E2B
+- **Tier 3**: `execute_code` — Docker container; Python, JavaScript, bash; not E2B. Use this for running skill scripts.
 
 ## Clean Code
 

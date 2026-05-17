@@ -9,7 +9,6 @@ import { createListDirTool, createReadFileTool, createWriteFileTool } from "./to
 import { createReadMemoryTool, createSaveMemoryTool } from "./tools/memory-tools";
 import { createSpawnAgentsParallelTool, createSpawnAgentTool } from "./tools/orchestrator-tools";
 import { createStartResearchTool } from "./tools/research-tools";
-import { createRunSkillScriptTool } from "./tools/run-skill-script-tool";
 import { createSafeBashTool } from "./tools/safe-bash-tool";
 import { createFetchUrlTool } from "./tools/web/fetch-url";
 import { createWebSearchTool } from "./tools/web/web-search";
@@ -26,7 +25,6 @@ export type AgentToolName =
   | "execute_code"
   | "spawn_agent"
   | "spawn_agents_parallel"
-  | "run_skill_script"
   | "save_memory"
   | "read_memory";
 
@@ -124,7 +122,6 @@ function capabilitiesToToolNames(caps: ToolCapabilities): AgentToolName[] {
     "list_dir",
     "safe_bash",
     "execute_code",
-    "run_skill_script",
   ];
   if (caps.webAccess) names.push("fetch_url", "web_search");
   if (caps.memory) names.push("save_memory", "read_memory");
@@ -147,7 +144,6 @@ function buildTools(ctx: ToolContext): AgentTool<any>[] {
     createWriteFileTool(jail, folderPath, onFileWrite, ctx.emitApprovalRequired),
     createListDirTool(jail, ctx.emitApprovalRequired),
     createSafeBashTool(projectId, workspacePath, auditLogPath, ctx.emitBlocked),
-    createRunSkillScriptTool(slug, homePath, auditLogPath),
   ];
 
   if (ctx.saveMemoryFn) {

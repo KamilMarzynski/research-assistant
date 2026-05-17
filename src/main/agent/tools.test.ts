@@ -21,6 +21,7 @@ describe("createAgentTools – toolNames filter", () => {
     expect(names).toContain("write_file");
     expect(names).toContain("list_dir");
     expect(names).toContain("safe_bash");
+    expect(names).not.toContain("run_skill_script");
   });
 
   it("filters to specified tool names", () => {
@@ -65,6 +66,14 @@ describe("createAgentTools – toolNames filter", () => {
 });
 
 describe("createAgentTools – execute_code", () => {
+  it("does not expose run_skill_script because scripts should use execute_code", () => {
+    const tools = createAgentTools({
+      ...BASE,
+      toolNames: ["run_skill_script" as never],
+    });
+    expect(tools.map((t) => t.name)).toEqual([]);
+  });
+
   it("includes execute_code when in toolNames", () => {
     const tools = createAgentTools({ ...BASE, toolNames: ["execute_code"] });
     expect(tools.map((t) => t.name)).toContain("execute_code");
