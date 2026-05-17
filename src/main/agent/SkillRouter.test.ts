@@ -147,6 +147,7 @@ describe("SkillRouter", () => {
       expect(xml).toContain("</available_skills>");
       expect(xml).toContain('name="tricky"');
       expect(xml).toContain('description="Uses &lt;html&gt; &amp; &quot;quotes&quot;"');
+      expect(xml).not.toContain("path=");
       expect(xml).not.toContain("<html>");
       expect(xml).not.toContain('"quotes"');
     });
