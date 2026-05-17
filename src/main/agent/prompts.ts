@@ -161,7 +161,8 @@ Do not guess. A quick research task is always better than a wrong answer.
 ## Skills
 
 Skills are reusable technique guides in ~/.scholar/skills/ and in the project skills directory.
-When a task matches a skill description, use read_file to load the full SKILL.md before applying it.
+The available_skills index lists only skill names and descriptions.
+When a task matches a skill description, use read_skill with the skill name before applying it.
 If a skill includes a script, run it through execute_code. Do not use a dedicated skill-script runner.
 
 ## Skill creation

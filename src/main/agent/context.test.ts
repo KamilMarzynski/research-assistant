@@ -10,6 +10,24 @@ vi.mock("node:os", () => ({
   homedir: () => tmpHome,
 }));
 
+vi.mock("chokidar", () => ({
+  watch: vi.fn(() => ({
+    on: vi.fn(),
+    close: vi.fn(),
+  })),
+}));
+
+vi.mock("../utils/frontmatter", () => ({
+  parseFrontmatter: (content: string) => {
+    const name = content.match(/^name:\s*(.+)$/m)?.[1];
+    const description = content.match(/^description:\s*(.+)$/m)?.[1];
+    return {
+      name,
+      description,
+    };
+  },
+}));
+
 const { loadSkillIndexXml, buildSystemContext, toSlug, loadSkillsByContent } = await import(
   "./context"
 );
@@ -40,6 +58,7 @@ describe("loadSkillIndexXml", () => {
     expect(result).toContain("<available_skills>");
     expect(result).toContain('name="my-skill"');
     expect(result).toContain('description="Does something useful."');
+    expect(result).not.toContain("read_skill");
   });
 
   it("project-level skill overrides global when same name", async () => {
@@ -215,6 +234,7 @@ describe("buildSystemContext", () => {
     const result = await buildSystemContext(join(home, "projects", "my-project"), null);
     expect(result).toContain("<available_skills>");
     expect(result).toContain('name="my-skill"');
+    expect(result).toContain("use read_skill with the skill name");
   });
 
   it("injects onboarding prompt when GOAL.md or FILES.md is missing", async () => {
