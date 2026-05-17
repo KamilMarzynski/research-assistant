@@ -79,7 +79,7 @@ export async function buildSystemContext(
   const skillIndex = skillIndexXml ?? (await loadSkillIndexXml(projectPath));
   if (skillIndex) {
     parts.push(
-      "<!-- Available Skills — When a task matches a description, use read_skill with the skill name before applying it -->",
+      "<!-- Available Skills — This index includes only skill names and descriptions. When a task matches a description, use read_skill with the skill name before applying it. -->",
       skillIndex,
     );
   }

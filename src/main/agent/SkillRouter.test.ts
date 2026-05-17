@@ -1,8 +1,26 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SkillRouter } from "./SkillRouter";
+
+vi.mock("chokidar", () => ({
+  watch: vi.fn(() => ({
+    on: vi.fn(),
+    close: vi.fn(),
+  })),
+}));
+
+vi.mock("../utils/frontmatter", () => ({
+  parseFrontmatter: (content: string) => {
+    const name = content.match(/^name:\s*(.+)$/m)?.[1];
+    const description = content.match(/^description:\s*(.+)$/m)?.[1];
+    return {
+      name,
+      description,
+    };
+  },
+}));
 
 describe("SkillRouter", () => {
   let tmpDir: string;
@@ -145,11 +163,34 @@ describe("SkillRouter", () => {
 
       expect(xml).toContain("<available_skills>");
       expect(xml).toContain("</available_skills>");
+      expect(xml).not.toContain("read_skill");
       expect(xml).toContain('name="tricky"');
       expect(xml).toContain('description="Uses &lt;html&gt; &amp; &quot;quotes&quot;"');
       expect(xml).not.toContain("path=");
       expect(xml).not.toContain("<html>");
       expect(xml).not.toContain('"quotes"');
+    });
+
+    it("includes only skill entries inside the XML index", async () => {
+      const skillDir = join(tmpDir, "skills");
+      const alphaDir = join(skillDir, "alpha");
+      const betaDir = join(skillDir, "beta");
+      mkdirSync(alphaDir, { recursive: true });
+      mkdirSync(betaDir, { recursive: true });
+      writeFileSync(join(alphaDir, "SKILL.md"), "---\nname: alpha\ndescription: First\n---");
+      writeFileSync(join(betaDir, "SKILL.md"), "---\nname: beta\ndescription: Second\n---");
+
+      const router = new SkillRouter([skillDir]);
+      await router.buildIndex();
+
+      expect(router.toXml()).toBe(
+        [
+          "<available_skills>",
+          '  <skill name="alpha" description="First" />',
+          '  <skill name="beta" description="Second" />',
+          "</available_skills>",
+        ].join("\n"),
+      );
     });
 
     it("returns empty string when no skills are indexed", () => {

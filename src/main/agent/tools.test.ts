@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { describe, expect, it, vi } from "vitest";
 import { AllowlistService } from "../services/AllowlistService";
 import { CompressionService } from "./CompressionService";
@@ -73,6 +74,18 @@ describe("createAgentTools – execute_code", () => {
   it("excludes execute_code when not in toolNames", () => {
     const tools = createAgentTools({ ...BASE, toolNames: ["read_file"] });
     expect(tools.map((t) => t.name)).not.toContain("execute_code");
+  });
+});
+
+describe("createAgentTools – read_skill", () => {
+  it("includes read_skill by default", () => {
+    const tools = createAgentTools(BASE);
+    expect(tools.map((t) => t.name)).toContain("read_skill");
+  });
+
+  it("includes read_skill when requested by toolNames", () => {
+    const tools = createAgentTools({ ...BASE, toolNames: ["read_skill"] });
+    expect(tools.map((t) => t.name)).toEqual(["read_skill"]);
   });
 });
 

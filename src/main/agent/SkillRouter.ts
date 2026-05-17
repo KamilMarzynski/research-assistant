@@ -40,7 +40,7 @@ export class SkillRouter {
       }
     }
     this.index = {
-      skills: Array.from(byName.values()),
+      skills: Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name)),
       lastScan: Date.now(),
     };
     return this.index;
@@ -52,10 +52,7 @@ export class SkillRouter {
 
   toXml(): string {
     if (this.index.skills.length === 0) return "";
-    const lines = [
-      "<available_skills>",
-      "  To use a skill, call the read_skill tool with the skill name.",
-    ];
+    const lines = ["<available_skills>"];
     for (const skill of this.index.skills) {
       lines.push(
         `  <skill name="${escapeXml(skill.name)}" description="${escapeXml(skill.description)}" />`,

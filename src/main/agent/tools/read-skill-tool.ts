@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
@@ -30,7 +31,7 @@ function stripFrontmatter(content: string): string {
 
 async function readSkillDirs(skillsDir: string): Promise<string[]> {
   try {
-    return await readdir(skillsDir);
+    return (await readdir(skillsDir, "utf-8")).sort((a, b) => a.localeCompare(b));
   } catch {
     return [];
   }
@@ -41,7 +42,13 @@ async function findSkillDir(
   skillName: string,
 ): Promise<{ dir: string; skillMdPath: string } | null> {
   const entries = await readSkillDirs(skillsDir);
+  let directoryMatch: { dir: string; skillMdPath: string } | null = null;
+
   for (const entry of entries) {
+    if (entry.startsWith(".")) {
+      continue;
+    }
+
     const skillDir = join(skillsDir, entry);
     const skillMdPath = join(skillDir, "SKILL.md");
     try {
@@ -50,24 +57,30 @@ async function findSkillDir(
       if (meta.name === skillName) {
         return { dir: skillDir, skillMdPath };
       }
+      if (entry === skillName) {
+        directoryMatch = { dir: skillDir, skillMdPath };
+      }
     } catch {
       // Ignore unreadable or malformed entries.
     }
   }
-  return null;
+
+  return directoryMatch;
 }
 
 async function listSkillFiles(skillDir: string): Promise<SkillFileInfo[]> {
   const files: SkillFileInfo[] = [];
 
-  async function walk(dir: string): Promise<void> {
-    let entries: Awaited<ReturnType<typeof readdir>>;
+  async function readDirEntries(dir: string): Promise<Dirent[]> {
     try {
-      entries = await readdir(dir, { withFileTypes: true });
+      return await readdir(dir, { withFileTypes: true });
     } catch {
-      return;
+      return [];
     }
+  }
 
+  async function walk(dir: string): Promise<void> {
+    const entries = await readDirEntries(dir);
     for (const entry of entries) {
       if (entry.name.startsWith(".")) continue;
 
@@ -133,9 +146,15 @@ export function createReadSkillTool(
           content: [
             {
               type: "text" as const,
-              text: [`Skill: ${skillName}`, `Scope: ${candidate.scope}`, "", result.body, "", "Additional files:", fileList].join(
-                "\n",
-              ),
+              text: [
+                `Skill: ${skillName}`,
+                `Scope: ${candidate.scope}`,
+                "",
+                result.body,
+                "",
+                "Additional files:",
+                fileList,
+              ].join("\n"),
             },
           ],
           details: result,

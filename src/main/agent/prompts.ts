@@ -161,6 +161,7 @@ Do not guess. A quick research task is always better than a wrong answer.
 ## Skills
 
 Skills are reusable technique guides in ~/.scholar/skills/ and in the project skills directory.
+The available_skills index lists only skill names and descriptions.
 When a task matches a skill description, use read_skill with the skill name before applying it.
 
 ## Skill creation
