@@ -1,9 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { appendFile } from "node:fs/promises";
-import type {
-  AuditLogEntry,
-  ExecuteCodeApprovalPayload,
-} from "../../../shared/ipc-types";
+import type { AuditLogEntry, ExecuteCodeApprovalPayload } from "../../../shared/ipc-types";
 
 type ExecuteCodeApprovalAction = "approve_once" | "deny";
 

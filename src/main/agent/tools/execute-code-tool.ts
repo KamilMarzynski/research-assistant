@@ -1,13 +1,13 @@
 import { basename } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { ApprovalRequiredError, type AllowlistService } from "../../services/AllowlistService";
+import { type AllowlistService, ApprovalRequiredError } from "../../services/AllowlistService";
+import { runExecuteCode } from "../extensions/docker-sandbox";
 import {
   appendAuditEntry,
   enterExecuteCodeApprovalGate,
   hashCode,
 } from "../extensions/execute-code-approval";
-import { runExecuteCode } from "../extensions/docker-sandbox";
 import type { PathJail } from "../path-jail";
 
 interface ExecuteCodeToolOptions {

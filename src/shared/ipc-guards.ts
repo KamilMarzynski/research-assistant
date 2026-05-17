@@ -96,9 +96,7 @@ export function decodeBlockedCommandPayload(data: unknown): BlockedCommandPayloa
   return tryDecode(BlockedCommandPayloadSchema, data, "BASH_BLOCKED");
 }
 
-export function decodeExecuteCodeApprovalPayload(
-  data: unknown,
-): ExecuteCodeApprovalPayload | null {
+export function decodeExecuteCodeApprovalPayload(data: unknown): ExecuteCodeApprovalPayload | null {
   return tryDecode(ExecuteCodeApprovalPayloadSchema, data, "EXECUTE_CODE_APPROVAL_REQUIRED");
 }
 
