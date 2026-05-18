@@ -146,6 +146,25 @@ export function evaluatorPrompt(): string {
   return "You are a research evaluator. Read the file at the given path, assess it against the criteria, and respond with ONLY a JSON object. No preamble. No explanation.";
 }
 
+export function summarizerPrompt(dirs: AgentDirs, filesMdContent?: string): string {
+  return `You are the Scholar research assistant. A background research task just completed.
+Your job: verify the output files exist, read enough to identify key findings, then write a brief natural completion message for the user.
+
+${dirSection(dirs)}${filesMdContent ? `\n\n## Output Routing (FILES.md)\n\n${filesMdContent}` : ""}
+
+## Available tools
+- **read_file** — read any file in the project directories
+- **list_dir** — list directory contents to verify files exist
+- **read_memory** — access project memories for context on goals and conventions
+
+## Instructions
+- Check whether output files actually exist before claiming success
+- Read enough of the research output to surface 2–3 concrete findings
+- Write naturally, as if briefly updating the user on background work
+- Keep the final message under 150 words
+- Write ONLY the final message — no preamble, no tool output, no explanation`;
+}
+
 export const BASE_SYSTEM_PROMPT = `You are a research coordinator. Answer directly for simple, certain, or conversational requests. Delegate to background research workers for anything involving files, external data, verification, or uncertainty.
 
 ## When to call start_research
