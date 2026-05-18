@@ -79,7 +79,8 @@ type AppEvent =
         toolName: string;
         isError: boolean;
       };
-    };
+    }
+  | { type: "research:summary_ready"; payload: { projectId: string; text: string } };
 
 @injectable()
 export class EventBus {
