@@ -14,6 +14,7 @@ import { ArtifactService } from "./ArtifactService";
 import { HomeService } from "./HomeService";
 import { ObservabilityService } from "./ObservabilityService";
 import { ProjectService } from "./ProjectService";
+import { ResearchSummarizerService } from "./ResearchSummarizerService";
 import { SettingsService } from "./SettingsService";
 import { TaskPersistenceService } from "./TaskPersistenceService";
 
@@ -38,6 +39,8 @@ export class ResearchService {
     @inject(ObservabilityService) private readonly observabilityService: ObservabilityService,
     @inject(TaskPersistenceService)
     private readonly taskPersistence: TaskPersistenceService,
+    @inject(ResearchSummarizerService)
+    private readonly summarizerService: ResearchSummarizerService,
   ) {}
 
   async startResearch(
@@ -227,6 +230,21 @@ export class ResearchService {
               filePaths,
             },
           });
+
+          void this.summarizerService
+            .summarize({
+              projectId: config.projectId,
+              projectName: config.projectName,
+              query: config.query,
+              filePaths,
+              taskWorkspacePath: workspacePath,
+              projectPath: config.projectPath,
+              folderPath: config.folderPath,
+              slug,
+              provider,
+              filesMdContent,
+            })
+            .catch((err) => console.error("[ResearchService] summarizer.summarize failed:", err));
         } catch (err) {
           await this.taskPersistence.updateTaskStatus(taskId, "failed", String(err));
           this.eventBus.emit({

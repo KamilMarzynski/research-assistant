@@ -159,6 +159,12 @@ function makeTaskPersistenceService() {
   };
 }
 
+function makeResearchSummarizerService() {
+  return {
+    summarize: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
 describe("ResearchService", () => {
   beforeEach(() => {
     getCaptured().current = null;
@@ -183,6 +189,7 @@ describe("ResearchService", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskId).toBeTruthy();
@@ -203,6 +210,7 @@ describe("ResearchService", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -223,6 +231,7 @@ describe("ResearchService", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
+      makeResearchSummarizerService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskPersistence.saveTask).toHaveBeenCalledWith(
@@ -246,6 +255,7 @@ describe("ResearchService", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
+      makeResearchSummarizerService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -281,6 +291,7 @@ describe("ResearchService", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     await expect(svc.startResearch("p1", "My Project", "research X", null)).rejects.toThrow(
       "No API key configured",
@@ -317,6 +328,7 @@ describe("ResearchService", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
+      makeResearchSummarizerService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -345,6 +357,7 @@ describe("ResearchService", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -376,6 +389,7 @@ describe("ResearchService", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -406,6 +420,7 @@ describe("ResearchService", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -444,6 +459,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -471,6 +487,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 5 }));
@@ -491,6 +508,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
+      makeResearchSummarizerService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -518,6 +536,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -538,6 +557,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
+      makeResearchSummarizerService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -577,6 +597,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query A", null);
@@ -609,6 +630,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -642,6 +664,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
 
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
@@ -669,6 +692,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -695,6 +719,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
+      makeResearchSummarizerService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(

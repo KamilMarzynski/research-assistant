@@ -7,7 +7,7 @@ export function registerEventForwarders(
   win: BrowserWindow,
   deps: { eventBus: EventBus; sessionManager: SessionManager },
 ): void {
-  const { eventBus, sessionManager } = deps;
+  const { eventBus } = deps;
 
   eventBus.on("research:started", (payload) => {
     emitPush(win, {
@@ -56,16 +56,6 @@ export function registerEventForwarders(
         if (win.isMinimized()) win.restore();
         win.focus();
       });
-    }
-
-    const session = sessionManager.get(payload.projectId);
-    if (session) {
-      const filePathsStr = payload.filePaths.length > 0 ? payload.filePaths.join(", ") : "none";
-      session
-        .queueFollowUp(
-          `Background research complete (task ${payload.taskId}). Query: "${payload.query}". Artifact saved at ${filePathsStr}. Please briefly summarise the findings for the user.`,
-        )
-        .catch((err) => console.error("[event-forwarders] queueFollowUp failed:", err));
     }
   });
 

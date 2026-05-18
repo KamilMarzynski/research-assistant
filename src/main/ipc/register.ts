@@ -24,6 +24,8 @@ import { registerCommandHandlers } from "./command-handlers";
 import { registerEventForwarders } from "./event-forwarders";
 import { registerProjectHandlers } from "./project-handlers";
 import { registerResearchHandlers } from "./research-handlers";
+import { SummaryQueue } from "./SummaryQueue";
+import { SummaryStreamCoordinator } from "./SummaryStreamCoordinator";
 import { SessionManager } from "./session-manager";
 import { registerSettingsHandlers } from "./settings-handlers";
 import { registerStartupTasks } from "./startup-tasks";
@@ -40,6 +42,14 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const eventBus = container.resolve(EventBus);
 
   const sessionManager = new SessionManager();
+  const summaryQueue = new SummaryQueue();
+  const summaryStreamCoordinator = new SummaryStreamCoordinator(
+    win,
+    eventBus,
+    summaryQueue,
+    sessionManager,
+  );
+  summaryStreamCoordinator.register();
   const outputNotificationService = container.resolve(OutputNotificationService);
   const memoryFileService = container.resolve(MemoryFileService);
   const allowlistService = container.resolve(AllowlistService);
