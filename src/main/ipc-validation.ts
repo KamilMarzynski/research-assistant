@@ -68,6 +68,11 @@ export const SetProjectModelSchema = z.object({
   modelOverride: z.string(),
 });
 
+export const SetProjectApprovalLevelSchema = z.object({
+  projectId: z.string(),
+  approvalLevel: z.enum(["default", "bypass_approvals"]),
+});
+
 export const ResolveBlockedCommandSchema = z.object({
   commandId: z.string(),
   action: z.enum(["approve_once", "approve_session", "deny"]),

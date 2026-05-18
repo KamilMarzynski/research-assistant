@@ -47,6 +47,20 @@ describe("DrizzleProjectRepository", () => {
       });
       expect(project.maxRecentMessages).toBe(20);
     });
+
+    it("sets approvalLevel to default on create and persists it", async () => {
+      const project = await repo.create({
+        name: "Approval Defaults",
+        slug: null,
+        folderPath: null,
+        projectPath: null,
+      });
+
+      expect(project.approvalLevel).toBe("default");
+
+      const found = await repo.get(project.id);
+      expect(found?.approvalLevel).toBe("default");
+    });
   });
 
   describe("list", () => {
@@ -257,6 +271,31 @@ describe("DrizzleProjectRepository", () => {
 
     it("throws when project does not exist", async () => {
       await expect(repo.setSlug("nonexistent-id", "test-slug")).rejects.toThrow(
+        "Project not found",
+      );
+    });
+  });
+
+  describe("setApprovalLevel", () => {
+    it("persists changed approvalLevel across get() and list()", async () => {
+      const project = await repo.create({
+        name: "Approval Change",
+        slug: null,
+        folderPath: null,
+        projectPath: null,
+      });
+
+      await repo.setApprovalLevel(project.id, "bypass_approvals");
+
+      const found = await repo.get(project.id);
+      const list = await repo.list();
+
+      expect(found?.approvalLevel).toBe("bypass_approvals");
+      expect(list.find((item) => item.id === project.id)?.approvalLevel).toBe("bypass_approvals");
+    });
+
+    it("throws when project does not exist", async () => {
+      await expect(repo.setApprovalLevel("nonexistent-id", "bypass_approvals")).rejects.toThrow(
         "Project not found",
       );
     });

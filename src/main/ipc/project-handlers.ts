@@ -1,14 +1,20 @@
 import { type BrowserWindow, dialog, ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
+import type { EventBus } from "../event-bus";
 import {
   CreateProjectSchema,
   DeleteProjectSchema,
   LinkFolderSchema,
   RenameProjectSchema,
+  SetProjectApprovalLevelSchema,
   SetProjectModelSchema,
   UnlinkFolderSchema,
 } from "../ipc-validation";
-import type { ProjectService } from "../services/ProjectService";
+import type {
+  ProjectApprovalLevelUpdateResult,
+  ProjectApprovalResolver,
+  ProjectService,
+} from "../services/ProjectService";
 import { parseOrThrow } from "./parse-util";
 import type { SessionManager } from "./session-manager";
 import { wrapIpc } from "./wrap-ipc";
@@ -17,10 +23,12 @@ export function registerProjectHandlers(
   win: BrowserWindow,
   deps: {
     projectService: ProjectService;
+    approvalResolver: ProjectApprovalResolver;
     sessionManager: SessionManager;
+    eventBus: EventBus;
   },
 ): void {
-  const { projectService, sessionManager } = deps;
+  const { projectService, approvalResolver, sessionManager, eventBus } = deps;
 
   ipcMain.handle(IPC.GET_PROJECTS, () => wrapIpc(() => projectService.listProjects()));
 
@@ -74,6 +82,28 @@ export function registerProjectHandlers(
     }),
   );
 
+  ipcMain.handle(IPC.SET_PROJECT_APPROVAL_LEVEL, (_event, payload: unknown) =>
+    wrapIpc(async () => {
+      const { projectId, approvalLevel } = parseOrThrow(
+        SetProjectApprovalLevelSchema,
+        payload,
+        "SET_PROJECT_APPROVAL_LEVEL",
+      );
+
+      const result = await projectService.transitionApprovalLevel(
+        projectId,
+        approvalLevel,
+        approvalResolver,
+      );
+      if (shouldEmitAutoResolvedEvent(result)) {
+        eventBus.emit({
+          type: "approvals:auto_resolved",
+          payload: { projectId },
+        });
+      }
+    }),
+  );
+
   ipcMain.handle(IPC.OPEN_FOLDER_DIALOG, () =>
     wrapIpc(async () => {
       const result = await dialog.showOpenDialog(win, {
@@ -84,4 +114,8 @@ export function registerProjectHandlers(
       return result.filePaths[0];
     }),
   );
+}
+
+function shouldEmitAutoResolvedEvent(result: ProjectApprovalLevelUpdateResult): boolean {
+  return result.approvalsAutoResolved;
 }

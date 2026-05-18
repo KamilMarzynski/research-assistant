@@ -22,6 +22,7 @@ import { DrizzleArtifactRepository } from "./repositories/drizzle/DrizzleArtifac
 import { DrizzleMessageRepository } from "./repositories/drizzle/DrizzleMessageRepository";
 import { DrizzleProjectRepository } from "./repositories/drizzle/DrizzleProjectRepository";
 import { AllowlistService } from "./services/AllowlistService";
+import { ApprovalPolicyService } from "./services/ApprovalPolicyService";
 import { ArtifactService } from "./services/ArtifactService";
 import { HomeService } from "./services/HomeService";
 import { MemoryFileService } from "./services/MemoryFileService";
@@ -58,6 +59,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.register(ARTIFACT_REPO_TOKEN, { useClass: DrizzleArtifactRepository });
 
   appContainer.registerSingleton(ProjectService);
+  appContainer.registerSingleton(ApprovalPolicyService);
   appContainer.registerSingleton(MessageService);
   appContainer.registerSingleton(ArtifactService);
   appContainer.registerSingleton(ResearchService);

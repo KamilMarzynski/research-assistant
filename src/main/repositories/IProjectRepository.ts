@@ -1,11 +1,12 @@
-import type { Project } from "@shared/types";
+import type { ApprovalLevel, Project } from "@shared/types";
 
 export type CreateProjectData = Omit<
   Project,
-  "id" | "createdAt" | "updatedAt" | "maxRecentMessages" | "modelOverride"
+  "id" | "createdAt" | "updatedAt" | "maxRecentMessages" | "modelOverride" | "approvalLevel"
 > & {
   maxRecentMessages?: number;
   modelOverride?: string | null;
+  approvalLevel?: ApprovalLevel;
 };
 
 export interface IProjectRepository {
@@ -17,6 +18,7 @@ export interface IProjectRepository {
   rename(id: string, name: string): Promise<void>;
   unlinkFolder(id: string): Promise<void>;
   setModelOverride(id: string, modelOverride: string | null): Promise<void>;
+  setApprovalLevel(id: string, approvalLevel: ApprovalLevel): Promise<void>;
   setProjectPath(id: string, projectPath: string): Promise<void>;
   setSlug(id: string, slug: string): Promise<void>;
 }

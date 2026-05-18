@@ -4,6 +4,7 @@ import { PathJailFactory } from "../agent/path-jail-factory";
 import { MEMORY_MANAGER_TOKEN } from "../di/tokens";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "../services/AllowlistService";
+import { ApprovalPolicyService } from "../services/ApprovalPolicyService";
 import { ArtifactService } from "../services/ArtifactService";
 import { HomeService } from "../services/HomeService";
 import { MemoryFileService } from "../services/MemoryFileService";
@@ -30,6 +31,7 @@ import { registerStartupTasks } from "./startup-tasks";
 export function registerIpcHandlers(win: BrowserWindow, container: DependencyContainer): void {
   const projectService = container.resolve(ProjectService);
   const messageService = container.resolve(MessageService);
+  const approvalPolicyService = container.resolve(ApprovalPolicyService);
   const artifactService = container.resolve(ArtifactService);
   const settingsService = container.resolve(SettingsService);
   const homeService = container.resolve(HomeService);
@@ -46,7 +48,14 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
   const skillManagementService = container.resolve(SkillManagementService);
   const taskPersistenceService = container.resolve(TaskPersistenceService);
 
-  registerProjectHandlers(win, { projectService, sessionManager });
+  const approvalResolver = registerCommandHandlers(win, allowlistService);
+
+  registerProjectHandlers(win, {
+    projectService,
+    approvalResolver,
+    sessionManager,
+    eventBus,
+  });
   registerSettingsHandlers(win, { settingsService, sessionManager, projectService });
   registerArtifactHandlers(win, { projectService, artifactService, pathJailFactory });
   registerChatHandler(win, {
@@ -61,11 +70,11 @@ export function registerIpcHandlers(win: BrowserWindow, container: DependencyCon
     outputNotificationService,
     memoryFileService,
     allowlistService,
+    approvalPolicyService,
     observabilityService,
   });
   registerAdminHandlers(win, { homeService, skillManagementService });
   registerResearchHandlers(win, { projectService, researchService, taskPersistenceService });
-  registerCommandHandlers(win, allowlistService);
   registerEventForwarders(win, { eventBus, sessionManager });
   registerStartupTasks({ taskPersistenceService, researchService, eventBus });
 }

@@ -1,9 +1,23 @@
 import { access } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Project } from "../../../shared/types";
+import type { ApprovalLevel, Project } from "../../../shared/types";
 import type { IProjectRepository } from "../../repositories/IProjectRepository";
+import type { ApprovalPolicyService } from "../ApprovalPolicyService";
 import { NotFoundError } from "../errors";
-import { ProjectService } from "../ProjectService";
+import {
+  type ProjectApprovalResolutionResult,
+  type ProjectApprovalResolver,
+  ProjectService,
+} from "../ProjectService";
+
+vi.mock("electron", () => ({
+  dialog: { showErrorBox: vi.fn() },
+  safeStorage: {
+    isEncryptionAvailable: vi.fn().mockReturnValue(true),
+    encryptString: vi.fn((value: string) => Buffer.from(value)),
+    decryptString: vi.fn((value: Buffer) => value.toString()),
+  },
+}));
 
 vi.mock("node:fs/promises", () => ({
   access: vi.fn().mockResolvedValue(undefined),
@@ -21,6 +35,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
     modelOverride: null,
+    approvalLevel: "default",
     maxRecentMessages: 20,
     ...overrides,
   };
@@ -36,6 +51,7 @@ function makeMockRepo(overrides: Partial<IProjectRepository> = {}): IProjectRepo
     rename: vi.fn().mockResolvedValue(undefined),
     unlinkFolder: vi.fn().mockResolvedValue(undefined),
     setModelOverride: vi.fn().mockResolvedValue(undefined),
+    setApprovalLevel: vi.fn().mockResolvedValue(undefined),
     setProjectPath: vi.fn().mockResolvedValue(undefined),
     setSlug: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -56,15 +72,38 @@ function makeSettingsService() {
   };
 }
 
+function makeApprovalPolicyService(): Pick<ApprovalPolicyService, "setLevel"> {
+  return {
+    setLevel: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+function makeApprovalResolver(): ProjectApprovalResolver {
+  return {
+    resolvePendingApprovals: vi
+      .fn<() => Promise<ProjectApprovalResolutionResult>>()
+      .mockResolvedValue({ status: "unsupported" }),
+  };
+}
+
 describe("ProjectService", () => {
   let repo: IProjectRepository;
   let service: ProjectService;
+  let approvalPolicyService: Pick<ApprovalPolicyService, "setLevel">;
+  let approvalResolver: ProjectApprovalResolver;
 
   const HOME = "/tmp/.scholar";
 
   beforeEach(() => {
     repo = makeMockRepo();
-    service = new ProjectService(repo, HOME, makeSettingsService() as never);
+    approvalPolicyService = makeApprovalPolicyService();
+    approvalResolver = makeApprovalResolver();
+    service = new ProjectService(
+      repo,
+      HOME,
+      makeSettingsService() as never,
+      approvalPolicyService as ApprovalPolicyService,
+    );
   });
 
   describe("createProject", () => {
@@ -79,6 +118,7 @@ describe("ProjectService", () => {
         slug: null,
         folderPath: null,
         modelOverride: "openrouter:anthropic/claude_sonnet-4-5",
+        approvalLevel: "default",
         projectPath: null,
       });
       expect(repo.setSlug).toHaveBeenCalledWith("proj-1", "new-proj1");
@@ -88,6 +128,16 @@ describe("ProjectService", () => {
       );
       expect(result.projectPath).toBe("/tmp/.scholar/projects/new-proj1");
       expect(result.slug).toBe("new-proj1");
+    });
+
+    it("creates projects with default approval level", async () => {
+      await service.createProject("New");
+
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          approvalLevel: "default" satisfies ApprovalLevel,
+        }),
+      );
     });
   });
 
@@ -217,6 +267,81 @@ describe("ProjectService", () => {
 
       await expect(service.unlinkFolder("missing")).rejects.toThrow(NotFoundError);
       expect(repo.unlinkFolder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("setApprovalLevel", () => {
+    it("updates approval level through the approval policy service", async () => {
+      vi.mocked(repo.get).mockResolvedValue(makeProject());
+
+      await service.setApprovalLevel("proj-1", "bypass_approvals");
+
+      expect(approvalPolicyService.setLevel).toHaveBeenCalledWith("proj-1", "bypass_approvals");
+      expect(repo.setApprovalLevel).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFoundError when project missing", async () => {
+      vi.mocked(approvalPolicyService.setLevel).mockRejectedValue(
+        new NotFoundError("Project", "missing"),
+      );
+
+      await expect(service.setApprovalLevel("missing", "bypass_approvals")).rejects.toThrow(
+        NotFoundError,
+      );
+      expect(approvalPolicyService.setLevel).toHaveBeenCalledWith("missing", "bypass_approvals");
+    });
+  });
+
+  describe("transitionApprovalLevel", () => {
+    it("returns without resolution work for default approval level", async () => {
+      const result = await service.transitionApprovalLevel("proj-1", "default", approvalResolver);
+
+      expect(approvalPolicyService.setLevel).toHaveBeenCalledWith("proj-1", "default");
+      expect(approvalResolver.resolvePendingApprovals).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        approvalLevel: "default",
+        approvalsAutoResolved: false,
+        resolution: null,
+      });
+    });
+
+    it("delegates approval resolution when switching to bypass_approvals", async () => {
+      vi.mocked(approvalResolver.resolvePendingApprovals).mockResolvedValue({
+        status: "resolved",
+        resolvedCount: 2,
+      });
+
+      const result = await service.transitionApprovalLevel(
+        "proj-1",
+        "bypass_approvals",
+        approvalResolver,
+      );
+
+      expect(approvalPolicyService.setLevel).toHaveBeenCalledWith("proj-1", "bypass_approvals");
+      expect(approvalResolver.resolvePendingApprovals).toHaveBeenCalledWith("proj-1");
+      expect(result).toEqual({
+        approvalLevel: "bypass_approvals",
+        approvalsAutoResolved: true,
+        resolution: { status: "resolved", resolvedCount: 2 },
+      });
+    });
+
+    it("returns a failure result when resolver work fails after persistence", async () => {
+      vi.mocked(approvalResolver.resolvePendingApprovals).mockRejectedValue(new Error("boom"));
+
+      const result = await service.transitionApprovalLevel(
+        "proj-1",
+        "bypass_approvals",
+        approvalResolver,
+      );
+
+      expect(approvalPolicyService.setLevel).toHaveBeenCalledWith("proj-1", "bypass_approvals");
+      expect(approvalResolver.resolvePendingApprovals).toHaveBeenCalledWith("proj-1");
+      expect(result).toEqual({
+        approvalLevel: "bypass_approvals",
+        approvalsAutoResolved: false,
+        resolution: { status: "failed", error: "boom" },
+      });
     });
   });
 });

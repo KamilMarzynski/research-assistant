@@ -3,6 +3,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import type { EventBus } from "../event-bus";
 import { addPendingPathApproval } from "../ipc/command-handlers";
 import type { AllowlistService } from "../services/AllowlistService";
+import type { ApprovalPolicyService } from "../services/ApprovalPolicyService";
 import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
@@ -39,6 +40,7 @@ export interface MessagePipelineOptions {
   researchService: ResearchService;
   memoryFileService?: MemoryFileService;
   allowlistService: AllowlistService;
+  approvalPolicyService?: ApprovalPolicyService;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   initialMemoryContext: MemoryContext;
   isFirstRun: boolean;
@@ -123,6 +125,10 @@ export class MessagePipeline {
       emitExecuteCodeApprovalRequired: (payload) => {
         options.eventBus.emit({ type: "execute_code:approval_required", payload });
       },
+      shouldBypassApproval: options.approvalPolicyService
+        ? (projectId) =>
+            options.approvalPolicyService?.shouldBypass(projectId) ?? Promise.resolve(false)
+        : undefined,
       startResearchFn: (query, deep) =>
         deep === true
           ? options.researchService.startOrchestratedResearch(

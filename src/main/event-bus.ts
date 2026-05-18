@@ -59,6 +59,7 @@ type AppEvent =
       type: "path:approval_required";
       payload: { path: string; mode: "read" | "write"; projectId: string; intent?: string };
     }
+  | { type: "approvals:auto_resolved"; payload: { projectId: string } }
   | { type: "agent:chunk"; payload: { projectId: string; delta: string } }
   | { type: "agent:done"; payload: { projectId: string } }
   | {

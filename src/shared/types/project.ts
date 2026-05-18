@@ -1,3 +1,5 @@
+export type ApprovalLevel = "default" | "bypass_approvals";
+
 export type Project = {
   id: string;
   name: string;
@@ -5,6 +7,7 @@ export type Project = {
   folderPath: string | null;
   projectPath: string | null;
   modelOverride: string | null;
+  approvalLevel: ApprovalLevel;
   maxRecentMessages: number;
   createdAt: Date;
   updatedAt: Date;

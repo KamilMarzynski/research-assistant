@@ -94,6 +94,10 @@ export function registerEventForwarders(
     emitPush(win, { type: "PATH_APPROVAL_REQUIRED", ...payload });
   });
 
+  eventBus.on("approvals:auto_resolved", (payload) => {
+    emitPush(win, { type: "APPROVALS_AUTO_RESOLVED", projectId: payload.projectId });
+  });
+
   eventBus.on("agent:tool_start", (payload) => {
     emitPush(win, {
       type: "AGENT_PROGRESS",
