@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodeExecuteCodeApprovalPayload } from "../../../../shared/ipc-guards";
 import type { ExecuteCodeApprovalPayload } from "../../../../shared/ipc-types";
@@ -8,12 +8,19 @@ import { ipc } from "../../../lib/ipc-client";
 import PendingExecuteCodeModal from "./PendingExecuteCodeModal";
 
 export default function PendingExecuteCodeBanner() {
-  const { items, remove } = usePendingItems<ExecuteCodeApprovalPayload>({
+  const { items, remove, clearWhere } = usePendingItems<ExecuteCodeApprovalPayload>({
     channel: IPC.EXECUTE_CODE_APPROVAL_REQUIRED,
     decode: decodeExecuteCodeApprovalPayload,
     getKey: (request) => request.executionId,
   });
   const [selected, setSelected] = useState<ExecuteCodeApprovalPayload | null>(null);
+
+  useEffect(() => {
+    return ipc.on(IPC.APPROVALS_AUTO_RESOLVED, (event) => {
+      clearWhere((item) => item.projectId === event.projectId);
+      setSelected((current) => (current?.projectId === event.projectId ? null : current));
+    });
+  }, [clearWhere]);
 
   const handleResolve = async (
     request: ExecuteCodeApprovalPayload,

@@ -17,7 +17,7 @@ export class ApprovalRequiredError extends Error {
 
 @injectable()
 export class AllowlistService {
-  private sessionAllowlists = new Map<string, Set<string>>(); // projectId -> Set of resolved paths
+  private sessionAllowlists = new Map<string, Map<string, Set<"read" | "write">>>();
 
   async getGlobalAllowlist(): Promise<string[]> {
     const home = getScholarHome();
@@ -55,7 +55,7 @@ export class AllowlistService {
   isAllowed(
     projectId: string,
     inputPath: string,
-    _mode: "read" | "write",
+    mode: "read" | "write",
     existingZones: string[],
   ): { allowed: boolean; needsApproval: boolean } {
     const resolved = resolve(normalize(inputPath));
@@ -70,24 +70,37 @@ export class AllowlistService {
 
     // Check session allowlist
     const session = this.sessionAllowlists.get(projectId);
-    if (session?.has(resolved)) {
+    const modes = session?.get(resolved);
+    if (modes && this.hasModeApproval(modes, mode)) {
       return { allowed: true, needsApproval: false };
     }
 
     return { allowed: false, needsApproval: true };
   }
 
-  approveSession(projectId: string, path: string): void {
+  approveSession(projectId: string, path: string, mode: "read" | "write"): void {
     const resolved = resolve(normalize(path));
-    let set = this.sessionAllowlists.get(projectId);
-    if (!set) {
-      set = new Set();
-      this.sessionAllowlists.set(projectId, set);
+    let projectEntries = this.sessionAllowlists.get(projectId);
+    if (!projectEntries) {
+      projectEntries = new Map();
+      this.sessionAllowlists.set(projectId, projectEntries);
     }
-    set.add(resolved);
+    let modes = projectEntries.get(resolved);
+    if (!modes) {
+      modes = new Set();
+      projectEntries.set(resolved, modes);
+    }
+    modes.add(mode);
   }
 
   clearSession(projectId: string): void {
     this.sessionAllowlists.delete(projectId);
+  }
+
+  private hasModeApproval(modes: Set<"read" | "write">, requestedMode: "read" | "write"): boolean {
+    if (requestedMode === "read") {
+      return modes.has("read") || modes.has("write");
+    }
+    return modes.has("write");
   }
 }

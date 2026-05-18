@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodePathApprovalPayload } from "../../../../shared/ipc-guards";
 import type { PathApprovalPayload } from "../../../../shared/ipc-types";
@@ -8,12 +8,19 @@ import { ipc } from "../../../lib/ipc-client";
 import PendingPathModal from "./PendingPathModal";
 
 export default function PendingPathBanner() {
-  const { items, remove } = usePendingItems<PathApprovalPayload>({
+  const { items, remove, clearWhere } = usePendingItems<PathApprovalPayload>({
     channel: IPC.PATH_APPROVAL_REQUIRED,
     decode: decodePathApprovalPayload,
     getKey: (r) => `${r.projectId}:${r.path}:${r.mode}`,
   });
   const [selected, setSelected] = useState<PathApprovalPayload | null>(null);
+
+  useEffect(() => {
+    return ipc.on(IPC.APPROVALS_AUTO_RESOLVED, (event) => {
+      clearWhere((item) => item.projectId === event.projectId);
+      setSelected((current) => (current?.projectId === event.projectId ? null : current));
+    });
+  }, [clearWhere]);
 
   const handleResolve = async (
     req: PathApprovalPayload,

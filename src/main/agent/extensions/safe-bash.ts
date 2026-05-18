@@ -463,6 +463,7 @@ export interface SafeBashOptions {
   auditLogPath: string;
   timeoutMs?: number;
   emitBlocked?: (payload: BlockedCommandPayload) => void;
+  shouldBypassApproval?: (projectId: string) => Promise<boolean>;
 }
 
 export interface SafeBashResult {
@@ -634,6 +635,21 @@ export function resolveBlockedCommand(
   void runSafeBashInternal(deferred.options).then(deferred.resolve, deferred.reject);
 }
 
+export function resolvePendingBlockedCommandsForProject(
+  projectId: string,
+  action: "approve_once" | "approve_session" = "approve_once",
+): number {
+  const commandIds = Array.from(blockedPromises.entries())
+    .filter(([, deferred]) => deferred.options.projectId === projectId)
+    .map(([commandId]) => commandId);
+
+  for (const commandId of commandIds) {
+    resolveBlockedCommand(commandId, action, projectId);
+  }
+
+  return commandIds.length;
+}
+
 // --- Public API ---
 
 function buildFileExecutionHint(interpreter: string): string {
@@ -700,6 +716,10 @@ export async function runSafeBash(opts: SafeBashOptions): Promise<SafeBashResult
   }
 
   if (getProjectAllowlist(opts.projectId).has(hashCommand(opts.command))) {
+    return runSafeBashInternal(opts);
+  }
+
+  if (opts.shouldBypassApproval && (await opts.shouldBypassApproval(opts.projectId))) {
     return runSafeBashInternal(opts);
   }
 

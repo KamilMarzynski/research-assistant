@@ -145,4 +145,42 @@ describe("createExecuteCodeTool", () => {
     expect(auditEntry.blocked).toBe(true);
     expect(auditEntry.code).toBe("print('nope')");
   });
+
+  it("bypasses execute-code approval and requested path approvals when project policy allows it", async () => {
+    const emitApprovalRequired = vi.fn();
+    const allowlistService = new AllowlistService();
+    const restrictedPath = join(tempDir, "restricted.txt");
+    const jail = {
+      projectId: "p1",
+      validate: vi.fn((p: string) => {
+        if (p === restrictedPath) {
+          const allowed = allowlistService.isAllowed("p1", p, "read", []);
+          if (!allowed.allowed) throw new ApprovalRequiredError(p, "read");
+        }
+        return p;
+      }),
+    } as unknown as PathJail;
+    const tool = createExecuteCodeTool(jail, {
+      projectId: "p1",
+      auditLogPath: join(tempDir, "audit.log"),
+      allowlistService,
+      emitApprovalRequired,
+      shouldBypassApproval: vi.fn().mockResolvedValue(true),
+    });
+
+    const result = await tool.execute("tool-call", {
+      intent: "read fixture",
+      code: "print('ok')",
+      language: "python",
+      workspaceFiles: [restrictedPath],
+    });
+
+    expect(getText(result)).toContain("stdout:\nok");
+    expect(emitApprovalRequired).not.toHaveBeenCalled();
+    expect(runExecuteCode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceFiles: [{ name: "restricted.txt", sourcePath: restrictedPath }],
+      }),
+    );
+  });
 });

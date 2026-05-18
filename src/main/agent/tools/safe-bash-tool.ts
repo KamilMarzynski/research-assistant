@@ -9,6 +9,7 @@ export function createSafeBashTool(
   workspacePath: string,
   auditLogPath: string,
   emitBlocked: AgentToolsOptions["emitBlocked"],
+  shouldBypassApproval?: AgentToolsOptions["shouldBypassApproval"],
 ): AgentTool<typeof safeBashParameters, Awaited<ReturnType<typeof runSafeBash>>> {
   return {
     name: "safe_bash",
@@ -28,6 +29,7 @@ export function createSafeBashTool(
         workspacePath,
         auditLogPath,
         emitBlocked,
+        shouldBypassApproval,
       });
       const summary = [
         `Exit code: ${result.exitCode}`,

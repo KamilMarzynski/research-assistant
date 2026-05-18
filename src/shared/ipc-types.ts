@@ -1,5 +1,5 @@
 import type { SkillInfo } from "./ipc-channels";
-import type { Artifact, Message, Project, ResearchTask } from "./types";
+import type { ApprovalLevel, Artifact, Message, Project, ResearchTask } from "./types";
 
 /** Unified return shape for all ipcMain.handle handlers */
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string; code: string };
@@ -43,6 +43,7 @@ export type IpcPushEvent =
   | { type: "AGENT_PROGRESS"; event: AgentProgressEvent }
   | { type: "NEW_MESSAGE"; projectId: string; message: Message }
   | { type: "SETTINGS_UPDATED"; settings: SettingsResponse }
+  | { type: "APPROVALS_AUTO_RESOLVED"; projectId: string }
   | ({ type: "BASH_BLOCKED" } & BlockedCommandPayload)
   | ({ type: "EXECUTE_CODE_APPROVAL_REQUIRED" } & ExecuteCodeApprovalPayload)
   | ({ type: "PATH_APPROVAL_REQUIRED" } & PathApprovalPayload);
@@ -99,6 +100,7 @@ export interface IpcRequestMap {
   SEND_MESSAGE: { projectId: string; content: string };
   ABORT_MESSAGE: { projectId: string };
   SET_PROJECT_MODEL: { projectId: string; modelOverride: string };
+  SET_PROJECT_APPROVAL_LEVEL: { projectId: string; approvalLevel: ApprovalLevel };
 }
 
 /** Response from GET_SETTINGS */
@@ -263,4 +265,5 @@ export interface IpcResponseMap {
   SEND_MESSAGE: { messageId: string };
   ABORT_MESSAGE: undefined;
   SET_PROJECT_MODEL: undefined;
+  SET_PROJECT_APPROVAL_LEVEL: undefined;
 }

@@ -46,28 +46,48 @@ describe("AllowlistService", () => {
   });
 
   describe("approveSession", () => {
-    it("adds path to session allowlist", () => {
-      service.approveSession("proj-1", "/tmp/allowed.txt");
+    it("adds read approval for the same path and mode", () => {
+      service.approveSession("proj-1", "/tmp/allowed.txt", "read");
       const result = service.isAllowed("proj-1", "/tmp/allowed.txt", "read", []);
       expect(result).toEqual({ allowed: true, needsApproval: false });
     });
 
+    it("does not let a read approval imply write access", () => {
+      service.approveSession("proj-1", "/tmp/allowed.txt", "read");
+
+      const result = service.isAllowed("proj-1", "/tmp/allowed.txt", "write", []);
+      expect(result).toEqual({ allowed: false, needsApproval: true });
+    });
+
+    it("lets a write approval imply read access", () => {
+      service.approveSession("proj-1", "/tmp/allowed.txt", "write");
+
+      expect(service.isAllowed("proj-1", "/tmp/allowed.txt", "write", [])).toEqual({
+        allowed: true,
+        needsApproval: false,
+      });
+      expect(service.isAllowed("proj-1", "/tmp/allowed.txt", "read", [])).toEqual({
+        allowed: true,
+        needsApproval: false,
+      });
+    });
+
     it("handles multiple paths for same project", () => {
-      service.approveSession("proj-1", "/tmp/file-a.txt");
-      service.approveSession("proj-1", "/tmp/file-b.txt");
+      service.approveSession("proj-1", "/tmp/file-a.txt", "read");
+      service.approveSession("proj-1", "/tmp/file-b.txt", "write");
 
       expect(service.isAllowed("proj-1", "/tmp/file-a.txt", "read", [])).toEqual({
         allowed: true,
         needsApproval: false,
       });
-      expect(service.isAllowed("proj-1", "/tmp/file-b.txt", "read", [])).toEqual({
+      expect(service.isAllowed("proj-1", "/tmp/file-b.txt", "write", [])).toEqual({
         allowed: true,
         needsApproval: false,
       });
     });
 
     it("isolates allowlists between projects", () => {
-      service.approveSession("proj-1", "/tmp/proj1-file.txt");
+      service.approveSession("proj-1", "/tmp/proj1-file.txt", "read");
 
       expect(service.isAllowed("proj-2", "/tmp/proj1-file.txt", "read", [])).toEqual({
         allowed: false,
@@ -78,7 +98,7 @@ describe("AllowlistService", () => {
 
   describe("clearSession", () => {
     it("removes project session allowlist", () => {
-      service.approveSession("proj-1", "/tmp/allowed.txt");
+      service.approveSession("proj-1", "/tmp/allowed.txt", "read");
       service.clearSession("proj-1");
 
       const result = service.isAllowed("proj-1", "/tmp/allowed.txt", "read", []);
@@ -86,8 +106,8 @@ describe("AllowlistService", () => {
     });
 
     it("does not affect other projects when clearing one", () => {
-      service.approveSession("proj-1", "/tmp/proj1-file.txt");
-      service.approveSession("proj-2", "/tmp/proj2-file.txt");
+      service.approveSession("proj-1", "/tmp/proj1-file.txt", "read");
+      service.approveSession("proj-2", "/tmp/proj2-file.txt", "read");
 
       service.clearSession("proj-1");
 

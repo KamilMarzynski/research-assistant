@@ -1,9 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { appendFile } from "node:fs/promises";
-import type {
-  AuditLogEntry,
-  ExecuteCodeApprovalPayload,
-} from "../../../shared/ipc-types";
+import type { AuditLogEntry, ExecuteCodeApprovalPayload } from "../../../shared/ipc-types";
 
 type ExecuteCodeApprovalAction = "approve_once" | "deny";
 
@@ -66,4 +63,19 @@ export function resolveExecuteCodeApproval(
   clearTimeout(pending.timer);
   pendingApprovals.delete(executionId);
   pending.resolve(action === "approve_once");
+}
+
+export function resolvePendingExecuteCodeApprovalsForProject(
+  projectId: string,
+  action: ExecuteCodeApprovalAction = "approve_once",
+): number {
+  const executionIds = Array.from(pendingApprovals.entries())
+    .filter(([, pending]) => pending.payload.projectId === projectId)
+    .map(([executionId]) => executionId);
+
+  for (const executionId of executionIds) {
+    resolveExecuteCodeApproval(executionId, action);
+  }
+
+  return executionIds.length;
 }

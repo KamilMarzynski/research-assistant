@@ -110,6 +110,7 @@ export interface ToolContext {
     requestedPaths: Array<{ path: string; mode: "read" }>;
     timestamp: string;
   }) => void;
+  shouldBypassApproval?: (projectId: string) => Promise<boolean>;
   compressionService?: CompressionService;
   allowlistService: AllowlistService;
 }
@@ -143,10 +144,34 @@ function buildTools(ctx: ToolContext): AgentTool<any>[] {
 
   // biome-ignore lint/suspicious/noExplicitAny: see above
   const tools: AgentTool<any>[] = [
-    createReadFileTool(jail, ctx.compressionService, ctx.emitApprovalRequired),
-    createWriteFileTool(jail, folderPath, onFileWrite, ctx.emitApprovalRequired),
-    createListDirTool(jail, ctx.emitApprovalRequired),
-    createSafeBashTool(projectId, workspacePath, auditLogPath, ctx.emitBlocked),
+    createReadFileTool(
+      jail,
+      ctx.compressionService,
+      ctx.emitApprovalRequired,
+      ctx.allowlistService,
+      ctx.shouldBypassApproval,
+    ),
+    createWriteFileTool(
+      jail,
+      folderPath,
+      onFileWrite,
+      ctx.emitApprovalRequired,
+      ctx.allowlistService,
+      ctx.shouldBypassApproval,
+    ),
+    createListDirTool(
+      jail,
+      ctx.emitApprovalRequired,
+      ctx.allowlistService,
+      ctx.shouldBypassApproval,
+    ),
+    createSafeBashTool(
+      projectId,
+      workspacePath,
+      auditLogPath,
+      ctx.emitBlocked,
+      ctx.shouldBypassApproval,
+    ),
     createRunSkillScriptTool(slug, homePath, auditLogPath),
   ];
 
@@ -168,6 +193,7 @@ function buildTools(ctx: ToolContext): AgentTool<any>[] {
       auditLogPath,
       allowlistService: ctx.allowlistService,
       emitApprovalRequired: ctx.emitExecuteCodeApprovalRequired,
+      shouldBypassApproval: ctx.shouldBypassApproval,
     }),
   );
 

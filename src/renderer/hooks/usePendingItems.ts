@@ -12,6 +12,7 @@ export interface UsePendingItemsResult<T> {
   items: T[];
   add: (item: T) => void;
   remove: (item: T) => void;
+  clearWhere: (predicate: (item: T) => boolean) => void;
 }
 
 export function usePendingItems<T>({
@@ -40,6 +41,10 @@ export function usePendingItems<T>({
     [getKey],
   );
 
+  const clearWhere = useCallback((predicate: (item: T) => boolean) => {
+    setItems((prev) => prev.filter((item) => !predicate(item)));
+  }, []);
+
   useEffect(() => {
     const unsub = ipc.on(channel, (event) => {
       const item = decode(event);
@@ -48,5 +53,5 @@ export function usePendingItems<T>({
     return unsub;
   }, [channel, decode, add]);
 
-  return { items, add, remove };
+  return { items, add, remove, clearWhere };
 }

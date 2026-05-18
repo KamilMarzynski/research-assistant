@@ -133,6 +133,7 @@ export default function ChatPanel() {
           disabled={processing || streamingSegments.length > 0}
           projectId={activeProjectId}
           projectModelOverride={activeProject?.modelOverride ?? null}
+          projectApprovalLevel={activeProject?.approvalLevel ?? "default"}
         />
       )}
     </div>

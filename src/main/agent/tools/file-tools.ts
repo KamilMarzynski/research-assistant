@@ -3,6 +3,7 @@ import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
+import type { AllowlistService } from "../../services/AllowlistService";
 import { ApprovalRequiredError } from "../../services/AllowlistService";
 import type { CompressionService } from "../CompressionService";
 import { enterPathApprovalGate } from "../extensions/path-approval";
@@ -100,6 +101,8 @@ export function createReadFileTool(
     mode: "read" | "write";
     projectId: string;
   }) => void,
+  allowlistService?: AllowlistService,
+  shouldBypassApproval?: (projectId: string) => Promise<boolean>,
 ): AgentTool<typeof readFileParameters, SmartReadResult> {
   return {
     name: "read_file",
@@ -118,28 +121,44 @@ export function createReadFileTool(
         resolved = jail.validate(path, "read");
       } catch (err) {
         if (err instanceof ApprovalRequiredError) {
-          if (emitApprovalRequired) {
-            emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
+          if (
+            await shouldBypassPathApproval(
+              jail.projectId,
+              err,
+              allowlistService,
+              shouldBypassApproval,
+            )
+          ) {
+            resolved = jail.validate(path, "read");
+          } else {
+            if (emitApprovalRequired) {
+              emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
+            }
+            const approved = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            if (!approved) {
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.`,
+                  },
+                ],
+                details: {
+                  content: "",
+                  mimeType: "text/plain",
+                  truncated: false,
+                  hint: null,
+                  totalLines: 0,
+                  lineCount: 0,
+                  fileHash: "",
+                },
+              };
+            }
+            resolved = jail.validate(path, "read");
           }
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Approval required for ${err.mode} on "${err.path}". Waiting for user approval.`,
-              },
-            ],
-            details: {
-              content: "",
-              mimeType: "text/plain",
-              truncated: false,
-              hint: null,
-              totalLines: 0,
-              lineCount: 0,
-              fileHash: "",
-            },
-          };
+        } else {
+          throw err;
         }
-        throw err;
       }
       const buffer = await readFile(resolved);
       const fileHash = createHash("sha256").update(buffer).digest("hex");
@@ -240,6 +259,8 @@ export function createWriteFileTool(
     projectId: string;
     intent?: string;
   }) => void,
+  allowlistService?: AllowlistService,
+  shouldBypassApproval?: (projectId: string) => Promise<boolean>,
 ): AgentTool<typeof writeFileParameters, null> {
   return {
     name: "write_file",
@@ -259,27 +280,38 @@ export function createWriteFileTool(
         resolved = jail.validate(path, "write");
       } catch (err) {
         if (err instanceof ApprovalRequiredError) {
-          if (emitApprovalRequired) {
-            emitApprovalRequired({
-              path: err.path,
-              mode: err.mode,
-              projectId: jail.projectId,
-              intent,
-            });
+          if (
+            await shouldBypassPathApproval(
+              jail.projectId,
+              err,
+              allowlistService,
+              shouldBypassApproval,
+            )
+          ) {
+            resolved = jail.validate(path, "write");
+          } else {
+            if (emitApprovalRequired) {
+              emitApprovalRequired({
+                path: err.path,
+                mode: err.mode,
+                projectId: jail.projectId,
+                intent,
+              });
+            }
+            const approved = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            if (!approved) {
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.`,
+                  },
+                ],
+                details: null,
+              };
+            }
+            resolved = jail.validate(path, "write");
           }
-          const approved = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
-          if (!approved) {
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.`,
-                },
-              ],
-              details: null,
-            };
-          }
-          resolved = jail.validate(path, "write");
         } else {
           throw err;
         }
@@ -429,6 +461,8 @@ export function createListDirTool(
     mode: "read" | "write";
     projectId: string;
   }) => void,
+  allowlistService?: AllowlistService,
+  shouldBypassApproval?: (projectId: string) => Promise<boolean>,
 ): AgentTool<typeof listDirParameters, string[]> {
   return {
     name: "list_dir",
@@ -442,20 +476,36 @@ export function createListDirTool(
         resolved = jail.validate(path, "read");
       } catch (err) {
         if (err instanceof ApprovalRequiredError) {
-          if (emitApprovalRequired) {
-            emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
+          if (
+            await shouldBypassPathApproval(
+              jail.projectId,
+              err,
+              allowlistService,
+              shouldBypassApproval,
+            )
+          ) {
+            resolved = jail.validate(path, "read");
+          } else {
+            if (emitApprovalRequired) {
+              emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
+            }
+            const approved = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            if (!approved) {
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.`,
+                  },
+                ],
+                details: [],
+              };
+            }
+            resolved = jail.validate(path, "read");
           }
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Approval required for ${err.mode} on "${err.path}". Waiting for user approval.`,
-              },
-            ],
-            details: [],
-          };
+        } else {
+          throw err;
         }
-        throw err;
       }
       const entries = await readdir(resolved, { withFileTypes: true });
       const lines = entries.map((e) => `${e.isDirectory() ? "d" : "f"} ${e.name}`);
@@ -470,3 +520,21 @@ export function createListDirTool(
 const listDirParameters = Type.Object({
   path: Type.String({ description: "Absolute path to the directory" }),
 });
+
+async function shouldBypassPathApproval(
+  projectId: string,
+  error: ApprovalRequiredError,
+  allowlistService?: AllowlistService,
+  shouldBypassApproval?: (projectId: string) => Promise<boolean>,
+): Promise<boolean> {
+  if (!allowlistService || !shouldBypassApproval) {
+    return false;
+  }
+
+  if (!(await shouldBypassApproval(projectId))) {
+    return false;
+  }
+
+  allowlistService.approveSession(projectId, error.path, error.mode);
+  return true;
+}

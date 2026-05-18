@@ -1,8 +1,9 @@
 import { MenuItem, Select } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
+import type { ApprovalLevel } from "../../../../shared/types";
 import { ipc } from "../../../lib/ipc-client";
-import { IconChevD, IconCpu, IconSend, IconStop } from "../../shared/Icons";
+import { IconBolt, IconChevD, IconCpu, IconSend, IconShield, IconStop } from "../../shared/Icons";
 
 interface ModelInfo {
   id: string;
@@ -15,6 +16,7 @@ interface MessageInputProps {
   disabled?: boolean;
   projectId: string;
   projectModelOverride: string | null;
+  projectApprovalLevel: ApprovalLevel;
 }
 
 export default function MessageInput({
@@ -23,13 +25,20 @@ export default function MessageInput({
   disabled,
   projectId,
   projectModelOverride,
+  projectApprovalLevel,
 }: MessageInputProps) {
   const [content, setContent] = useState("");
   const [model, setModel] = useState<string>("");
   const [activeProvider, setActiveProvider] = useState<string>("openrouter");
+  const [approvalLevel, setApprovalLevel] = useState<ApprovalLevel>(projectApprovalLevel);
+  const [approvalLevelSaving, setApprovalLevelSaving] = useState(false);
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const lastProjectId = useRef<string>("");
+
+  useEffect(() => {
+    setApprovalLevel(projectApprovalLevel);
+  }, [projectApprovalLevel]);
 
   // Reset model state only when switching to a different project
   useEffect(() => {
@@ -99,6 +108,22 @@ export default function MessageInput({
     });
   };
 
+  const handleApprovalLevelChange = async (newApprovalLevel: ApprovalLevel) => {
+    const previous = approvalLevel;
+    setApprovalLevel(newApprovalLevel);
+    setApprovalLevelSaving(true);
+    try {
+      await ipc.invoke(IPC.SET_PROJECT_APPROVAL_LEVEL, {
+        projectId,
+        approvalLevel: newApprovalLevel,
+      });
+    } catch {
+      setApprovalLevel(previous);
+    } finally {
+      setApprovalLevelSaving(false);
+    }
+  };
+
   const handleSend = () => {
     const trimmed = content.trim();
     if (!trimmed || disabled) return;
@@ -107,6 +132,10 @@ export default function MessageInput({
   };
 
   const modelOptions = availableModels.length > 0 ? availableModels : [{ id: model, name: model }];
+  const approvalLabel =
+    approvalLevel === "bypass_approvals" ? "Bypass approvals" : "Default permissions";
+  const approvalAccent = approvalLevel === "bypass_approvals" ? "var(--accent)" : "var(--ink)";
+  const ApprovalIcon = approvalLevel === "bypass_approvals" ? IconBolt : IconShield;
 
   return (
     <div
@@ -232,6 +261,98 @@ export default function MessageInput({
                     {m.name}
                   </MenuItem>
                 ))}
+              </Select>
+              <Select
+                size="small"
+                value={approvalLevel}
+                disabled={approvalLevelSaving}
+                onChange={(e) => handleApprovalLevelChange(e.target.value as ApprovalLevel)}
+                IconComponent={() => null}
+                inputProps={{ "aria-label": "Approval level" }}
+                renderValue={() => (
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontSize: "var(--text-sm)",
+                      color: approvalAccent,
+                    }}
+                  >
+                    <ApprovalIcon size={13} strokeColor={approvalAccent} />
+                    <span>{approvalLabel}</span>
+                    <IconChevD size={12} />
+                  </span>
+                )}
+                sx={{
+                  minWidth: 176,
+                  flexShrink: 0,
+                  fontSize: "var(--text-sm)",
+                  color: approvalAccent,
+                  "& .MuiSelect-select": {
+                    py: 0.5,
+                    px: 1,
+                    fontSize: "var(--text-sm)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    color: approvalAccent,
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--line-strong)" },
+                  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--accent)" },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "var(--accent)",
+                  },
+                }}
+                MenuProps={{
+                  anchorOrigin: { vertical: "top", horizontal: "left" },
+                  transformOrigin: { vertical: "bottom", horizontal: "left" },
+                  slotProps: {
+                    paper: {
+                      sx: {
+                        background: "var(--surface)",
+                        border: "1px solid var(--line)",
+                        borderRadius: "var(--r-md)",
+                        boxShadow: "var(--shadow-2)",
+                        color: "var(--ink)",
+                        mb: 0.5,
+                      },
+                    },
+                  },
+                }}
+              >
+                <MenuItem
+                  value="default"
+                  sx={{
+                    fontSize: "var(--text-sm)",
+                    color: "var(--ink)",
+                    background: "transparent",
+                    "&:hover": { background: "var(--surface-2)" },
+                    "&.Mui-selected": {
+                      background: "var(--accent-soft)",
+                      color: "var(--ink)",
+                    },
+                    "&.Mui-selected:hover": { background: "var(--accent-soft)" },
+                  }}
+                >
+                  Default permissions
+                </MenuItem>
+                <MenuItem
+                  value="bypass_approvals"
+                  sx={{
+                    fontSize: "var(--text-sm)",
+                    color: "var(--accent)",
+                    background: "transparent",
+                    "&:hover": { background: "var(--surface-2)" },
+                    "&.Mui-selected": {
+                      background: "var(--accent-soft)",
+                      color: "var(--accent)",
+                    },
+                    "&.Mui-selected:hover": { background: "var(--accent-soft)" },
+                  }}
+                >
+                  Bypass approvals
+                </MenuItem>
               </Select>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

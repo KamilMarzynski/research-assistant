@@ -30,8 +30,7 @@ export default function PendingExecuteCodeModal({
         )}
       </div>
       <p style={{ color: "var(--ink-2)", fontSize: 13.5, marginBottom: 8 }}>
-        The agent wants to run sandboxed code. Review the intent, inputs, and code before
-        approving.
+        The agent wants to run sandboxed code. Review the intent, inputs, and code before approving.
       </p>
       <span className="t-mono t-tertiary" style={{ fontSize: 12, display: "block" }}>
         <strong>Intent:</strong> {request.intent}
@@ -77,4 +76,3 @@ export default function PendingExecuteCodeModal({
     </ReviewDialog>
   );
 }
-

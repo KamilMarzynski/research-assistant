@@ -1,13 +1,13 @@
 import { basename } from "node:path";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
-import { ApprovalRequiredError, type AllowlistService } from "../../services/AllowlistService";
+import { type AllowlistService, ApprovalRequiredError } from "../../services/AllowlistService";
+import { runExecuteCode } from "../extensions/docker-sandbox";
 import {
   appendAuditEntry,
   enterExecuteCodeApprovalGate,
   hashCode,
 } from "../extensions/execute-code-approval";
-import { runExecuteCode } from "../extensions/docker-sandbox";
 import type { PathJail } from "../path-jail";
 
 interface ExecuteCodeToolOptions {
@@ -15,6 +15,7 @@ interface ExecuteCodeToolOptions {
   auditLogPath: string;
   allowlistService: AllowlistService;
   emitApprovalRequired?: Parameters<typeof enterExecuteCodeApprovalGate>[1];
+  shouldBypassApproval?: (projectId: string) => Promise<boolean>;
 }
 
 export function createExecuteCodeTool(
@@ -48,6 +49,60 @@ export function createExecuteCodeTool(
           }
           throw err;
         }
+      }
+
+      const shouldBypass =
+        options.shouldBypassApproval &&
+        (await options.shouldBypassApproval(options.projectId)) === true;
+
+      if (shouldBypass) {
+        for (const pathApproval of requestedPaths) {
+          options.allowlistService.approveSession(
+            options.projectId,
+            pathApproval.path,
+            pathApproval.mode,
+          );
+        }
+
+        const approvedWorkspaceFiles = requestedWorkspaceFiles.map((p) => {
+          const validated = jail.validate(p, "read");
+          return { name: basename(validated), sourcePath: validated };
+        });
+        const result = await runExecuteCode({
+          code,
+          language,
+          files,
+          workspaceFiles: approvedWorkspaceFiles,
+          networkEnabled,
+        });
+        await appendAuditEntry(options.auditLogPath, {
+          ts: startedAt,
+          projectId: options.projectId,
+          tool: "execute_code",
+          intent,
+          language,
+          code,
+          codeHash,
+          networkEnabled: networkEnabled === true,
+          workspaceFiles: requestedWorkspaceFiles,
+          inlineFiles: inlineFileNames,
+          outputFiles: result.outputFiles.map((f) => f.name),
+          exitCode: result.error ? 1 : 0,
+          blockReason: result.error,
+        });
+        const text = [
+          result.stdout ? `stdout:\n${result.stdout}` : "",
+          result.error ? `error: ${result.error}` : "",
+          result.outputFiles.length > 0
+            ? `output files: ${result.outputFiles.map((f) => f.name).join(", ")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+        return {
+          content: [{ type: "text" as const, text: text || "(no output)" }],
+          details: result,
+        };
       }
 
       if (!options.emitApprovalRequired) {
@@ -94,7 +149,11 @@ export function createExecuteCodeTool(
       }
 
       for (const pathApproval of requestedPaths) {
-        options.allowlistService.approveSession(options.projectId, pathApproval.path);
+        options.allowlistService.approveSession(
+          options.projectId,
+          pathApproval.path,
+          pathApproval.mode,
+        );
       }
 
       const approvedWorkspaceFiles = requestedWorkspaceFiles.map((p) => {

@@ -258,6 +258,23 @@ describe("runSafeBash", () => {
     expect(result.truncated).toBe(false);
   });
 
+  it("bypasses blocked-command approval when project policy allows it", async () => {
+    const emitBlocked = vi.fn();
+
+    const result = await runSafeBash({
+      command: "echo hello | cat",
+      intent: "test bypass",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+      emitBlocked,
+      shouldBypassApproval: vi.fn().mockResolvedValue(true),
+    });
+
+    expect(result.stdout.trim()).toBe("hello");
+    expect(emitBlocked).not.toHaveBeenCalled();
+  });
+
   it("returns inline code hint for python3 -c instead of executing", async () => {
     const result = await runSafeBash({
       command: 'python3 -c "print(1)"',

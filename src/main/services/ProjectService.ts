@@ -10,6 +10,22 @@ import { ApprovalPolicyService } from "./ApprovalPolicyService";
 import { NotFoundError } from "./errors";
 import { SettingsService } from "./SettingsService";
 
+export type ProjectApprovalResolutionResult =
+  | { status: "resolved"; resolvedCount: number }
+  | { status: "no_pending_approvals" }
+  | { status: "failed"; error: string }
+  | { status: "unsupported" };
+
+export interface ProjectApprovalResolver {
+  resolvePendingApprovals(projectId: string): Promise<ProjectApprovalResolutionResult>;
+}
+
+export interface ProjectApprovalLevelUpdateResult {
+  approvalLevel: ApprovalLevel;
+  approvalsAutoResolved: boolean;
+  resolution: ProjectApprovalResolutionResult | null;
+}
+
 @injectable()
 export class ProjectService {
   constructor(
@@ -100,6 +116,43 @@ export class ProjectService {
 
   async setApprovalLevel(id: string, approvalLevel: ApprovalLevel): Promise<void> {
     await this.approvalPolicyService.setLevel(id, approvalLevel);
+  }
+
+  async transitionApprovalLevel(
+    id: string,
+    approvalLevel: ApprovalLevel,
+    approvalResolver: ProjectApprovalResolver,
+  ): Promise<ProjectApprovalLevelUpdateResult> {
+    await this.setApprovalLevel(id, approvalLevel);
+
+    if (approvalLevel !== "bypass_approvals") {
+      return {
+        approvalLevel,
+        approvalsAutoResolved: false,
+        resolution: null,
+      };
+    }
+
+    const resolution = await this.resolvePendingApprovalsSafely(id, approvalResolver);
+    return {
+      approvalLevel,
+      approvalsAutoResolved: resolution.status === "resolved",
+      resolution,
+    };
+  }
+
+  private async resolvePendingApprovalsSafely(
+    id: string,
+    approvalResolver: ProjectApprovalResolver,
+  ): Promise<ProjectApprovalResolutionResult> {
+    try {
+      return await approvalResolver.resolvePendingApprovals(id);
+    } catch (error) {
+      return {
+        status: "failed",
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   async updateAllProjectsModel(): Promise<void> {

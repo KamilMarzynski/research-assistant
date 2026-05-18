@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodeBlockedCommandPayload } from "../../../../shared/ipc-guards";
 import type { BlockedCommandPayload } from "../../../../shared/ipc-types";
@@ -8,12 +8,19 @@ import { ipc } from "../../../lib/ipc-client";
 import PendingCommandModal from "./PendingCommandModal";
 
 export default function PendingCommandBanner() {
-  const { items, remove } = usePendingItems<BlockedCommandPayload>({
+  const { items, remove, clearWhere } = usePendingItems<BlockedCommandPayload>({
     channel: IPC.BASH_BLOCKED,
     decode: decodeBlockedCommandPayload,
     getKey: (c) => c.commandId,
   });
   const [selected, setSelected] = useState<BlockedCommandPayload | null>(null);
+
+  useEffect(() => {
+    return ipc.on(IPC.APPROVALS_AUTO_RESOLVED, (event) => {
+      clearWhere((item) => item.projectId === event.projectId);
+      setSelected((current) => (current?.projectId === event.projectId ? null : current));
+    });
+  }, [clearWhere]);
 
   const handleResolve = async (
     cmd: BlockedCommandPayload,

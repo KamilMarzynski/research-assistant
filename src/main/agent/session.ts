@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { EventBus } from "../event-bus";
 import type { AllowlistService } from "../services/AllowlistService";
+import type { ApprovalPolicyService } from "../services/ApprovalPolicyService";
 import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager, MemoryContext } from "../services/MemoryManager";
@@ -30,6 +31,7 @@ export interface AgentSessionOptions {
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   memoryFileService?: MemoryFileService;
   allowlistService: AllowlistService;
+  approvalPolicyService?: ApprovalPolicyService;
   observabilityService?: ObservabilityService;
 }
 

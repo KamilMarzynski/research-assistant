@@ -8,6 +8,7 @@ import { AgentSession } from "../agent/session";
 import type { EventBus } from "../event-bus";
 import { AbortMessageSchema, ProjectIdSchema, SendMessageSchema } from "../ipc-validation";
 import type { AllowlistService } from "../services/AllowlistService";
+import type { ApprovalPolicyService } from "../services/ApprovalPolicyService";
 import type { HomeService } from "../services/HomeService";
 import type { MemoryFileService } from "../services/MemoryFileService";
 import type { IMemoryManager } from "../services/MemoryManager";
@@ -37,6 +38,7 @@ export function registerChatHandler(
     outputNotificationService: OutputNotificationService;
     memoryFileService: MemoryFileService;
     allowlistService: AllowlistService;
+    approvalPolicyService: ApprovalPolicyService;
     observabilityService: ObservabilityService;
   },
 ): void {
@@ -52,6 +54,7 @@ export function registerChatHandler(
     outputNotificationService,
     memoryFileService,
     allowlistService,
+    approvalPolicyService,
     observabilityService,
   } = deps;
 
@@ -122,6 +125,7 @@ export function registerChatHandler(
             webAccessEnabled: settings.webAccessEnabled,
             memoryFileService,
             allowlistService,
+            approvalPolicyService,
             observabilityService,
             onFileWrite: (absolutePath, relativePath, fileName) => {
               void outputNotificationService.recordWrite(
