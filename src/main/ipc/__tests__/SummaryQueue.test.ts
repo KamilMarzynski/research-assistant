@@ -35,4 +35,21 @@ describe("SummaryQueue", () => {
     expect(q.peek("p1")).toBe("hello");
     expect(q.hasItems("p1")).toBe(true);
   });
+
+  it("pop and peek on unknown projectId return undefined", () => {
+    const q = new SummaryQueue();
+    expect(q.pop("unknown")).toBeUndefined();
+    expect(q.peek("unknown")).toBeUndefined();
+    expect(q.hasItems("unknown")).toBe(false);
+  });
+
+  it("repopulating a drained queue works", () => {
+    const q = new SummaryQueue();
+    q.push("p1", "a");
+    expect(q.pop("p1")).toBe("a");
+    expect(q.hasItems("p1")).toBe(false);
+    q.push("p1", "b");
+    expect(q.hasItems("p1")).toBe(true);
+    expect(q.pop("p1")).toBe("b");
+  });
 });
