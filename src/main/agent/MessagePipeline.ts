@@ -328,7 +328,7 @@ export class MessagePipeline {
         },
       );
 
-      await this.agent.followUp({ role: "user", content, timestamp: Date.now() });
+      await this.agent.prompt(content);
     } catch (err) {
       console.error("[AgentSession] followUp failed:", err);
       throw err;
@@ -367,5 +367,9 @@ export class MessagePipeline {
     this.state.processing = false;
 
     this.eventBus.emit({ type: "agent:done", payload: { projectId: this.projectId } });
+  }
+
+  isProcessing(): boolean {
+    return this.state.processing;
   }
 }

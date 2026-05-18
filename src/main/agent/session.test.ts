@@ -341,6 +341,30 @@ describe("AgentSession", () => {
     });
   });
 
+  describe("isProcessing()", () => {
+    it("returns false when idle", () => {
+      expect(session.isProcessing()).toBe(false);
+    });
+
+    it("returns true while send() is running", async () => {
+      let resolvePrompt: (() => void) | undefined;
+      mockAgent.prompt.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolvePrompt = resolve;
+          }),
+      );
+      const sendPromise = session.send("hello");
+      while (mockAgent.prompt.mock.calls.length === 0) {
+        await new Promise((r) => setTimeout(r, 1));
+      }
+      expect(session.isProcessing()).toBe(true);
+      resolvePrompt?.();
+      await sendPromise;
+      expect(session.isProcessing()).toBe(false);
+    });
+  });
+
   describe("Agent constructor callbacks", () => {
     it("getApiKey returns the configured API key", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
@@ -530,34 +554,31 @@ describe("AgentSession", () => {
   });
 
   describe("queueFollowUp", () => {
-    it("calls agent.followUp with the message", async () => {
+    it("calls agent.prompt with the message", async () => {
       await session.queueFollowUp("Research complete: found 5 files.");
-      expect(mockAgent.followUp).toHaveBeenCalledWith(
-        expect.objectContaining({ role: "user", content: "Research complete: found 5 files." }),
-      );
+      expect(mockAgent.prompt).toHaveBeenCalledWith("Research complete: found 5 files.");
     });
 
     it("throws when followUp fails", async () => {
-      mockAgent.followUp.mockRejectedValueOnce(new Error("network error"));
+      mockAgent.prompt.mockRejectedValueOnce(new Error("network error"));
       await expect(session.queueFollowUp("follow-up")).rejects.toThrow("network error");
     });
 
     it("defers followUp while send() is processing and runs it after send completes", async () => {
-      mockAgent.prompt.mockImplementation(async () => {
+      mockAgent.prompt.mockImplementationOnce(async () => {
         // While prompt is running, queue a follow-up
         await session.queueFollowUp("deferred follow-up");
       });
 
       await session.send("hello");
-      // followUp should have been called after prompt resolved
-      expect(mockAgent.followUp).toHaveBeenCalledWith(
-        expect.objectContaining({ content: "deferred follow-up" }),
-      );
+      // agent.prompt called twice: once for "hello", once for the deferred follow-up
+      expect(mockAgent.prompt).toHaveBeenCalledTimes(2);
+      expect(mockAgent.prompt).toHaveBeenLastCalledWith("deferred follow-up");
     });
 
     it("defers followUp when another followUp is in progress", async () => {
       let resolveFollowUp: (() => void) | undefined;
-      mockAgent.followUp.mockImplementationOnce(
+      mockAgent.prompt.mockImplementationOnce(
         () =>
           new Promise<void>((resolve) => {
             resolveFollowUp = resolve;
@@ -568,10 +589,8 @@ describe("AgentSession", () => {
       // immediately queue a second follow-up while first is still processing
       const secondPromise = session.queueFollowUp("second");
 
-      expect(mockAgent.followUp).toHaveBeenCalledTimes(1);
-      expect(mockAgent.followUp).toHaveBeenCalledWith(
-        expect.objectContaining({ content: "first" }),
-      );
+      expect(mockAgent.prompt).toHaveBeenCalledTimes(1);
+      expect(mockAgent.prompt).toHaveBeenCalledWith("first");
 
       // resolve the first followUp
       resolveFollowUp?.();
@@ -579,10 +598,8 @@ describe("AgentSession", () => {
       await secondPromise;
 
       // second should now have run too
-      expect(mockAgent.followUp).toHaveBeenCalledTimes(2);
-      expect(mockAgent.followUp).toHaveBeenLastCalledWith(
-        expect.objectContaining({ content: "second" }),
-      );
+      expect(mockAgent.prompt).toHaveBeenCalledTimes(2);
+      expect(mockAgent.prompt).toHaveBeenLastCalledWith("second");
     });
   });
 

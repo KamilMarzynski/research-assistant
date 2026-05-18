@@ -80,4 +80,8 @@ export class AgentSession {
   abort(): void {
     this.pipeline.abort();
   }
+
+  isProcessing(): boolean {
+    return this.pipeline.isProcessing();
+  }
 }
