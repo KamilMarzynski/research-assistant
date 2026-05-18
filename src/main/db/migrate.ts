@@ -102,4 +102,13 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   } catch (err) {
     if (!isDuplicateColumnError(err)) throw err;
   }
+
+  // Run 18: add approval_level — idempotent
+  try {
+    await db.run(
+      sql`ALTER TABLE projects ADD COLUMN approval_level TEXT NOT NULL DEFAULT 'default'`,
+    );
+  } catch (err) {
+    if (!isDuplicateColumnError(err)) throw err;
+  }
 }

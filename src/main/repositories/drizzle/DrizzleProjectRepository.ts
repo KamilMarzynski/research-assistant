@@ -1,4 +1,4 @@
-import type { Project } from "@shared/types";
+import type { ApprovalLevel, Project } from "@shared/types";
 import { desc, eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
 import type { DrizzleDB } from "../../db/client";
@@ -26,6 +26,7 @@ export class DrizzleProjectRepository
       folderPath: data.folderPath ?? null,
       projectPath: data.projectPath ?? null,
       modelOverride: data.modelOverride ?? null,
+      approvalLevel: data.approvalLevel ?? "default",
       maxRecentMessages: data.maxRecentMessages ?? 20,
       createdAt: now,
       updatedAt: now,
@@ -37,6 +38,7 @@ export class DrizzleProjectRepository
       folderPath: project.folderPath,
       projectPath: project.projectPath,
       modelOverride: project.modelOverride,
+      approvalLevel: project.approvalLevel,
       maxRecentMessages: project.maxRecentMessages,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
@@ -92,6 +94,14 @@ export class DrizzleProjectRepository
     if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
   }
 
+  async setApprovalLevel(id: string, approvalLevel: ApprovalLevel): Promise<void> {
+    const result = await this.db
+      .update(projects)
+      .set({ approvalLevel, updatedAt: this.now() })
+      .where(eq(projects.id, id));
+    if (result.rowsAffected === 0) throw new Error(`Project not found: ${id}`);
+  }
+
   async setProjectPath(id: string, projectPath: string): Promise<void> {
     const result = await this.db
       .update(projects)
@@ -115,6 +125,7 @@ export class DrizzleProjectRepository
     folderPath: row.folderPath ?? null,
     projectPath: row.projectPath ?? null,
     modelOverride: row.modelOverride ?? null,
+    approvalLevel: row.approvalLevel ?? "default",
     maxRecentMessages: row.maxRecentMessages ?? 20,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

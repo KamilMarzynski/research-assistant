@@ -1,9 +1,12 @@
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { Project } from "../../../shared/types";
+import type { AllowlistService } from "../../services/AllowlistService";
 import { PathJailFactory } from "../path-jail-factory";
 
-const mockAllowlist = { isAllowed: vi.fn(() => ({ allowed: true })) } as any;
+const mockAllowlist = {
+  isAllowed: vi.fn(() => ({ allowed: true, needsApproval: false })),
+} as unknown as AllowlistService;
 
 describe("PathJailFactory", () => {
   const baseProject: Project = {
@@ -13,6 +16,7 @@ describe("PathJailFactory", () => {
     folderPath: "/home/user/myproject",
     projectPath: "/home/user/.scholar/projects/my-project-abc123",
     modelOverride: null,
+    approvalLevel: "default",
     maxRecentMessages: 50,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -21,9 +25,15 @@ describe("PathJailFactory", () => {
   it("creates PathJail with projectPath not projectName", () => {
     const factory = new PathJailFactory(mockAllowlist);
     const jail = factory.create(baseProject);
+    const projectPath = baseProject.projectPath;
+
+    if (!projectPath) {
+      throw new Error("projectPath must be defined for this test");
+    }
+
     expect(jail.projectId).toBe("proj-1");
     // Path inside projectPath should not throw
-    expect(() => jail.validate(join(baseProject.projectPath!, "output.md"), "write")).not.toThrow();
+    expect(() => jail.validate(join(projectPath, "output.md"), "write")).not.toThrow();
   });
 
   it("falls back to slug-based path when projectPath is null", () => {

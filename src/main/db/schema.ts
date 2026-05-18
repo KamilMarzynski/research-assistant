@@ -7,6 +7,9 @@ export const projects = sqliteTable("projects", {
   folderPath: text("folder_path"),
   projectPath: text("project_path"),
   modelOverride: text("model_override"),
+  approvalLevel: text("approval_level", { enum: ["default", "bypass_approvals"] })
+    .notNull()
+    .default("default"),
   maxRecentMessages: integer("max_recent_messages").notNull().default(20),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
