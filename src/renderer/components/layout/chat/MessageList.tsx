@@ -30,7 +30,7 @@ export default function MessageList({ messages, streamingSegments, processing }:
       ? messages.filter((m, i) => {
           if (i <= lastUserIndex) return true;
           if (m.role === "assistant" && m.content.trim() === "") return false;
-          if (streamingSegments.length > 0 && m.role === "assistant") return false;
+          if (processing && m.role === "assistant") return false;
           return true;
         })
       : messages;
@@ -79,6 +79,19 @@ export default function MessageList({ messages, streamingSegments, processing }:
               marginLeft: msg.role === "user" ? "auto" : undefined,
             }}
           >
+            {msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {msg.toolCalls.map((tc) => (
+                  <ActivityPill
+                    key={tc.toolCallId}
+                    toolCallId={tc.toolCallId}
+                    toolName={tc.toolName}
+                    description={tc.description}
+                    status={tc.status}
+                  />
+                ))}
+              </div>
+            )}
             <div
               style={{
                 padding: "12px 16px",

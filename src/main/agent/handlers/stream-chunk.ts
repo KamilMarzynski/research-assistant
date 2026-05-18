@@ -38,6 +38,12 @@ export async function handleStreamChunk(event: AgentEvent, ctx: HandlerContext):
         description,
       },
     });
+    ctx.state.pendingToolCalls.push({
+      toolCallId: event.toolCallId,
+      toolName: event.toolName,
+      description,
+      status: "running",
+    });
     return;
   }
 
@@ -51,5 +57,10 @@ export async function handleStreamChunk(event: AgentEvent, ctx: HandlerContext):
         isError: event.isError,
       },
     });
+    const idx = ctx.state.pendingToolCalls.findIndex((tc) => tc.toolCallId === event.toolCallId);
+    const existing = idx >= 0 ? ctx.state.pendingToolCalls[idx] : undefined;
+    if (existing) {
+      ctx.state.pendingToolCalls[idx] = { ...existing, status: event.isError ? "error" : "done" };
+    }
   }
 }

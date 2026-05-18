@@ -46,6 +46,7 @@ export class AgentSession {
       pendingFollowUp: null as string | null,
       pendingSkillDeltas: [] as Array<{ skillName: string; summary: string }>,
       pendingToolDescriptions: new Map<string, string>(),
+      pendingToolCalls: [],
       skillRouterReady: false,
       sessionId: randomUUID(),
       streamingMessageId: null,

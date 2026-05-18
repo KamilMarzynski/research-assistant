@@ -1,4 +1,3 @@
-import type { AgentEvent } from "@mariozechner/pi-agent-core";
 import { describe, expect, it, vi } from "vitest";
 import { handleStreamChunk } from "./stream-chunk";
 import type { HandlerContext } from "./types";
@@ -17,6 +16,7 @@ function makeCtx(overrides: Partial<HandlerContext> = {}): HandlerContext {
       processing: false,
       pendingFollowUp: null,
       pendingSkillDeltas: [],
+      pendingToolCalls: [],
       skillRouterReady: false,
       sessionId: "sess-1",
       streamingMessageId: null,
@@ -110,6 +110,64 @@ describe("handleStreamChunk — tool events", () => {
         payload: expect.objectContaining({ isError: true }),
       }),
     );
+  });
+
+  it("pushes to pendingToolCalls on tool_execution_start", async () => {
+    const ctx = makeCtx();
+    ctx.state.pendingToolDescriptions.set("tc-1", "Searching for papers");
+    await handleStreamChunk(
+      { type: "tool_execution_start", toolCallId: "tc-1", toolName: "web_search", args: {} },
+      ctx,
+    );
+    expect(ctx.state.pendingToolCalls).toHaveLength(1);
+    expect(ctx.state.pendingToolCalls[0]).toEqual({
+      toolCallId: "tc-1",
+      toolName: "web_search",
+      description: "Searching for papers",
+      status: "running",
+    });
+  });
+
+  it("updates pendingToolCalls to done on tool_execution_end", async () => {
+    const ctx = makeCtx();
+    ctx.state.pendingToolCalls.push({
+      toolCallId: "tc-4",
+      toolName: "start_research",
+      description: "Searching",
+      status: "running",
+    });
+    await handleStreamChunk(
+      {
+        type: "tool_execution_end",
+        toolCallId: "tc-4",
+        toolName: "start_research",
+        result: {},
+        isError: false,
+      },
+      ctx,
+    );
+    expect(ctx.state.pendingToolCalls[0]).toMatchObject({ toolCallId: "tc-4", status: "done" });
+  });
+
+  it("updates pendingToolCalls to error on tool_execution_end with isError=true", async () => {
+    const ctx = makeCtx();
+    ctx.state.pendingToolCalls.push({
+      toolCallId: "tc-5",
+      toolName: "safe_bash",
+      description: "Running cmd",
+      status: "running",
+    });
+    await handleStreamChunk(
+      {
+        type: "tool_execution_end",
+        toolCallId: "tc-5",
+        toolName: "safe_bash",
+        result: "error",
+        isError: true,
+      },
+      ctx,
+    );
+    expect(ctx.state.pendingToolCalls[0]).toMatchObject({ toolCallId: "tc-5", status: "error" });
   });
 
   it("still handles text_delta normally alongside tool events", async () => {

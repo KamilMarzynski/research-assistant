@@ -102,4 +102,11 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   } catch (err) {
     if (!isDuplicateColumnError(err)) throw err;
   }
+
+  // Run 18: add tool_calls to messages — idempotent
+  try {
+    await db.run(sql`ALTER TABLE messages ADD COLUMN tool_calls TEXT`);
+  } catch (err) {
+    if (!isDuplicateColumnError(err)) throw err;
+  }
 }

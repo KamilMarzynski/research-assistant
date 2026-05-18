@@ -99,12 +99,16 @@ export class PathJail {
       );
     }
 
-    // Writes to skills dirs require explicit user approval
+    // Writes to skills dirs require explicit user approval (unless already session-approved)
     if (
       mode === "write" &&
       (this.isInZone(resolved, [this.projectSkills]) || this.isInZone(resolved, [this.homeSkills]))
     ) {
-      throw new ApprovalRequiredError(resolved, mode);
+      const result = this.allowlistService.isAllowed(this.projectId, resolved, mode, []);
+      if (!result.allowed) {
+        throw new ApprovalRequiredError(resolved, mode);
+      }
+      return resolved;
     }
 
     // Cross-project write protection (hard block, no allowlist override)

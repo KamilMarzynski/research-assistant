@@ -1,6 +1,6 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
-import type { Message, MessageRole } from "../../../shared/types";
+import type { Message, MessageRole, ToolCallRecord } from "../../../shared/types";
 import type { DrizzleDB } from "../../db/client";
 import { messages } from "../../db/schema";
 import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
@@ -24,19 +24,27 @@ export class DrizzleMessageRepository
       role: data.role,
       content: data.content,
       createdAt: this.now(),
+      toolCalls: data.toolCalls,
     };
     await this.db.insert(messages).values({
       id: message.id,
       projectId: message.projectId,
       role: message.role,
       content: message.content,
+      toolCalls: data.toolCalls ? JSON.stringify(data.toolCalls) : null,
       createdAt: message.createdAt,
     });
     return message;
   }
 
-  async updateContent(id: string, content: string): Promise<void> {
-    await this.db.update(messages).set({ content }).where(eq(messages.id, id));
+  async updateContent(id: string, content: string, toolCalls?: ToolCallRecord[]): Promise<void> {
+    await this.db
+      .update(messages)
+      .set({
+        content,
+        ...(toolCalls !== undefined ? { toolCalls: JSON.stringify(toolCalls) } : {}),
+      })
+      .where(eq(messages.id, id));
   }
 
   async deleteMessage(id: string): Promise<void> {
@@ -69,5 +77,6 @@ export class DrizzleMessageRepository
     role: row.role as MessageRole,
     content: row.content,
     createdAt: row.createdAt,
+    toolCalls: row.toolCalls ? (JSON.parse(row.toolCalls) as ToolCallRecord[]) : undefined,
   });
 }

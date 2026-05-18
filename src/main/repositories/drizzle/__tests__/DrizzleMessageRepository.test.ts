@@ -36,6 +36,25 @@ describe("DrizzleMessageRepository", () => {
       expect(msg.content).toBe("Hello");
       expect(msg.createdAt).toBeInstanceOf(Date);
     });
+
+    it("stores and returns toolCalls when provided", async () => {
+      const toolCalls = [
+        {
+          toolCallId: "tc-1",
+          toolName: "web_search",
+          description: "Searching",
+          status: "done" as const,
+        },
+      ];
+      const msg = await repo.create({ projectId, role: "assistant", content: "Answer", toolCalls });
+
+      expect(msg.toolCalls).toEqual(toolCalls);
+    });
+
+    it("returns undefined toolCalls when not provided", async () => {
+      const msg = await repo.create({ projectId, role: "user", content: "Hello" });
+      expect(msg.toolCalls).toBeUndefined();
+    });
   });
 
   describe("listByProject", () => {
@@ -100,6 +119,70 @@ describe("DrizzleMessageRepository", () => {
 
     it("does not throw when id does not exist", async () => {
       await expect(repo.deleteMessage("non-existent-id")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("updateContent with toolCalls", () => {
+    it("persists toolCalls when provided to updateContent", async () => {
+      const msg = await repo.create({ projectId, role: "assistant", content: "Initial" });
+      const toolCalls = [
+        {
+          toolCallId: "tc-1",
+          toolName: "web_search",
+          description: "Searching",
+          status: "done" as const,
+        },
+        {
+          toolCallId: "tc-2",
+          toolName: "read_file",
+          description: "Reading",
+          status: "error" as const,
+        },
+      ];
+      await repo.updateContent(msg.id, "Updated", toolCalls);
+      const [updated] = await repo.listByProject(projectId);
+      expect(updated?.content).toBe("Updated");
+      expect(updated?.toolCalls).toEqual(toolCalls);
+    });
+
+    it("does not overwrite existing toolCalls when none provided to updateContent", async () => {
+      const toolCalls = [
+        {
+          toolCallId: "tc-1",
+          toolName: "web_search",
+          description: "Searching",
+          status: "done" as const,
+        },
+      ];
+      const msg = await repo.create({
+        projectId,
+        role: "assistant",
+        content: "Initial",
+        toolCalls,
+      });
+      await repo.updateContent(msg.id, "Updated");
+      const [updated] = await repo.listByProject(projectId);
+      expect(updated?.content).toBe("Updated");
+      expect(updated?.toolCalls).toEqual(toolCalls);
+    });
+  });
+
+  describe("listByProject with toolCalls", () => {
+    it("returns toolCalls on messages that have them", async () => {
+      const toolCalls = [
+        {
+          toolCallId: "tc-1",
+          toolName: "web_search",
+          description: "Searching",
+          status: "done" as const,
+        },
+      ];
+      await repo.create({ projectId, role: "user", content: "Question" });
+      await repo.create({ projectId, role: "assistant", content: "Answer", toolCalls });
+
+      const msgs = await repo.listByProject(projectId);
+      expect(msgs[0]?.toolCalls).toBeUndefined();
+      expect(msgs[1]?.toolCalls).toEqual(toolCalls);
     });
   });
 });
