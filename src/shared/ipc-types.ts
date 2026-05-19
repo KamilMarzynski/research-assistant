@@ -83,10 +83,12 @@ export interface IpcRequestMap {
     commandId: string;
     action: "approve_once" | "approve_session" | "deny";
     projectId?: string;
+    denyReason?: string;
   };
   RESOLVE_EXECUTE_CODE_APPROVAL: {
     executionId: string;
     action: "approve_once" | "deny";
+    denyReason?: string;
   };
   GET_PENDING_PATH_APPROVALS: undefined;
   RESOLVE_PATH_APPROVAL: {
@@ -94,6 +96,7 @@ export interface IpcRequestMap {
     mode: "read" | "write";
     action: "approve_once" | "approve_session" | "deny";
     projectId: string;
+    denyReason?: string;
   };
   CHECK_OLLAMA: string;
   GET_PROVIDER_MODELS: GetProviderModelsRequest;

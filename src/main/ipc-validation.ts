@@ -77,11 +77,13 @@ export const ResolveBlockedCommandSchema = z.object({
   commandId: z.string(),
   action: z.enum(["approve_once", "approve_session", "deny"]),
   projectId: z.string().optional(),
+  denyReason: z.string().optional(),
 });
 
 export const ResolveExecuteCodeApprovalSchema = z.object({
   executionId: z.string(),
   action: z.enum(["approve_once", "deny"]),
+  denyReason: z.string().optional(),
 });
 
 export const ResolvePathApprovalSchema = z.object({
@@ -89,6 +91,7 @@ export const ResolvePathApprovalSchema = z.object({
   mode: z.enum(["read", "write"]),
   action: z.enum(["approve_once", "approve_session", "deny"]),
   projectId: z.string(),
+  denyReason: z.string().optional(),
 });
 
 export const ToggleSkillSchema = z.object({
