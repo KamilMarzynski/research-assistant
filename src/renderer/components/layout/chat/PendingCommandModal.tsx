@@ -11,7 +11,7 @@ interface PendingCommandModalProps {
   command: BlockedCommandPayload;
   onApproveOnce: () => void;
   onApproveSession: () => void;
-  onDeny: () => void;
+  onDeny: (feedback?: string) => void;
   onClose: () => void;
 }
 

@@ -4,7 +4,7 @@ import ReviewDialog from "./ReviewDialog";
 interface PendingExecuteCodeModalProps {
   request: ExecuteCodeApprovalPayload;
   onApprove: () => void;
-  onDeny: () => void;
+  onDeny: (feedback?: string) => void;
   onClose: () => void;
 }
 

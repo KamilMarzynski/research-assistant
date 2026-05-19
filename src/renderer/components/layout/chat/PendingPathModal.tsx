@@ -11,7 +11,7 @@ interface PendingPathModalProps {
   request: PathApprovalPayload;
   onApproveOnce: () => void;
   onApproveSession: () => void;
-  onDeny: () => void;
+  onDeny: (feedback?: string) => void;
   onClose: () => void;
 }
 
