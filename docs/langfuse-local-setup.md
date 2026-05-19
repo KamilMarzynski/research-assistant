@@ -34,7 +34,7 @@ This starts the following services in the background:
 
 ## Connecting the App
 
-1. Go to the Research Assistant app settings.
+1. Go to the Scholar app settings.
 2. Enable the **Langfuse** toggle.
 3. Paste the **Secret Key** and **Public Key**.
 4. Set the **Host** to `http://localhost:3000`.

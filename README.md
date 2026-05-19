@@ -1,4 +1,4 @@
-# Research Assistant
+# Scholar
 
 > **Private project — work in progress.**
 
