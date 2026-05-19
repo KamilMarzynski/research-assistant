@@ -388,6 +388,45 @@ describe("createWorkerAgent – onProgress", () => {
   });
 });
 
+import { AGENT_TYPE_PRESETS } from "./worker-agent";
+
+function makeBase() {
+  return {
+    projectId: "p1",
+    slug: "test-proj",
+    projectName: "Test",
+    projectPath: null,
+    folderPath: null,
+    homePath: "/tmp/.scholar",
+    taskWorkspacePath: "/tmp/.scholar/projects/test-proj/workspace/abc",
+    provider: { type: "openrouter" as const, apiKey: "sk-test", model: "test" },
+    allowlistService: new AllowlistService(),
+  };
+}
+
+describe("AGENT_TYPE_PRESETS.finisher", () => {
+  it("includes safe_bash in toolNames", () => {
+    const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
+    expect(config.toolNames).toContain("safe_bash");
+  });
+  it("includes write_file in toolNames", () => {
+    const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
+    expect(config.toolNames).toContain("write_file");
+  });
+  it("includes read_memory in toolNames", () => {
+    const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
+    expect(config.toolNames).toContain("read_memory");
+  });
+  it("has remainingDepth 0", () => {
+    const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
+    expect(config.remainingDepth).toBe(0);
+  });
+  it("system prompt instructs mv usage", () => {
+    const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
+    expect(config.systemPromptAddition).toContain("mv");
+  });
+});
+
 describe("makeEvaluatorFn", () => {
   beforeEach(async () => {
     subscribers.length = 0;
