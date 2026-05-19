@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFetchUrlTool } from "../fetch-url";
 
+vi.mock("node:dns/promises", () => ({
+  resolve4: vi.fn().mockResolvedValue(["93.184.216.34"]),
+  resolve6: vi.fn().mockResolvedValue([]),
+}));
+
 describe("createFetchUrlTool", () => {
   describe("metadata", () => {
     it("returns a tool with name 'fetch_url' and label 'Fetch URL'", () => {
