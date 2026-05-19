@@ -57,7 +57,7 @@ export function registerCommandHandlers(
 
   ipcMain.handle(IPC.RESOLVE_PATH_APPROVAL, (_event, payload: unknown) =>
     wrapIpc(async () => {
-      const { path, mode, action, projectId } = parseOrThrow(
+      const { path, mode, action, projectId, denyReason } = parseOrThrow(
         ResolvePathApprovalSchema,
         payload,
         "RESOLVE_PATH_APPROVAL",
@@ -71,7 +71,7 @@ export function registerCommandHandlers(
       if (approved) {
         allowlistService.approveSession(projectId, path, mode);
       }
-      resolvePathApprovalGate(projectId, path, mode as "read" | "write", approved);
+      resolvePathApprovalGate(projectId, path, mode as "read" | "write", approved, denyReason);
     }),
   );
 

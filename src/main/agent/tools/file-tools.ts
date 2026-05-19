@@ -134,9 +134,9 @@ export function createReadFileTool(
             if (emitApprovalRequired) {
               emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
             }
-            const gateResult = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
-            if (!gateResult.approved) {
-              const feedback = gateResult.denyReason ? ` ${gateResult.denyReason}` : "";
+            const { approved, denyReason } = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            if (!approved) {
+              const feedback = denyReason ? ` ${denyReason}` : "";
               return {
                 content: [
                   {
@@ -299,9 +299,9 @@ export function createWriteFileTool(
                 intent,
               });
             }
-            const gateResult = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
-            if (!gateResult.approved) {
-              const feedback = gateResult.denyReason ? ` ${gateResult.denyReason}` : "";
+            const { approved, denyReason } = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            if (!approved) {
+              const feedback = denyReason ? ` ${denyReason}` : "";
               return {
                 content: [
                   {
@@ -491,9 +491,9 @@ export function createListDirTool(
             if (emitApprovalRequired) {
               emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
             }
-            const gateResult = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
-            if (!gateResult.approved) {
-              const feedback = gateResult.denyReason ? ` ${gateResult.denyReason}` : "";
+            const { approved, denyReason } = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            if (!approved) {
+              const feedback = denyReason ? ` ${denyReason}` : "";
               return {
                 content: [
                   {
