@@ -182,7 +182,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
       >
         <IconLogo size={18} />
         <span style={{ fontWeight: 600, fontSize: 13, letterSpacing: "-0.005em" }}>
-          Research Assistant
+          Scholar
         </span>
       </div>
 
