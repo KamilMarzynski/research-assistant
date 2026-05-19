@@ -42,6 +42,7 @@ describe("createModel", () => {
     const model = createModel({ provider: ollamaProvider });
     expect(model.baseUrl).toBe("http://localhost:11434/v1");
     expect(model.id).toBe("llama3");
+    expect(model.contextWindow).toBe(128_000);
   });
 
   it("returns openai model config", () => {
@@ -58,5 +59,38 @@ describe("createModel", () => {
       model: "claude-3-5-sonnet",
     };
     expect(() => createModel({ provider: anthropicProvider })).toThrow("Direct Anthropic API");
+  });
+
+  it("uses resolved metadata context window for ollama", () => {
+    const model = createModel({
+      provider: { type: "ollama", host: "http://localhost:11434", model: "llama3" },
+      metadata: {
+        id: "llama3",
+        name: "llama3",
+        provider: "ollama",
+        maxContextWindow: 131_072,
+        effectiveContextWindow: 32_768,
+        source: "provider-runtime",
+      },
+    });
+    expect(model.contextWindow).toBe(32_768);
+    expect(model.maxTokens).toBe(4096);
+  });
+
+  it("uses resolved metadata context window for openai", () => {
+    const model = createModel({
+      provider: { type: "openai", apiKey: "sk-openai", model: "gpt-4o" },
+      metadata: {
+        id: "gpt-4o",
+        name: "gpt-4o",
+        provider: "openai",
+        maxContextWindow: 128_000,
+        effectiveContextWindow: 128_000,
+        maxOutputTokens: 8192,
+        source: "pi-ai",
+      },
+    });
+    expect(model.contextWindow).toBe(128_000);
+    expect(model.maxTokens).toBe(8192);
   });
 });

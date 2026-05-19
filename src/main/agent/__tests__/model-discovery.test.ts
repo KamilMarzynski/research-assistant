@@ -9,8 +9,8 @@ describe("getOllamaModels", () => {
     });
     const result = await getOllamaModels("http://localhost:11434");
     expect(result.models).toEqual([
-      { id: "llama3.2:3b", name: "llama3.2:3b" },
-      { id: "mistral:7b", name: "mistral:7b" },
+      { id: "llama3.2:3b", name: "llama3.2:3b", provider: "ollama", source: "provider-api" },
+      { id: "mistral:7b", name: "mistral:7b", provider: "ollama", source: "provider-api" },
     ]);
     expect(result.error).toBeUndefined();
   });
@@ -19,7 +19,7 @@ describe("getOllamaModels", () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("Connection refused"));
     const result = await getOllamaModels("http://localhost:11434");
     expect(result.models).toEqual([]);
-    expect(result.error).toBe("Ollama not reachable");
+    expect(result.error).toBe("Connection refused");
   });
 
   it("returns error for non-http protocol", async () => {
@@ -51,15 +51,29 @@ describe("getOpenRouterModels", () => {
       ok: true,
       json: async () => ({
         data: [
-          { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
-          { id: "openai/gpt-4o" },
+          { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", context_length: 200_000 },
+          { id: "openai/gpt-4o", context_length: 128_000 },
         ],
       }),
     });
     const result = await getOpenRouterModels();
     expect(result.models).toEqual([
-      { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
-      { id: "openai/gpt-4o", name: "openai/gpt-4o" },
+      {
+        id: "anthropic/claude-sonnet-4-6",
+        name: "Claude Sonnet 4.6",
+        provider: "openrouter",
+        maxContextWindow: 200_000,
+        effectiveContextWindow: 200_000,
+        source: "provider-api",
+      },
+      {
+        id: "openai/gpt-4o",
+        name: "openai/gpt-4o",
+        provider: "openrouter",
+        maxContextWindow: 128_000,
+        effectiveContextWindow: 128_000,
+        source: "provider-api",
+      },
     ]);
     expect(result.error).toBeUndefined();
   });
@@ -81,7 +95,7 @@ describe("getOpenRouterModels", () => {
   it("returns error on failure", async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
     const result = await getOpenRouterModels();
-    expect(result.error).toBe("OpenRouter request failed");
+    expect(result.error).toBe("Network error");
   });
 
   it("returns error on non-ok", async () => {
@@ -106,8 +120,8 @@ describe("getOpenAiModels", () => {
     });
     const result = await getOpenAiModels("sk-test");
     expect(result.models).toEqual([
-      { id: "gpt-4o", name: "gpt-4o" },
-      { id: "gpt-4o-mini", name: "gpt-4o-mini" },
+      { id: "gpt-4o", name: "gpt-4o", provider: "openai", source: "provider-api" },
+      { id: "gpt-4o-mini", name: "gpt-4o-mini", provider: "openai", source: "provider-api" },
     ]);
     expect(result.error).toBeUndefined();
   });
@@ -121,7 +135,7 @@ describe("getOpenAiModels", () => {
   it("returns error on network failure", async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("Timeout"));
     const result = await getOpenAiModels("sk-test");
-    expect(result.error).toBe("OpenAI request failed");
+    expect(result.error).toBe("Timeout");
   });
 
   it("returns error on non-ok non-401", async () => {
