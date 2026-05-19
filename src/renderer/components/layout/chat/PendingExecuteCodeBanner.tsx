@@ -2,12 +2,18 @@ import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodeExecuteCodeApprovalPayload } from "../../../../shared/ipc-guards";
 import type { ExecuteCodeApprovalPayload } from "../../../../shared/ipc-types";
+import type { Project } from "../../../../shared/types";
 import { IconAlert } from "../../../components/shared/Icons";
 import { usePendingItems } from "../../../hooks/usePendingItems";
 import { ipc } from "../../../lib/ipc-client";
 import PendingExecuteCodeModal from "./PendingExecuteCodeModal";
 
-export default function PendingExecuteCodeBanner() {
+interface Props {
+  activeProjectId: string | null;
+  projects: Project[];
+}
+
+export default function PendingExecuteCodeBanner({ activeProjectId, projects }: Props) {
   const { items, remove, clearWhere } = usePendingItems<ExecuteCodeApprovalPayload>({
     channel: IPC.EXECUTE_CODE_APPROVAL_REQUIRED,
     decode: decodeExecuteCodeApprovalPayload,
@@ -59,6 +65,11 @@ export default function PendingExecuteCodeBanner() {
           <IconAlert size={14} strokeColor="var(--warn)" />
           <span className="chip chip--warn">code execution</span>
           <span style={{ flex: 1, fontSize: 12, color: "var(--ink-2)" }}>
+            {request.projectId !== activeProjectId && (
+              <span style={{ color: "var(--ink-3)", marginRight: 6 }}>
+                [{projects.find((p) => p.id === request.projectId)?.name ?? "background"}]
+              </span>
+            )}
             {request.language} · {request.intent}
           </span>
           <button

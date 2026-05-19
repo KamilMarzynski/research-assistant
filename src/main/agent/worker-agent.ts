@@ -1,7 +1,11 @@
 import { dirname } from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { z } from "zod/v4";
-import type { ExecuteCodeApprovalPayload } from "../../shared/ipc-types";
+import type {
+  BlockedCommandPayload,
+  ExecuteCodeApprovalPayload,
+  PathApprovalPayload,
+} from "../../shared/ipc-types";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { ObservabilityService } from "../services/ObservabilityService";
 import { AgentTracer } from "./AgentTracer";
@@ -54,6 +58,8 @@ export interface WorkerAgentConfig {
   agentLabel?: string;
   onProgress?: (label: string, delta: string) => void;
   webAccessEnabled?: boolean;
+  emitBlocked?: (payload: BlockedCommandPayload) => void;
+  emitApprovalRequired?: (payload: PathApprovalPayload) => void;
   emitExecuteCodeApprovalRequired?: (payload: ExecuteCodeApprovalPayload) => void;
   allowlistService: AllowlistService;
   observabilityService?: ObservabilityService;
@@ -286,6 +292,8 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       onProgress,
       webAccessEnabled,
       allowlistService,
+      emitBlocked: config.emitBlocked,
+      emitApprovalRequired: config.emitApprovalRequired,
       emitExecuteCodeApprovalRequired: config.emitExecuteCodeApprovalRequired,
     };
 
@@ -361,6 +369,8 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     spawnAgentFn,
     spawnAgentsParallelFn,
     allowlistService,
+    emitBlocked: config.emitBlocked,
+    emitApprovalRequired: config.emitApprovalRequired,
     emitExecuteCodeApprovalRequired: config.emitExecuteCodeApprovalRequired,
   });
 

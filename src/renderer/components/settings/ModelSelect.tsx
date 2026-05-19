@@ -48,7 +48,7 @@ export default function ModelSelect({
               color: "var(--ink)",
             }}
           >
-            <span>{modelsLoading ? "Loading models…" : (displayName || "Select a model")}</span>
+            <span>{modelsLoading ? "Loading models…" : displayName || "Select a model"}</span>
             <IconChevD size={12} />
           </span>
         )}
@@ -89,11 +89,7 @@ export default function ModelSelect({
         }}
       >
         {displayOptions.length === 0 && (
-          <MenuItem
-            value=""
-            disabled
-            sx={{ fontSize: "var(--text-sm)", color: "var(--ink-3)" }}
-          >
+          <MenuItem value="" disabled sx={{ fontSize: "var(--text-sm)", color: "var(--ink-3)" }}>
             No models available
           </MenuItem>
         )}

@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
-import type { ExecuteCodeApprovalPayload } from "../../shared/ipc-types";
+import type {
+  BlockedCommandPayload,
+  ExecuteCodeApprovalPayload,
+  PathApprovalPayload,
+} from "../../shared/ipc-types";
 import { resolveProvider } from "../agent/model-provider";
 import type { AgentType } from "../agent/tools";
 import { AGENT_TYPE_PRESETS, createWorkerAgent } from "../agent/worker-agent";
@@ -136,6 +140,10 @@ export class ResearchService {
       provider,
       onProgress,
       webAccessEnabled: settings.webAccessEnabled,
+      emitBlocked: (payload: BlockedCommandPayload) =>
+        this.eventBus.emit({ type: "bash:blocked", payload }),
+      emitApprovalRequired: (payload: PathApprovalPayload) =>
+        this.eventBus.emit({ type: "path:approval_required", payload }),
       emitExecuteCodeApprovalRequired: (payload: ExecuteCodeApprovalPayload) =>
         this.eventBus.emit({ type: "execute_code:approval_required", payload }),
       allowlistService: this.allowlistService,

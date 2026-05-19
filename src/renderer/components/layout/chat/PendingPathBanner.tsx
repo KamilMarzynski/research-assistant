@@ -2,12 +2,18 @@ import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodePathApprovalPayload } from "../../../../shared/ipc-guards";
 import type { PathApprovalPayload } from "../../../../shared/ipc-types";
+import type { Project } from "../../../../shared/types";
 import { IconShield } from "../../../components/shared/Icons";
 import { usePendingItems } from "../../../hooks/usePendingItems";
 import { ipc } from "../../../lib/ipc-client";
 import PendingPathModal from "./PendingPathModal";
 
-export default function PendingPathBanner() {
+interface Props {
+  activeProjectId: string | null;
+  projects: Project[];
+}
+
+export default function PendingPathBanner({ activeProjectId, projects }: Props) {
   const { items, remove, clearWhere } = usePendingItems<PathApprovalPayload>({
     channel: IPC.PATH_APPROVAL_REQUIRED,
     decode: decodePathApprovalPayload,
@@ -61,6 +67,11 @@ export default function PendingPathBanner() {
           <IconShield size={14} strokeColor="var(--warn)" />
           <span className="chip chip--warn">privilege</span>
           <span style={{ flex: 1, fontSize: 12, color: "var(--ink-2)" }}>
+            {req.projectId !== activeProjectId && (
+              <span style={{ color: "var(--ink-3)", marginRight: 6 }}>
+                [{projects.find((p) => p.id === req.projectId)?.name ?? "background"}]
+              </span>
+            )}
             Blocked path: <strong>{req.path}</strong> — {req.mode} access required
             {req.intent ? ` — ${req.intent}` : ""}
           </span>

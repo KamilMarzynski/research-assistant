@@ -36,9 +36,9 @@ describe("pending approval banners", () => {
 
     render(
       <>
-        <PendingCommandBanner />
-        <PendingExecuteCodeBanner />
-        <PendingPathBanner />
+        <PendingCommandBanner activeProjectId="proj-1" projects={[]} />
+        <PendingExecuteCodeBanner activeProjectId="proj-1" projects={[]} />
+        <PendingPathBanner activeProjectId="proj-1" projects={[]} />
       </>,
     );
 

@@ -2,12 +2,18 @@ import { useEffect, useState } from "react";
 import { IPC } from "../../../../shared/ipc-channels";
 import { decodeBlockedCommandPayload } from "../../../../shared/ipc-guards";
 import type { BlockedCommandPayload } from "../../../../shared/ipc-types";
+import type { Project } from "../../../../shared/types";
 import { IconAlert } from "../../../components/shared/Icons";
 import { usePendingItems } from "../../../hooks/usePendingItems";
 import { ipc } from "../../../lib/ipc-client";
 import PendingCommandModal from "./PendingCommandModal";
 
-export default function PendingCommandBanner() {
+interface Props {
+  activeProjectId: string | null;
+  projects: Project[];
+}
+
+export default function PendingCommandBanner({ activeProjectId, projects }: Props) {
   const { items, remove, clearWhere } = usePendingItems<BlockedCommandPayload>({
     channel: IPC.BASH_BLOCKED,
     decode: decodeBlockedCommandPayload,
@@ -60,6 +66,11 @@ export default function PendingCommandBanner() {
           <IconAlert size={14} strokeColor="var(--danger)" />
           <span className="chip chip--danger">destructive</span>
           <span style={{ flex: 1, fontSize: 12, color: "var(--ink-2)" }}>
+            {cmd.projectId !== activeProjectId && (
+              <span style={{ color: "var(--ink-3)", marginRight: 6 }}>
+                [{projects.find((p) => p.id === cmd.projectId)?.name ?? "background"}]
+              </span>
+            )}
             Blocked command: <strong>{cmd.command}</strong> — {cmd.reason}
           </span>
           <button

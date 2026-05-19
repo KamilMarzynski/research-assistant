@@ -106,9 +106,9 @@ export default function ChatPanel() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <WindowDragBar />
       <ChatHeader />
-      <PendingCommandBanner />
-      <PendingExecuteCodeBanner />
-      <PendingPathBanner />
+      <PendingCommandBanner activeProjectId={activeProjectId} projects={projects} />
+      <PendingExecuteCodeBanner activeProjectId={activeProjectId} projects={projects} />
+      <PendingPathBanner activeProjectId={activeProjectId} projects={projects} />
       <MessageList
         messages={messages}
         streamingSegments={streamingSegments}
