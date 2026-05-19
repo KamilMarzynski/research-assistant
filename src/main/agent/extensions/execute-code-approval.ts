@@ -4,9 +4,13 @@ import type { AuditLogEntry, ExecuteCodeApprovalPayload } from "../../../shared/
 
 type ExecuteCodeApprovalAction = "approve_once" | "deny";
 
+export type ExecuteCodeGateResult =
+  | { approved: true; payload: ExecuteCodeApprovalPayload }
+  | { approved: false; denyReason?: string };
+
 interface ExecuteCodeApprovalPromise {
   payload: ExecuteCodeApprovalPayload;
-  resolve: (approved: boolean) => void;
+  resolve: (result: ExecuteCodeGateResult) => void;
   reject: (error: Error) => void;
   timer: ReturnType<typeof setTimeout>;
 }
@@ -28,7 +32,7 @@ export async function appendAuditEntry(auditLogPath: string, entry: AuditLogEntr
 export function enterExecuteCodeApprovalGate(
   payload: Omit<ExecuteCodeApprovalPayload, "executionId" | "timestamp">,
   emitApprovalRequired: (payload: ExecuteCodeApprovalPayload) => void,
-): Promise<{ approved: boolean; payload: ExecuteCodeApprovalPayload }> {
+): Promise<ExecuteCodeGateResult> {
   return new Promise((resolve, reject) => {
     const executionId = randomUUID();
     const fullPayload: ExecuteCodeApprovalPayload = {
@@ -44,7 +48,7 @@ export function enterExecuteCodeApprovalGate(
 
     pendingApprovals.set(executionId, {
       payload: fullPayload,
-      resolve: (approved) => resolve({ approved, payload: fullPayload }),
+      resolve: (result) => resolve(result),
       reject,
       timer,
     });
@@ -56,13 +60,19 @@ export function enterExecuteCodeApprovalGate(
 export function resolveExecuteCodeApproval(
   executionId: string,
   action: ExecuteCodeApprovalAction,
+  denyReason?: string,
 ): void {
   const pending = pendingApprovals.get(executionId);
   if (!pending) return;
 
   clearTimeout(pending.timer);
   pendingApprovals.delete(executionId);
-  pending.resolve(action === "approve_once");
+
+  if (action === "approve_once") {
+    pending.resolve({ approved: true, payload: pending.payload });
+  } else {
+    pending.resolve({ approved: false, denyReason });
+  }
 }
 
 export function resolvePendingExecuteCodeApprovalsForProject(

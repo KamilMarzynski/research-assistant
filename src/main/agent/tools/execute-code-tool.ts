@@ -125,6 +125,10 @@ export function createExecuteCodeTool(
       );
 
       if (!approval.approved) {
+        const denyReason = approval.denyReason;
+        const msg = denyReason
+          ? `User denied code execution. ${denyReason}`
+          : "User denied code execution.";
         await appendAuditEntry(options.auditLogPath, {
           ts: startedAt,
           projectId: options.projectId,
@@ -138,13 +142,13 @@ export function createExecuteCodeTool(
           inlineFiles: inlineFileNames,
           exitCode: null,
           blocked: true,
-          blockReason: "User denied code execution.",
+          blockReason: msg,
           blockKey: "execute_code_denied",
           blockCategory: "code_execution",
         });
         return {
-          content: [{ type: "text" as const, text: "User denied code execution." }],
-          details: { stdout: "", outputFiles: [], error: "User denied code execution." },
+          content: [{ type: "text" as const, text: msg }],
+          details: { stdout: "", outputFiles: [], error: msg },
         };
       }
 

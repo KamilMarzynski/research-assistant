@@ -146,6 +146,56 @@ describe("createExecuteCodeTool", () => {
     expect(auditEntry.code).toBe("print('nope')");
   });
 
+  it("includes denyReason in tool result when denied with feedback", async () => {
+    const emitApprovalRequired = vi.fn();
+    const auditLogPath = join(tempDir, "audit.log");
+    const jail = { validate: (p: string) => p } as unknown as PathJail;
+    const tool = createExecuteCodeTool(jail, {
+      projectId: "p1",
+      auditLogPath,
+      allowlistService: new AllowlistService(),
+      emitApprovalRequired,
+    });
+
+    const pending = tool.execute("tool-call", {
+      intent: "try code",
+      code: "print('nope')",
+      language: "python",
+    });
+
+    await vi.waitFor(() => expect(emitApprovalRequired).toHaveBeenCalledTimes(1));
+    const request = emitApprovalRequired.mock.calls[0][0];
+    resolveExecuteCodeApproval(request.executionId, "deny", "use read_file instead");
+    const result = await pending;
+
+    expect(getText(result)).toBe("User denied code execution. use read_file instead");
+  });
+
+  it("omits denyReason from tool result when denied without feedback", async () => {
+    const emitApprovalRequired = vi.fn();
+    const auditLogPath = join(tempDir, "audit.log");
+    const jail = { validate: (p: string) => p } as unknown as PathJail;
+    const tool = createExecuteCodeTool(jail, {
+      projectId: "p1",
+      auditLogPath,
+      allowlistService: new AllowlistService(),
+      emitApprovalRequired,
+    });
+
+    const pending = tool.execute("tool-call", {
+      intent: "try code",
+      code: "print('nope')",
+      language: "python",
+    });
+
+    await vi.waitFor(() => expect(emitApprovalRequired).toHaveBeenCalledTimes(1));
+    const request = emitApprovalRequired.mock.calls[0][0];
+    resolveExecuteCodeApproval(request.executionId, "deny");
+    const result = await pending;
+
+    expect(getText(result)).toBe("User denied code execution.");
+  });
+
   it("bypasses execute-code approval and requested path approvals when project policy allows it", async () => {
     const emitApprovalRequired = vi.fn();
     const allowlistService = new AllowlistService();

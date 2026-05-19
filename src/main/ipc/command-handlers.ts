@@ -40,12 +40,12 @@ export function registerCommandHandlers(
 
   ipcMain.handle(IPC.RESOLVE_EXECUTE_CODE_APPROVAL, (_event, payload: unknown) =>
     wrapIpc(async () => {
-      const { executionId, action } = parseOrThrow(
+      const { executionId, action, denyReason } = parseOrThrow(
         ResolveExecuteCodeApprovalSchema,
         payload,
         "RESOLVE_EXECUTE_CODE_APPROVAL",
       );
-      resolveExecuteCodeApproval(executionId, action);
+      resolveExecuteCodeApproval(executionId, action, denyReason);
     }),
   );
 
