@@ -206,24 +206,24 @@ export default function MessageInput({
                   </span>
                 )}
                 sx={{
-                  minWidth: 130,
                   flexShrink: 0,
                   fontSize: "var(--text-sm)",
                   color: "var(--ink)",
+                  borderRadius: "var(--r-sm)",
+                  transition: "background 120ms ease",
                   "& .MuiSelect-select": {
                     py: 0.5,
-                    px: 1,
+                    px: 0.75,
                     fontSize: "var(--text-sm)",
                     display: "flex",
                     alignItems: "center",
                     gap: 0.5,
                     color: "var(--ink)",
                   },
-                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--line-strong)" },
-                  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--accent)" },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "var(--accent)",
-                  },
+                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  "&:hover .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  "&:hover": { background: "var(--surface-2)" },
                 }}
                 MenuProps={{
                   anchorOrigin: { vertical: "top", horizontal: "left" },
@@ -285,24 +285,24 @@ export default function MessageInput({
                   </span>
                 )}
                 sx={{
-                  minWidth: 176,
                   flexShrink: 0,
                   fontSize: "var(--text-sm)",
                   color: approvalAccent,
+                  borderRadius: "var(--r-sm)",
+                  transition: "background 120ms ease",
                   "& .MuiSelect-select": {
                     py: 0.5,
-                    px: 1,
+                    px: 0.75,
                     fontSize: "var(--text-sm)",
                     display: "flex",
                     alignItems: "center",
                     gap: 0.5,
                     color: approvalAccent,
                   },
-                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--line-strong)" },
-                  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--accent)" },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "var(--accent)",
-                  },
+                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  "&:hover .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  "&:hover": { background: "var(--surface-2)" },
                 }}
                 MenuProps={{
                   anchorOrigin: { vertical: "top", horizontal: "left" },

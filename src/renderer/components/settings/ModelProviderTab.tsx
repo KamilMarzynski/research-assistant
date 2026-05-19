@@ -67,17 +67,17 @@ export default function ModelProviderTab({
           return (
             <label
               key={provider.id}
+              className="provider-card"
               style={{
                 position: "relative",
                 border: `1px solid ${isActive ? "var(--accent)" : "var(--line)"}`,
-                background: isActive ? "var(--accent-soft)" : "var(--surface)",
+                background: isActive ? "var(--accent-soft)" : undefined,
                 borderRadius: "var(--r-md)",
                 padding: "12px 16px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
-                transition: "border-color 120ms ease, background 120ms ease",
               }}
             >
               <input

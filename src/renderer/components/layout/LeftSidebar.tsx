@@ -210,7 +210,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
             padding: "7px 10px",
             borderRadius: 8,
             cursor: "pointer" as const,
-            background: isActive ? "var(--accent-soft)" : "transparent",
+            background: isActive ? "var(--accent-soft)" : undefined,
             color: isActive ? "var(--accent)" : "var(--ink)",
             fontWeight: isActive ? (500 as const) : (400 as const),
             fontSize: 13,
@@ -240,6 +240,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
             <button
               key={p.id}
               type="button"
+              className="nav-row"
               data-testid={`project-item-${p.id}`}
               onClick={() => setActiveProjectId(p.id)}
               onContextMenu={(e) => handleContextMenu(e, p)}

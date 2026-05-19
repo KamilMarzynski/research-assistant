@@ -44,7 +44,7 @@ export default function SettingsTabs({
           fontWeight: isActive ? 500 : 400,
           color: isActive ? "var(--accent)" : "var(--ink-2)",
           cursor: "pointer",
-          background: isActive ? "var(--accent-soft)" : "transparent",
+          background: isActive ? "var(--accent-soft)" : undefined,
           border: "none",
           borderRadius: isVertical ? 8 : 0,
           marginBottom: isVertical ? 0 : -1,
@@ -55,7 +55,13 @@ export default function SettingsTabs({
           btnStyle.borderBottom = `2px solid ${isActive ? "var(--accent)" : "transparent"}`;
         }
         return (
-          <button key={t.label} type="button" onClick={() => onChange(i)} style={btnStyle}>
+          <button
+            key={t.label}
+            type="button"
+            className="nav-row"
+            onClick={() => onChange(i)}
+            style={btnStyle}
+          >
             <Icon size={13} />
             {t.label}
           </button>

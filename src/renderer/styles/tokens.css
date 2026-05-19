@@ -165,6 +165,50 @@ body {
   justify-content: center;
 }
 
+/* Nav row — sidebar items, settings tabs, any list row needing ghost hover */
+.nav-row {
+  background: transparent;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+.nav-row:hover {
+  background: var(--surface-2);
+}
+
+/* Provider card — settings provider selector cards */
+.provider-card {
+  background: var(--surface);
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+.provider-card:hover {
+  background: var(--surface-2);
+}
+
+/* Ghost select — borderless native <select> for inline pickers */
+.select-ghost {
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 4px 8px 4px 6px;
+  cursor: pointer;
+  outline: none;
+  width: 100%;
+  transition: background 120ms ease;
+}
+.select-ghost:hover {
+  background: var(--surface-2);
+}
+.select-ghost:focus {
+  background: var(--surface-2);
+  outline: none;
+}
+
 /* Input */
 .input {
   font-family: inherit;
