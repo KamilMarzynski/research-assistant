@@ -82,7 +82,7 @@ describe("SummaryStreamCoordinator", () => {
     queue.push("p1", "Result here.");
     eventBus.emit({
       type: "research:summary_ready",
-      payload: { projectId: "p1", text: "Result here." },
+      payload: { projectId: "p1", text: "Result here.", movedFiles: [] },
     });
     await new Promise((r) => setTimeout(r, 10));
     const doneCalls = (emitPush as ReturnType<typeof vi.fn>).mock.calls.filter(
@@ -99,7 +99,7 @@ describe("SummaryStreamCoordinator", () => {
     queue.push("p1", "Deferred.");
     eventBus.emit({
       type: "research:summary_ready",
-      payload: { projectId: "p1", text: "Deferred." },
+      payload: { projectId: "p1", text: "Deferred.", movedFiles: [] },
     });
     await new Promise((r) => setTimeout(r, 10));
     const doneCalls = (emitPush as ReturnType<typeof vi.fn>).mock.calls.filter(

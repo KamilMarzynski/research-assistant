@@ -15,7 +15,6 @@ import {
   finisherPrompt,
   orchestratorPrompt,
   researcherPrompt,
-  summarizerPrompt,
 } from "./prompts";
 import type { AgentToolName, AgentType, EvaluationVerdict, SpawnResult } from "./tools";
 import { createAgentTools } from "./tools";
@@ -216,20 +215,6 @@ export const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
       toolNames: [...ORCHESTRATOR_TOOL_NAMES],
       systemPromptAddition: orchestratorPrompt(dirs, outputPath, base.filesMdContent),
       remainingDepth: depth,
-    };
-  },
-  summarizer: (base, _outputPath) => {
-    const dirs = buildAgentDirs({
-      folderPath: base.folderPath,
-      homePath: base.homePath,
-      slug: base.slug,
-      taskWorkspaceDir: base.taskWorkspacePath ?? base.homePath,
-    });
-    return {
-      ...base,
-      toolNames: ["read_file", "list_dir", "read_memory"],
-      systemPromptAddition: summarizerPrompt(dirs, base.filesMdContent),
-      remainingDepth: 0,
     };
   },
   finisher: (base, _outputPath) => {

@@ -82,7 +82,7 @@ type AppEvent =
     }
   | {
       type: "research:summary_ready";
-      payload: { projectId: string; text: string; movedFiles?: string[] };
+      payload: { projectId: string; text: string; movedFiles: string[] };
     };
 
 @injectable()
