@@ -49,7 +49,7 @@ export function researcherPrompt(
   filesMdContent?: string,
 ): string {
   const outputSection = filesMdContent
-    ? `## Output routing
+    ? `## Output Routing
 
 FILES.md defines where research outputs should be saved. Follow it exactly when writing final files.
 
@@ -85,7 +85,12 @@ ${outputSection}
 
 Use Markdown with clear headings and a Sources section at the end.
 
-When done, respond with a brief summary of key findings and where you saved them.`;
+## Handoff
+
+When your research is complete, you must declare every file you created.
+
+### Output Files
+List each file you wrote on a separate line, as an absolute path. Do not include intermediate or scratch files — only final deliverables.`;
 }
 
 export function orchestratorPrompt(
@@ -94,7 +99,7 @@ export function orchestratorPrompt(
   filesMdContent?: string,
 ): string {
   const outputSection = filesMdContent
-    ? `## Output routing
+    ? `## Output Routing
 
 FILES.md defines where research outputs should be saved. Follow it when writing your final synthesis.
 
@@ -120,9 +125,12 @@ ${outputSection}
 3. Use spawn_agent for sequential tasks with dependencies
 4. Each spawned agent receives its own outputPath within \`taskWorkspaceDir\`
 
-## Synthesis
+## Handoff
 
-Combine findings from subagents into a coherent conclusion. Do not concatenate outputs. Resolve conflicts, summarise themes, and present actionable results.`;
+When all sub-agents have completed, you must aggregate their output file declarations.
+
+### Output Files
+Take the union of all files declared by sub-agents and list each one on a separate line, as an absolute path. Do not include intermediate or scratch files.`;
 }
 
 export function coderPrompt(dirs: AgentDirs, outputPath: string): string {
@@ -146,20 +154,23 @@ export function evaluatorPrompt(): string {
   return "You are a research evaluator. Read the file at the given path, assess it against the criteria, and respond with ONLY a JSON object. No preamble. No explanation.";
 }
 
-export function summarizerPrompt(dirs: AgentDirs, filesMdContent?: string): string {
-  return `You are the Scholar research assistant. A background research task just completed.
-Your job: verify the output files exist, read enough to identify key findings, then write a brief natural completion message for the user.
+export function finisherPrompt(dirs: AgentDirs, filesMdContent?: string): string {
+  return `You are a research finisher. A background research task just completed.
+Your job: verify the output files exist, read enough to identify key findings, then move final files to userProjectDir and write a brief natural completion message for the user.
 
-${dirSection(dirs)}${filesMdContent ? `\n\n## Output Routing (FILES.md)\n\n${filesMdContent}` : ""}
+${dirSection(dirs)}${filesMdContent ? `\n\n## Output Routing\n\n${filesMdContent}` : ""}
 
 ## Available tools
 - **read_file** — read any file in the project directories
 - **list_dir** — list directory contents to verify files exist
 - **read_memory** — access project memories for context on goals and conventions
+- **safe_bash** — use mv via safe_bash to move files from taskWorkspaceDir to userProjectDir
 
 ## Instructions
 - Check whether output files actually exist before claiming success
 - Read enough of the research output to surface 2–3 concrete findings
+- Use safe_bash with mv to move final files from taskWorkspaceDir to userProjectDir
+- Never recreate files that already exist
 - Write naturally, as if briefly updating the user on background work
 - Keep the final message under 150 words
 - Write ONLY the final message — no preamble, no tool output, no explanation`;

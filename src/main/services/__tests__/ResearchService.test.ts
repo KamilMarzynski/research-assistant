@@ -114,16 +114,6 @@ function makeSettingsService() {
   };
 }
 
-function makeArtifactService() {
-  return {
-    saveArtifact: vi.fn().mockResolvedValue(undefined),
-    listArtifacts: vi.fn().mockResolvedValue([]),
-    listUnacknowledged: vi.fn().mockResolvedValue([]),
-    acknowledge: vi.fn().mockResolvedValue(undefined),
-    acknowledgeAll: vi.fn().mockResolvedValue(undefined),
-  };
-}
-
 function makeObservabilityService() {
   return {
     getTraceId: vi.fn().mockResolvedValue(null),
@@ -159,9 +149,9 @@ function makeTaskPersistenceService() {
   };
 }
 
-function makeResearchSummarizerService() {
+function makeResearchFinisherService() {
   return {
-    summarize: vi.fn().mockResolvedValue(undefined),
+    finish: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -186,10 +176,9 @@ describe("ResearchService", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskId).toBeTruthy();
@@ -207,10 +196,9 @@ describe("ResearchService", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -228,10 +216,9 @@ describe("ResearchService", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskPersistence.saveTask).toHaveBeenCalledWith(
@@ -252,10 +239,9 @@ describe("ResearchService", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -288,10 +274,9 @@ describe("ResearchService", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     await expect(svc.startResearch("p1", "My Project", "research X", null)).rejects.toThrow(
       "No API key configured",
@@ -325,10 +310,9 @@ describe("ResearchService", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -354,10 +338,9 @@ describe("ResearchService", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -386,10 +369,9 @@ describe("ResearchService", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -417,10 +399,9 @@ describe("ResearchService", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -431,6 +412,39 @@ describe("ResearchService", () => {
         type: "research:complete",
         payload: expect.objectContaining({ filePaths: [] }),
       }),
+    );
+  });
+
+  it("passes accumulated researchOutput to finisher.finish", async () => {
+    const finisher = makeResearchFinisherService();
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
+      finisher as never,
+    );
+    await svc.startResearch("p1", "My Project", "research X", null);
+
+    await getCaptured().current?.({
+      type: "message_update",
+      assistantMessageEvent: { type: "text_delta", delta: "first chunk" },
+    });
+    await getCaptured().current?.({
+      type: "message_update",
+      assistantMessageEvent: { type: "text_delta", delta: " second chunk" },
+    });
+    await getCaptured().current?.({ type: "agent_end" });
+
+    expect(finisher.finish).toHaveBeenCalledWith(
+      expect.objectContaining({ researchOutput: "first chunk second chunk" }),
     );
   });
 });
@@ -456,10 +470,9 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -484,10 +497,9 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 5 }));
@@ -505,10 +517,9 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -533,10 +544,9 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -554,10 +564,9 @@ describe("ResearchService – startOrchestratedResearch", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       taskPersistence as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -594,10 +603,9 @@ describe("ResearchService – _runResearch internals", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query A", null);
@@ -627,10 +635,9 @@ describe("ResearchService – _runResearch internals", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -661,10 +668,9 @@ describe("ResearchService – _runResearch internals", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
 
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
@@ -689,10 +695,9 @@ describe("ResearchService – _runResearch internals", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -716,10 +721,9 @@ describe("ResearchService – _runResearch internals", () => {
           .fn()
           .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
       } as never,
-      makeArtifactService() as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
-      makeResearchSummarizerService() as never,
+      makeResearchFinisherService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(

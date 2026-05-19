@@ -31,8 +31,8 @@ import { MessageService } from "./services/MessageService";
 import { ObservabilityService } from "./services/ObservabilityService";
 import { OutputNotificationService } from "./services/OutputNotificationService";
 import { ProjectService } from "./services/ProjectService";
+import { ResearchFinisherService } from "./services/ResearchFinisherService";
 import { ResearchService } from "./services/ResearchService";
-import { ResearchSummarizerService } from "./services/ResearchSummarizerService";
 import { SettingsService } from "./services/SettingsService";
 import { SkillManagementService } from "./services/SkillManagementService";
 import { SkillWatcherService } from "./services/SkillWatcherService";
@@ -64,7 +64,7 @@ export async function bootstrap(): Promise<DependencyContainer> {
   appContainer.registerSingleton(MessageService);
   appContainer.registerSingleton(ArtifactService);
   appContainer.registerSingleton(ResearchService);
-  appContainer.registerSingleton(ResearchSummarizerService);
+  appContainer.registerSingleton(ResearchFinisherService);
   appContainer.registerSingleton(EventBus);
   appContainer.registerSingleton(SettingsService);
   appContainer.registerSingleton(ObservabilityService);

@@ -31,7 +31,7 @@ export type AgentToolName =
   | "read_memory";
 
 export type SpawnResult = { outputPath: string; summary: string };
-export type AgentType = "researcher" | "coder" | "orchestrator" | "summarizer";
+export type AgentType = "researcher" | "coder" | "orchestrator" | "finisher";
 
 export interface EvaluationVerdict {
   pass: boolean;

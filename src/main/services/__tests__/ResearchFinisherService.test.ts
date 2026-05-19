@@ -4,13 +4,13 @@ import { EventBus } from "../../event-bus";
 
 const mockRun = vi
   .fn()
-  .mockResolvedValue("Research complete. Files found at /path/to/output.md. Key finding: X.");
+  .mockResolvedValue("Research done. Files at /project/output.md. Key finding: X.");
 const mockAgent = { subscribe: vi.fn(), abort: vi.fn() };
 
 vi.mock("../../agent/worker-agent", () => ({
   createWorkerAgent: vi.fn().mockResolvedValue({ run: mockRun, agent: mockAgent }),
   AGENT_TYPE_PRESETS: {
-    summarizer: vi.fn().mockReturnValue({}),
+    finisher: vi.fn().mockReturnValue({}),
   },
 }));
 
@@ -25,7 +25,7 @@ vi.mock("node:fs/promises", () => ({
   readFile: mockReadFile,
 }));
 
-const { ResearchSummarizerService } = await import("../ResearchSummarizerService");
+const { ResearchFinisherService } = await import("../ResearchFinisherService");
 
 function makeMessageService() {
   return {
@@ -53,12 +53,14 @@ function makeEventBus() {
   return bus;
 }
 
-function makeJob() {
+function makeJob(researchOutput?: string) {
   return {
     projectId: "p1",
     projectName: "Test Project",
     query: "What is the best model?",
-    filePaths: ["/tmp/.scholar/projects/test/output.md"],
+    researchOutput:
+      researchOutput ??
+      "Some research.\n\n## Handoff\nWent well.\n\n### Output Files\n/project/output.md",
     taskWorkspacePath: "/tmp/.scholar/projects/test/workspace/abc",
     projectPath: "/tmp/.scholar/projects/test",
     folderPath: null,
@@ -68,8 +70,8 @@ function makeJob() {
   };
 }
 
-describe("ResearchSummarizerService", () => {
-  let service: InstanceType<typeof ResearchSummarizerService>;
+describe("ResearchFinisherService", () => {
+  let service: InstanceType<typeof ResearchFinisherService>;
   let messageService: ReturnType<typeof makeMessageService>;
   let eventBus: EventBus;
 
@@ -77,7 +79,7 @@ describe("ResearchSummarizerService", () => {
     vi.clearAllMocks();
     messageService = makeMessageService();
     eventBus = makeEventBus();
-    service = new ResearchSummarizerService(
+    service = new ResearchFinisherService(
       messageService as never,
       makeHomeService() as never,
       makeAllowlistService() as never,
@@ -86,33 +88,59 @@ describe("ResearchSummarizerService", () => {
   });
 
   it("saves assistant message to DB after worker runs", async () => {
-    await service.summarize(makeJob());
+    await service.finish(makeJob());
     expect(messageService.addMessage).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: "p1", role: "assistant" }),
     );
   });
 
-  it("emits research:summary_ready with the generated text", async () => {
-    await service.summarize(makeJob());
+  it("emits research:summary_ready with text and movedFiles parsed from researchOutput", async () => {
+    await service.finish(makeJob());
     expect(eventBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "research:summary_ready",
-        payload: expect.objectContaining({ projectId: "p1", text: expect.any(String) }),
+        payload: expect.objectContaining({
+          projectId: "p1",
+          text: expect.any(String),
+          movedFiles: ["/project/output.md"],
+        }),
+      }),
+    );
+  });
+
+  it("movedFiles is empty when ### Output Files section absent", async () => {
+    await service.finish(makeJob("Research done, no handoff section."));
+    expect(eventBus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "research:summary_ready",
+        payload: expect.objectContaining({ movedFiles: [] }),
+      }),
+    );
+  });
+
+  it("movedFiles parses multiple paths", async () => {
+    await service.finish(
+      makeJob("## Handoff\nDone.\n\n### Output Files\n/project/a.md\n/project/b.md"),
+    );
+    expect(eventBus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "research:summary_ready",
+        payload: expect.objectContaining({ movedFiles: ["/project/a.md", "/project/b.md"] }),
       }),
     );
   });
 
   it("saves static fallback message when worker throws", async () => {
     mockRun.mockRejectedValueOnce(new Error("model timeout"));
-    await service.summarize(makeJob());
+    await service.finish(makeJob());
     const call = (messageService.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(call.content).toContain("Research complete");
     expect(call.content).toContain("What is the best model?");
   });
 
-  it("emits research:summary_ready even on fallback", async () => {
+  it("emits research:summary_ready even on worker fallback", async () => {
     mockRun.mockRejectedValueOnce(new Error("fail"));
-    await service.summarize(makeJob());
+    await service.finish(makeJob());
     expect(eventBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({ type: "research:summary_ready" }),
     );
@@ -120,43 +148,34 @@ describe("ResearchSummarizerService", () => {
 
   it("emits research:summary_ready even when DB save throws", async () => {
     messageService.addMessage.mockRejectedValueOnce(new Error("db down"));
-    await service.summarize(makeJob());
+    await service.finish(makeJob());
     expect(eventBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({ type: "research:summary_ready" }),
     );
   });
 
-  it("reads FILES.md when filesMdContent is not provided", async () => {
+  it("reads FILES.md when filesMdContent not provided", async () => {
     mockReadFile.mockResolvedValueOnce("# Files\n\n- output.md");
-    await service.summarize(makeJob());
+    await service.finish(makeJob());
     expect(mockReadFile).toHaveBeenCalledWith("/tmp/.scholar/projects/test/FILES.md", "utf-8");
   });
 
-  it("skips reading FILES.md when filesMdContent is already provided", async () => {
-    await service.summarize({ ...makeJob(), filesMdContent: "provided" });
+  it("skips reading FILES.md when filesMdContent already provided", async () => {
+    await service.finish({ ...makeJob(), filesMdContent: "provided" });
     expect(mockReadFile).not.toHaveBeenCalled();
   });
 
   it("uses home-based project path when projectPath is null", async () => {
-    await service.summarize({ ...makeJob(), projectPath: null });
+    await service.finish({ ...makeJob(), projectPath: null });
     expect(mockReadFile).toHaveBeenCalledWith("/tmp/.scholar/projects/test/FILES.md", "utf-8");
   });
 
-  it("handles empty filePaths in success path", async () => {
-    await service.summarize({ ...makeJob(), filePaths: [] });
-    expect(mockRun).toHaveBeenCalledWith(
-      expect.stringContaining("Files reportedly saved to: none"),
-    );
+  it("passes researchOutput to agent task prompt", async () => {
+    await service.finish(makeJob("## Handoff\nAll good.\n\n### Output Files\n/a.md"));
+    expect(mockRun).toHaveBeenCalledWith(expect.stringContaining("## Handoff"));
   });
 
-  it("handles empty filePaths in fallback path", async () => {
-    mockRun.mockRejectedValueOnce(new Error("fail"));
-    await service.summarize({ ...makeJob(), filePaths: [] });
-    const call = (messageService.addMessage as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(call.content).toContain("workspace");
-  });
-
-  it("serialises jobs — second job runs after first completes", async () => {
+  it("serialises jobs — second runs after first completes", async () => {
     const order: string[] = [];
     let resolveFirst: (() => void) | undefined;
     const firstPromise = new Promise<string>((resolve) => {
@@ -172,10 +191,9 @@ describe("ResearchSummarizerService", () => {
         return "second done";
       });
 
-    const p1 = service.summarize({ ...makeJob(), projectId: "p1" });
-    const p2 = service.summarize({ ...makeJob(), projectId: "p2" });
+    const p1 = service.finish({ ...makeJob(), projectId: "p1" });
+    const p2 = service.finish({ ...makeJob(), projectId: "p2" });
 
-    // first hasn't finished yet — second should not have started
     expect(order).toEqual([]);
     resolveFirst?.();
     await p1;

@@ -12,9 +12,9 @@ import {
   buildAgentDirs,
   coderPrompt,
   evaluatorPrompt,
+  finisherPrompt,
   orchestratorPrompt,
   researcherPrompt,
-  summarizerPrompt,
 } from "./prompts";
 import { modelMetadataService } from "./providers/ModelMetadataService";
 import type { AgentToolName, AgentType, EvaluationVerdict, SpawnResult } from "./tools";
@@ -218,7 +218,7 @@ export const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
       remainingDepth: depth,
     };
   },
-  summarizer: (base, _outputPath) => {
+  finisher: (base, _outputPath) => {
     const dirs = buildAgentDirs({
       folderPath: base.folderPath,
       homePath: base.homePath,
@@ -227,8 +227,8 @@ export const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
     });
     return {
       ...base,
-      toolNames: ["read_file", "list_dir", "read_memory"],
-      systemPromptAddition: summarizerPrompt(dirs, base.filesMdContent),
+      toolNames: ["read_file", "list_dir", "read_memory", "safe_bash", "write_file"],
+      systemPromptAddition: finisherPrompt(dirs, base.filesMdContent),
       remainingDepth: 0,
     };
   },

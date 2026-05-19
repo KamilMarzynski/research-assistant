@@ -8,11 +8,11 @@ import { AllowlistService } from "./AllowlistService";
 import { HomeService } from "./HomeService";
 import { MessageService } from "./MessageService";
 
-export interface SummarizeJob {
+export interface FinishJob {
   projectId: string;
   projectName: string;
   query: string;
-  filePaths: string[];
+  researchOutput: string;
   taskWorkspacePath: string;
   projectPath: string | null;
   folderPath: string | null;
@@ -21,10 +21,20 @@ export interface SummarizeJob {
   filesMdContent?: string;
 }
 
+function parseOutputFiles(text: string): string[] {
+  const idx = text.indexOf("### Output Files");
+  if (idx === -1) return [];
+  const section = text.slice(idx + "### Output Files".length);
+  return section
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("/"));
+}
+
 @injectable()
-export class ResearchSummarizerService {
+export class ResearchFinisherService {
   private _running = false;
-  private readonly _queue: SummarizeJob[] = [];
+  private readonly _queue: FinishJob[] = [];
 
   constructor(
     @inject(MessageService) private readonly messageService: MessageService,
@@ -33,7 +43,7 @@ export class ResearchSummarizerService {
     @inject(EventBus) private readonly eventBus: EventBus,
   ) {}
 
-  summarize(job: SummarizeJob): Promise<void> {
+  finish(job: FinishJob): Promise<void> {
     this._queue.push(job);
     if (!this._running) {
       return this._processQueue();
@@ -54,12 +64,13 @@ export class ResearchSummarizerService {
     }
   }
 
-  private async _processJob(job: SummarizeJob): Promise<void> {
+  private async _processJob(job: FinishJob): Promise<void> {
+    const movedFiles = parseOutputFiles(job.researchOutput);
     let text: string;
     try {
-      text = await this._runSummarizer(job);
+      text = await this._runFinisher(job);
     } catch (err) {
-      console.error("[ResearchSummarizerService] summarizer failed:", err);
+      console.error("[ResearchFinisherService] finisher failed:", err);
       text = this._fallbackText(job);
     }
 
@@ -70,16 +81,16 @@ export class ResearchSummarizerService {
         content: text,
       });
     } catch (err) {
-      console.error("[ResearchSummarizerService] failed to save message:", err);
+      console.error("[ResearchFinisherService] failed to save message:", err);
     }
 
     this.eventBus.emit({
       type: "research:summary_ready",
-      payload: { projectId: job.projectId, text },
+      payload: { projectId: job.projectId, text, movedFiles },
     });
   }
 
-  private async _runSummarizer(job: SummarizeJob): Promise<string> {
+  private async _runFinisher(job: FinishJob): Promise<string> {
     const homePath = this.homeService.getHomePath();
     const projectPath = job.projectPath ?? join(homePath, "projects", job.slug);
 
@@ -92,7 +103,7 @@ export class ResearchSummarizerService {
       }
     }
 
-    const workerConfig = AGENT_TYPE_PRESETS.summarizer(
+    const workerConfig = AGENT_TYPE_PRESETS.finisher(
       {
         projectId: job.projectId,
         slug: job.slug,
@@ -116,20 +127,16 @@ export class ResearchSummarizerService {
       "",
       `Query: "${job.query}"`,
       `Task workspace: ${job.taskWorkspacePath}`,
-      `Files reportedly saved to: ${job.filePaths.length > 0 ? job.filePaths.join(", ") : "none"}`,
       "",
-      "1. Verify the output files exist at the reported paths using read_file or list_dir.",
-      "   If FILES.md specifies routing conventions, check those paths too.",
-      "2. Read enough of the research output to identify 2–3 key findings.",
-      "3. Write a short natural message for the user: whether it went smoothly, where the results are, and the key findings.",
-      "Write ONLY the final message, nothing else.",
+      "Research output (contains ## Handoff with declared output files):",
+      "",
+      job.researchOutput,
     ].join("\n");
 
     return run(taskPrompt);
   }
 
-  private _fallbackText(job: SummarizeJob): string {
-    const paths = job.filePaths.length > 0 ? job.filePaths.join(", ") : "workspace";
-    return `Research complete: "${job.query}". Results saved to: ${paths}. (Summary generation failed — check files manually.)`;
+  private _fallbackText(job: FinishJob): string {
+    return `Research complete: "${job.query}". Results in workspace: ${job.taskWorkspacePath}. (Completion agent failed — check files manually.)`;
   }
 }
