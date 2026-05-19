@@ -245,7 +245,7 @@ export default function LeftSidebar({ onOpenSettings }: LeftSidebarProps) {
               style={itemStyle}
             >
               <span
-                className={`dot ${isActive ? "dot--accent" : "dot--idle"} ${states[p.id]?.processing ? "dot--pulse" : ""}`}
+                className={`dot ${isActive ? "dot--accent" : (states[p.id]?.researchCount ?? 0) > 0 ? "dot--accent" : "dot--idle"} ${states[p.id]?.processing || (states[p.id]?.researchCount ?? 0) > 0 ? "dot--pulse" : ""}`}
                 style={{ flexShrink: 0 }}
               />
               <span

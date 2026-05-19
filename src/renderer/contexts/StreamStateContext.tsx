@@ -23,6 +23,7 @@ export type StreamSegment =
 export interface ProjectStreamState {
   streamingSegments: StreamSegment[];
   processing: boolean;
+  researchCount: number;
 }
 
 // ─── Reducer state ────────────────────────────────────────────────────────────
@@ -49,7 +50,9 @@ export type StreamAction =
       projectId: string;
       toolCallId: string;
       isError: boolean;
-    };
+    }
+  | { type: "RESEARCH_STARTED"; projectId: string }
+  | { type: "RESEARCH_ENDED"; projectId: string };
 
 // ─── Initial state ────────────────────────────────────────────────────────────
 
@@ -68,6 +71,7 @@ export function streamReducer(state: StreamState, action: StreamAction): StreamS
           [action.projectId]: {
             streamingSegments: existing?.streamingSegments ?? [],
             processing: true,
+            researchCount: existing?.researchCount ?? 0,
           },
         },
       };
@@ -81,6 +85,36 @@ export function streamReducer(state: StreamState, action: StreamAction): StreamS
         states: {
           ...state.states,
           [action.projectId]: { ...existing, streamingSegments: [], processing: false },
+        },
+      };
+    }
+
+    case "RESEARCH_STARTED": {
+      const existing = state.states[action.projectId];
+      return {
+        ...state,
+        states: {
+          ...state.states,
+          [action.projectId]: {
+            streamingSegments: existing?.streamingSegments ?? [],
+            processing: existing?.processing ?? false,
+            researchCount: (existing?.researchCount ?? 0) + 1,
+          },
+        },
+      };
+    }
+
+    case "RESEARCH_ENDED": {
+      const existing = state.states[action.projectId];
+      if (!existing) return state;
+      return {
+        ...state,
+        states: {
+          ...state.states,
+          [action.projectId]: {
+            ...existing,
+            researchCount: Math.max(0, existing.researchCount - 1),
+          },
         },
       };
     }
@@ -103,7 +137,11 @@ export function streamReducer(state: StreamState, action: StreamAction): StreamS
         ...state,
         states: {
           ...state.states,
-          [action.projectId]: { streamingSegments: segments, processing: true },
+          [action.projectId]: {
+            streamingSegments: segments,
+            processing: true,
+            researchCount: existing?.researchCount ?? 0,
+          },
         },
       };
     }
@@ -127,6 +165,7 @@ export function streamReducer(state: StreamState, action: StreamAction): StreamS
           [action.projectId]: {
             streamingSegments: segments,
             processing: existing?.processing ?? true,
+            researchCount: existing?.researchCount ?? 0,
           },
         },
       };
@@ -229,6 +268,10 @@ export function StreamStateProvider({ children }: { children: ReactNode }) {
       } else if (kind === "tool_call_end") {
         const { projectId, toolCallId, isError } = event.event;
         dispatch({ type: "TOOL_CALL_END", projectId, toolCallId, isError });
+      } else if (kind === "research_started") {
+        dispatch({ type: "RESEARCH_STARTED", projectId: event.event.projectId });
+      } else if (kind === "research_complete" || kind === "research_failed") {
+        dispatch({ type: "RESEARCH_ENDED", projectId: event.event.projectId });
       }
     });
 

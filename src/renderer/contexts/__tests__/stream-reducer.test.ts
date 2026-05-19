@@ -10,6 +10,7 @@ function stateWithProject(
   projectId: string,
   partial: Partial<{
     processing: boolean;
+    researchCount: number;
     segments: StreamState["states"][string]["streamingSegments"];
   }> = {},
 ): StreamState {
@@ -17,6 +18,7 @@ function stateWithProject(
     states: {
       [projectId]: {
         processing: partial.processing ?? false,
+        researchCount: partial.researchCount ?? 0,
         streamingSegments: partial.segments ?? [],
       },
     },
@@ -28,7 +30,7 @@ describe("streamReducer", () => {
 
   it("START_STREAM creates project entry with processing=true", () => {
     const next = streamReducer(initialStreamState, { type: "START_STREAM", projectId: "p1" });
-    expect(next.states.p1).toEqual({ streamingSegments: [], processing: true });
+    expect(next.states.p1).toEqual({ streamingSegments: [], processing: true, researchCount: 0 });
   });
 
   it("START_STREAM preserves existing segments", () => {
@@ -55,7 +57,7 @@ describe("streamReducer", () => {
       processing: true,
     });
     const next = streamReducer(base, { type: "END_STREAM", projectId: "p1" });
-    expect(next.states.p1).toEqual({ streamingSegments: [], processing: false });
+    expect(next.states.p1).toEqual({ streamingSegments: [], processing: false, researchCount: 0 });
   });
 
   it("END_STREAM returns same state when project does not exist", () => {
@@ -224,6 +226,36 @@ describe("streamReducer", () => {
       toolCallId: "tc-1",
       isError: false,
     });
+    expect(next).toBe(initialStreamState);
+  });
+
+  // ─── RESEARCH_STARTED / RESEARCH_ENDED ───────────────────────────────────
+
+  it("RESEARCH_STARTED increments researchCount for new project", () => {
+    const next = streamReducer(initialStreamState, { type: "RESEARCH_STARTED", projectId: "p1" });
+    expect(next.states.p1.researchCount).toBe(1);
+  });
+
+  it("RESEARCH_STARTED increments researchCount for existing project", () => {
+    const base = stateWithProject("p1", { researchCount: 2 });
+    const next = streamReducer(base, { type: "RESEARCH_STARTED", projectId: "p1" });
+    expect(next.states.p1.researchCount).toBe(3);
+  });
+
+  it("RESEARCH_ENDED decrements researchCount", () => {
+    const base = stateWithProject("p1", { researchCount: 2 });
+    const next = streamReducer(base, { type: "RESEARCH_ENDED", projectId: "p1" });
+    expect(next.states.p1.researchCount).toBe(1);
+  });
+
+  it("RESEARCH_ENDED clamps researchCount to 0", () => {
+    const base = stateWithProject("p1", { researchCount: 0 });
+    const next = streamReducer(base, { type: "RESEARCH_ENDED", projectId: "p1" });
+    expect(next.states.p1.researchCount).toBe(0);
+  });
+
+  it("RESEARCH_ENDED returns same state when project does not exist", () => {
+    const next = streamReducer(initialStreamState, { type: "RESEARCH_ENDED", projectId: "p1" });
     expect(next).toBe(initialStreamState);
   });
 
