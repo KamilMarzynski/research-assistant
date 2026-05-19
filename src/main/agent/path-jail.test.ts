@@ -3,6 +3,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AllowlistService, ApprovalRequiredError } from "../services/AllowlistService";
+import { enterPathApprovalGate, resolvePathApprovalGate } from "./extensions/path-approval";
 import { PathJail } from "./path-jail";
 
 const HOME = join(homedir(), ".scholar");
@@ -223,5 +224,36 @@ describe("PathJail", () => {
       const p = join(realZone, "internal_link", "file.txt");
       expect(() => jail.validate(p, "write")).not.toThrow();
     });
+  });
+});
+
+describe("path approval gate denyReason", () => {
+  it("resolves with approved: true when approved", async () => {
+    const promise = enterPathApprovalGate("proj-1", "/some/path", "read");
+    resolvePathApprovalGate("proj-1", "/some/path", "read", true);
+    const result = await promise;
+    expect(result.approved).toBe(true);
+  });
+
+  it("resolves with approved: false and no denyReason when denied without message", async () => {
+    const promise = enterPathApprovalGate("proj-2", "/some/path", "read");
+    resolvePathApprovalGate("proj-2", "/some/path", "read", false);
+    const result = await promise;
+    expect(result.approved).toBe(false);
+    expect(result.denyReason).toBeUndefined();
+  });
+
+  it("resolves with denyReason when denied with message", async () => {
+    const promise = enterPathApprovalGate("proj-3", "/some/path", "write");
+    resolvePathApprovalGate(
+      "proj-3",
+      "/some/path",
+      "write",
+      false,
+      "use the workspace dir instead",
+    );
+    const result = await promise;
+    expect(result.approved).toBe(false);
+    expect(result.denyReason).toBe("use the workspace dir instead");
   });
 });

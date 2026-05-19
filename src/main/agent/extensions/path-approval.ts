@@ -1,6 +1,10 @@
+export type PathApprovalResult =
+  | { approved: true; denyReason?: undefined }
+  | { approved: false; denyReason?: string };
+
 const pendingGates = new Map<
   string,
-  { resolve: (approved: boolean) => void; timer: ReturnType<typeof setTimeout> }
+  { resolve: (result: PathApprovalResult) => void; timer: ReturnType<typeof setTimeout> }
 >();
 const timeoutHandlers = new Map<string, Set<() => void>>();
 
@@ -12,8 +16,8 @@ export function enterPathApprovalGate(
   projectId: string,
   path: string,
   mode: "read" | "write",
-): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
+): Promise<PathApprovalResult> {
+  return new Promise<PathApprovalResult>((resolve) => {
     const key = makeKey(projectId, path, mode);
     const timer = setTimeout(() => {
       pendingGates.delete(key);
@@ -22,7 +26,7 @@ export function enterPathApprovalGate(
       handlers?.forEach((handler) => {
         handler();
       });
-      resolve(false);
+      resolve({ approved: false });
     }, 300_000);
     pendingGates.set(key, { resolve, timer });
   });
@@ -33,6 +37,7 @@ export function resolvePathApprovalGate(
   path: string,
   mode: "read" | "write",
   approved: boolean,
+  denyReason?: string,
 ): void {
   const key = makeKey(projectId, path, mode);
   const gate = pendingGates.get(key);
@@ -40,7 +45,7 @@ export function resolvePathApprovalGate(
   clearTimeout(gate.timer);
   pendingGates.delete(key);
   timeoutHandlers.delete(key);
-  gate.resolve(approved);
+  gate.resolve(approved ? { approved: true } : { approved: false, denyReason });
 }
 
 export function onPathApprovalTimeout(

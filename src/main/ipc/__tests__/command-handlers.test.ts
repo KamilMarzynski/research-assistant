@@ -69,7 +69,7 @@ describe("registerCommandHandlers resolver", () => {
       stdout: expect.stringContaining("hello"),
     });
     await expect(executeCodePromise).resolves.toMatchObject({ approved: true });
-    await expect(pathPromise).resolves.toBe(true);
+    await expect(pathPromise).resolves.toEqual({ approved: true });
     expect(allowlistService.isAllowed("p1", "/tmp/restricted.txt", "read", [])).toEqual({
       allowed: true,
       needsApproval: false,
@@ -107,7 +107,7 @@ describe("registerCommandHandlers resolver", () => {
 
     await vi.advanceTimersByTimeAsync(300_000);
 
-    await expect(pathPromise).resolves.toBe(false);
+    await expect(pathPromise).resolves.toEqual({ approved: false });
     await expect(getPendingHandler({}, undefined)).resolves.toEqual({ ok: true, data: [] });
     await expect(resolver.resolvePendingApprovals("p1")).resolves.toEqual({
       status: "no_pending_approvals",

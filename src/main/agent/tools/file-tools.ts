@@ -134,13 +134,14 @@ export function createReadFileTool(
             if (emitApprovalRequired) {
               emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
             }
-            const approved = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
-            if (!approved) {
+            const gateResult = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            if (!gateResult.approved) {
+              const feedback = gateResult.denyReason ? ` ${gateResult.denyReason}` : "";
               return {
                 content: [
                   {
                     type: "text" as const,
-                    text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.`,
+                    text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.${feedback}`,
                   },
                 ],
                 details: {
@@ -298,13 +299,14 @@ export function createWriteFileTool(
                 intent,
               });
             }
-            const approved = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
-            if (!approved) {
+            const gateResult = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            if (!gateResult.approved) {
+              const feedback = gateResult.denyReason ? ` ${gateResult.denyReason}` : "";
               return {
                 content: [
                   {
                     type: "text" as const,
-                    text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.`,
+                    text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.${feedback}`,
                   },
                 ],
                 details: null,
@@ -489,13 +491,14 @@ export function createListDirTool(
             if (emitApprovalRequired) {
               emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
             }
-            const approved = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
-            if (!approved) {
+            const gateResult = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            if (!gateResult.approved) {
+              const feedback = gateResult.denyReason ? ` ${gateResult.denyReason}` : "";
               return {
                 content: [
                   {
                     type: "text" as const,
-                    text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.`,
+                    text: `User did not approve access to "${err.path}". Choose a different path or ask the user to allow it.${feedback}`,
                   },
                 ],
                 details: [],
