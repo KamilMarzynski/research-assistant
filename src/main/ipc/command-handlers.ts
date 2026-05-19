@@ -29,12 +29,12 @@ export function registerCommandHandlers(
 ): ProjectApprovalResolver {
   ipcMain.handle(IPC.RESOLVE_BLOCKED_COMMAND, (_event, payload: unknown) =>
     wrapIpc(async () => {
-      const { commandId, action, projectId } = parseOrThrow(
+      const { commandId, action, projectId, denyReason } = parseOrThrow(
         ResolveBlockedCommandSchema,
         payload,
         "RESOLVE_BLOCKED_COMMAND",
       );
-      resolveBlockedCommand(commandId, action, projectId);
+      resolveBlockedCommand(commandId, action, projectId, denyReason);
     }),
   );
 

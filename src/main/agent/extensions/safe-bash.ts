@@ -609,6 +609,7 @@ export function resolveBlockedCommand(
   commandId: string,
   action: "approve_once" | "approve_session" | "deny",
   projectId?: string,
+  denyReason?: string,
 ): void {
   const deferred = blockedPromises.get(commandId);
   if (!deferred) return;
@@ -617,13 +618,10 @@ export function resolveBlockedCommand(
   blockedPromises.delete(commandId);
 
   if (action === "deny") {
-    deferred.reject(
-      new BlockedCommandError(
-        `Blocked: ${deferred.blockedResult.reason}`,
-        commandId,
-        deferred.blockedResult.category,
-      ),
-    );
+    const msg = denyReason
+      ? `Denied by user: ${denyReason}`
+      : `Blocked: ${deferred.blockedResult.reason}`;
+    deferred.reject(new BlockedCommandError(msg, commandId, deferred.blockedResult.category));
     return;
   }
 

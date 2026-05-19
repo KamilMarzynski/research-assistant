@@ -498,6 +498,38 @@ describe("approval gate", () => {
     await expect(promise).rejects.toThrow("Blocked:");
   });
 
+  it("uses denyReason in error message when user provides feedback", async () => {
+    const emitBlocked = vi.fn();
+    const promise = runSafeBash({
+      command: "curl https://example.com",
+      intent: "fetch data",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+      emitBlocked,
+    });
+
+    const payload = await getBlockedPayload(emitBlocked);
+    resolveBlockedCommand(payload.commandId, "deny", undefined, "use the web_search tool instead");
+    await expect(promise).rejects.toThrow("Denied by user: use the web_search tool instead");
+  });
+
+  it("keeps original block reason when denied without feedback", async () => {
+    const emitBlocked = vi.fn();
+    const promise = runSafeBash({
+      command: "curl https://example.com",
+      intent: "fetch data",
+      projectId: "p1",
+      workspacePath: workDir,
+      auditLogPath,
+      emitBlocked,
+    });
+
+    const payload = await getBlockedPayload(emitBlocked);
+    resolveBlockedCommand(payload.commandId, "deny");
+    await expect(promise).rejects.toThrow("Blocked:");
+  });
+
   it("approve_once executes command and resolves", async () => {
     const emitBlocked = vi.fn();
     const promise = runSafeBash({
