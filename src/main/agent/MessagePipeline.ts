@@ -19,6 +19,8 @@ import { pruneMessages } from "./message-context-pruner";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
 import { getContextWindow } from "./model-registry";
+import type { ProviderModelMetadata } from "./providers/provider-client.types";
+import { getDefaultContextWindow } from "./providers/static-model-metadata";
 import { BASE_SYSTEM_PROMPT } from "./prompts";
 import { createDefaultSkillRouter } from "./SkillRouter";
 import { buildSystemPrompt } from "./system-prompt-builder";
@@ -32,6 +34,7 @@ export interface MessagePipelineOptions {
   projectPath: string | null;
   folderPath: string | null;
   provider: ModelProvider;
+  resolvedModelMetadata?: ProviderModelMetadata;
   messageService: MessageService;
   memoryManager: IMemoryManager;
   eventBus: EventBus;
@@ -188,15 +191,19 @@ export class MessagePipeline {
       allowlistService: options.allowlistService,
     });
 
+    const effectiveContextWindow =
+      options.resolvedModelMetadata?.effectiveContextWindow ??
+      options.resolvedModelMetadata?.maxContextWindow ??
+      getDefaultContextWindow();
+
     this.agent = new Agent({
       initialState: {
         systemPrompt,
-        model: createModel({ provider: options.provider }),
+        model: createModel({ provider: options.provider, metadata: options.resolvedModelMetadata }),
         tools,
         messages: initialMessages,
       },
-      transformContext: async (messages) =>
-        pruneMessages(messages, getContextWindow(options.provider.model)),
+      transformContext: async (messages) => pruneMessages(messages, effectiveContextWindow),
       getApiKey: async () =>
         options.provider.type === "ollama" ? "ollama" : options.provider.apiKey,
       beforeToolCall: async (ctx) => {

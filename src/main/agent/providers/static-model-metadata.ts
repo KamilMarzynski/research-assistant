@@ -7,6 +7,10 @@ export interface StaticModelEntry {
 
 export const DEFAULT_CONTEXT_WINDOW = 128_000;
 
+export function getDefaultContextWindow(): number {
+  return DEFAULT_CONTEXT_WINDOW;
+}
+
 export const STATIC_MODEL_ENTRIES: StaticModelEntry[] = [
   { pattern: "gpt-4o", contextWindow: 128_000 },
   { pattern: "gpt-4o-mini", contextWindow: 128_000 },

@@ -7,6 +7,7 @@ import type { ObservabilityService } from "../services/ObservabilityService";
 import { AgentTracer } from "./AgentTracer";
 import { loadSkillsByContent } from "./context";
 import { createModel } from "./model-factory";
+import { modelMetadataService } from "./providers/ModelMetadataService";
 import type { ModelProvider } from "./model-provider";
 import {
   buildAgentDirs,
@@ -363,10 +364,12 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     emitExecuteCodeApprovalRequired: config.emitExecuteCodeApprovalRequired,
   });
 
+  const resolvedModelMetadata = await modelMetadataService.getModelMetadata(provider);
+
   const agent = new Agent({
     initialState: {
       systemPrompt,
-      model: createModel({ provider }),
+      model: createModel({ provider, metadata: resolvedModelMetadata }),
       tools,
     },
     getApiKey: async () => (provider.type === "ollama" ? "ollama" : provider.apiKey),

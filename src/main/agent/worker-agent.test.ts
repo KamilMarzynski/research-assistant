@@ -47,6 +47,18 @@ vi.mock("./context", () => ({
 vi.mock("./tools", () => ({
   createAgentTools: vi.fn().mockReturnValue([{ name: "read_file" }, { name: "safe_bash" }]),
 }));
+vi.mock("./providers/ModelMetadataService", () => ({
+  modelMetadataService: {
+    getModelMetadata: () => Promise.resolve({
+      id: "test-model",
+      name: "test-model",
+      provider: "openrouter",
+      effectiveContextWindow: 128_000,
+      source: "pi-ai",
+    }),
+  },
+}));
+
 
 const { createWorkerAgent, makeEvaluatorFn } = await import("./worker-agent");
 

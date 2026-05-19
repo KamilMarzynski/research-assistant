@@ -25,6 +25,7 @@ export interface AgentSessionOptions {
   projectPath: string | null;
   folderPath: string | null;
   provider: ModelProvider;
+  resolvedModelMetadata?: ProviderModelMetadata;
   isFirstRun: boolean;
   systemContext?: string;
   webAccessEnabled?: boolean;

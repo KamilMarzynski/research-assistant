@@ -107,6 +107,8 @@ export function registerChatHandler(
             join(homeService.getHomePath(), "projects", project.slug ?? projectId);
           const systemContext = await buildSystemContext(projectPath, project.folderPath);
           const initialMemoryContext = await memoryManager.buildContext(projectId);
+          const resolvedModelMetadata = await modelMetadataService.getModelMetadata(provider);
+
           const session = new AgentSession({
             messageService,
             eventBus,
@@ -120,6 +122,7 @@ export function registerChatHandler(
             projectPath,
             folderPath: project.folderPath,
             provider,
+            resolvedModelMetadata,
             isFirstRun,
             systemContext,
             webAccessEnabled: settings.webAccessEnabled,

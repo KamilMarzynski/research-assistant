@@ -40,6 +40,7 @@ vi.mock("./tools", () => ({
   createAgentTools: vi.fn().mockReturnValue([{ name: "read_file" }, { name: "write_file" }]),
 }));
 
+
 vi.mock("./worker-agent", () => ({
   makeEvaluatorFn: vi.fn().mockReturnValue(vi.fn()),
 }));
@@ -1079,6 +1080,50 @@ describe("AgentSession", () => {
       await localSession.send("hello again");
       expect(mockAgent.state.systemPrompt).not.toBe(firstPrompt);
       expect(mockAgent.state.systemPrompt).toContain("changed context");
+    });
+  });
+
+
+  it('passes resolved model metadata into createModel', async () => {
+    const { createModel } = await import('./model-factory') as unknown as {
+      createModel: ReturnType<typeof vi.fn>;
+    };
+
+    new AgentSession({
+      eventBus: makeEventBus(),
+      messageService: makeMessageService() as never,
+      homeService: makeHomeService() as never,
+      researchService: makeResearchService() as never,
+      memoryManager: makeMemoryManager() as never,
+      initialMemoryContext: { summary: '', recentMessages: [] },
+      projectId: 'p-1',
+      slug: 'test',
+      projectName: 'Test Project',
+      folderPath: null,
+      projectPath: null,
+      provider: { type: 'openai', apiKey: 'sk-openai', model: 'gpt-4o' },
+      resolvedModelMetadata: {
+        id: 'gpt-4o',
+        name: 'gpt-4o',
+        provider: 'openai',
+        maxContextWindow: 128000,
+        effectiveContextWindow: 128000,
+        source: 'pi-ai',
+      },
+      isFirstRun: false,
+      allowlistService: new AllowlistService() as never,
+    });
+
+    expect(createModel).toHaveBeenCalledWith({
+      provider: { type: 'openai', apiKey: 'sk-openai', model: 'gpt-4o' },
+      metadata: {
+        id: 'gpt-4o',
+        name: 'gpt-4o',
+        provider: 'openai',
+        maxContextWindow: 128000,
+        effectiveContextWindow: 128000,
+        source: 'pi-ai',
+      },
     });
   });
 });
