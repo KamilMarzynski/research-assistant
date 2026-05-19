@@ -51,7 +51,12 @@ export default function ReviewDialog({
         }}
       >
         <span style={{ fontSize: 17, fontWeight: 600 }}>{title}</span>
-        <button type="button" className="btn btn--ghost btn--sm" onClick={onClose}>
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
+          onClick={onClose}
+          aria-label="Close"
+        >
           ✕
         </button>
       </div>
@@ -66,7 +71,7 @@ export default function ReviewDialog({
           gap: 8,
         }}
       >
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
           <button
             type="button"
             className="btn btn--danger"
@@ -95,11 +100,12 @@ export default function ReviewDialog({
           </button>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <input
-            type="text"
+          <textarea
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             placeholder="Tell agent what to do instead…"
+            aria-label="Tell agent what to do instead"
+            rows={2}
             style={{
               flex: 1,
               padding: "6px 10px",
@@ -109,6 +115,7 @@ export default function ReviewDialog({
               borderRadius: "var(--r-md)",
               color: "var(--ink)",
               outline: "none",
+              resize: "none",
             }}
           />
           <button

@@ -71,4 +71,32 @@ describe("ReviewDialog", () => {
     renderDialog({ onApproveSession: vi.fn() });
     expect(screen.getByTestId("approve-session-btn")).toBeInTheDocument();
   });
+
+  it("calls onApproveOnce when Approve Once clicked", () => {
+    const { onApproveOnce } = renderDialog();
+    fireEvent.click(screen.getByTestId("approve-once-btn"));
+    expect(onApproveOnce).toHaveBeenCalled();
+  });
+
+  it("calls onClose when ✕ clicked", () => {
+    const { onClose } = renderDialog();
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("calls onApproveSession when Approve Session clicked", () => {
+    const onApproveSession = vi.fn();
+    renderDialog({ onApproveSession });
+    fireEvent.click(screen.getByTestId("approve-session-btn"));
+    expect(onApproveSession).toHaveBeenCalled();
+  });
+
+  it("re-disables Redirect when textarea is cleared", () => {
+    renderDialog();
+    const textarea = screen.getByPlaceholderText("Tell agent what to do instead…");
+    fireEvent.change(textarea, { target: { value: "some text" } });
+    expect(screen.getByTestId("redirect-btn")).not.toBeDisabled();
+    fireEvent.change(textarea, { target: { value: "" } });
+    expect(screen.getByTestId("redirect-btn")).toBeDisabled();
+  });
 });
