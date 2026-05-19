@@ -80,7 +80,10 @@ type AppEvent =
         isError: boolean;
       };
     }
-  | { type: "research:summary_ready"; payload: { projectId: string; text: string } };
+  | {
+      type: "research:summary_ready";
+      payload: { projectId: string; text: string; movedFiles?: string[] };
+    };
 
 @injectable()
 export class EventBus {
