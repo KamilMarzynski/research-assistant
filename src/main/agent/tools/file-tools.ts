@@ -134,7 +134,11 @@ export function createReadFileTool(
             if (emitApprovalRequired) {
               emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
             }
-            const { approved, denyReason } = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            const { approved, denyReason } = await enterPathApprovalGate(
+              jail.projectId,
+              err.path,
+              err.mode,
+            );
             if (!approved) {
               const feedback = denyReason ? ` ${denyReason}` : "";
               return {
@@ -299,7 +303,11 @@ export function createWriteFileTool(
                 intent,
               });
             }
-            const { approved, denyReason } = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            const { approved, denyReason } = await enterPathApprovalGate(
+              jail.projectId,
+              err.path,
+              err.mode,
+            );
             if (!approved) {
               const feedback = denyReason ? ` ${denyReason}` : "";
               return {
@@ -491,7 +499,11 @@ export function createListDirTool(
             if (emitApprovalRequired) {
               emitApprovalRequired({ path: err.path, mode: err.mode, projectId: jail.projectId });
             }
-            const { approved, denyReason } = await enterPathApprovalGate(jail.projectId, err.path, err.mode);
+            const { approved, denyReason } = await enterPathApprovalGate(
+              jail.projectId,
+              err.path,
+              err.mode,
+            );
             if (!approved) {
               const feedback = denyReason ? ` ${denyReason}` : "";
               return {
