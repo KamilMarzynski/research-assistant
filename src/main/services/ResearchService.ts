@@ -4,17 +4,15 @@ import { join } from "node:path";
 import { inject, injectable } from "tsyringe";
 import type { ExecuteCodeApprovalPayload } from "../../shared/ipc-types";
 import { resolveProvider } from "../agent/model-provider";
-import { OutputRouter } from "../agent/OutputRouter";
-import { PathJail } from "../agent/path-jail";
 import type { AgentType } from "../agent/tools";
 import { AGENT_TYPE_PRESETS, createWorkerAgent } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
-import { ArtifactService } from "./ArtifactService";
 import { HomeService } from "./HomeService";
 import { ObservabilityService } from "./ObservabilityService";
 import { ProjectService } from "./ProjectService";
-import { ResearchSummarizerService } from "./ResearchSummarizerService";
+import type { FinishJob } from "./ResearchFinisherService";
+import { ResearchFinisherService } from "./ResearchFinisherService";
 import { SettingsService } from "./SettingsService";
 import { TaskPersistenceService } from "./TaskPersistenceService";
 
@@ -35,12 +33,11 @@ export class ResearchService {
     @inject(HomeService) private readonly homeService: HomeService,
     @inject(AllowlistService) private readonly allowlistService: AllowlistService,
     @inject(ProjectService) private readonly projectService: ProjectService,
-    @inject(ArtifactService) private readonly artifactService: ArtifactService,
     @inject(ObservabilityService) private readonly observabilityService: ObservabilityService,
     @inject(TaskPersistenceService)
     private readonly taskPersistence: TaskPersistenceService,
-    @inject(ResearchSummarizerService)
-    private readonly summarizerService: ResearchSummarizerService,
+    @inject(ResearchFinisherService)
+    private readonly finisherService: ResearchFinisherService,
   ) {}
 
   async startResearch(
@@ -154,6 +151,8 @@ export class ResearchService {
       payload: { taskId, projectId: config.projectId, query: config.query },
     });
 
+    let researchOutput = "";
+
     agent.subscribe(async (event) => {
       const e = event as {
         type: string;
@@ -163,6 +162,7 @@ export class ResearchService {
       if (e.type === "message_update") {
         const ae = e.assistantMessageEvent;
         if (ae?.type === "text_delta") {
+          researchOutput += ae.delta;
           this.eventBus.emit({
             type: "research:progress",
             payload: { taskId, projectId: config.projectId, message: ae.delta },
@@ -177,74 +177,30 @@ export class ResearchService {
         try {
           await this.taskPersistence.updateTaskStatus(taskId, "complete");
 
-          // Read FILES.md for output conventions
-          let filePaths: string[] = [];
-          try {
-            const homePath = this.homeService.getHomePath();
-            const projectPath = config.projectPath ?? join(homePath, "projects", slug);
-            let filesMdContent = "";
-
-            try {
-              filesMdContent = await readFile(join(projectPath, "FILES.md"), "utf-8");
-            } catch {
-              /* not found */
-            }
-
-            let conventions: { default: string; code?: string; reports?: string } | null = null;
-            if (filesMdContent) {
-              const jail = new PathJail(
-                config.projectId,
-                slug,
-                config.folderPath,
-                projectPath,
-                this.allowlistService,
-              );
-              const router = new OutputRouter(jail, this.artifactService);
-              conventions = router.parseConventions(filesMdContent);
-            }
-            if (!conventions && config.folderPath) {
-              conventions = { default: config.folderPath };
-            }
-            if (conventions) {
-              const jail = new PathJail(
-                config.projectId,
-                slug,
-                config.folderPath,
-                projectPath,
-                this.allowlistService,
-              );
-              const router = new OutputRouter(jail, this.artifactService);
-              const result = await router.moveFinals(workspacePath, conventions);
-              filePaths = result.moved.map((name) => join(conventions.default, name));
-            }
-          } catch (err) {
-            console.error("[ResearchService] output routing failed:", err);
-          }
-
           this.eventBus.emit({
             type: "research:complete",
             payload: {
               taskId,
               projectId: config.projectId,
               query: config.query,
-              filePaths,
+              filePaths: [],
             },
           });
 
-          void this.summarizerService
-            .summarize({
+          void this.finisherService
+            .finish({
               projectId: config.projectId,
               projectName: config.projectName,
               query: config.query,
-              filePaths,
+              researchOutput,
               taskWorkspacePath: workspacePath,
               projectPath: config.projectPath,
               folderPath: config.folderPath,
               slug,
               provider,
               filesMdContent,
-            })
-            .catch((err) => console.error("[ResearchService] summarizer.summarize failed:", err));
+            } satisfies FinishJob)
+            .catch((err) => console.error("[ResearchService] finisherService.finish failed:", err));
         } catch (err) {
           await this.taskPersistence.updateTaskStatus(taskId, "failed", String(err));
           this.eventBus.emit({
