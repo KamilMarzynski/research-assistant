@@ -31,6 +31,7 @@ export default function PendingPathBanner({ activeProjectId, projects }: Props) 
   const handleResolve = async (
     req: PathApprovalPayload,
     action: "approve_once" | "approve_session" | "deny",
+    denyReason?: string,
   ) => {
     try {
       await ipc.invoke(IPC.RESOLVE_PATH_APPROVAL, {
@@ -38,6 +39,7 @@ export default function PendingPathBanner({ activeProjectId, projects }: Props) 
         mode: req.mode,
         action,
         projectId: req.projectId,
+        denyReason,
       });
     } catch {
       // Handler may throw if already resolved
@@ -90,7 +92,7 @@ export default function PendingPathBanner({ activeProjectId, projects }: Props) 
           request={selected}
           onApproveOnce={() => handleResolve(selected, "approve_once")}
           onApproveSession={() => handleResolve(selected, "approve_session")}
-          onDeny={() => handleResolve(selected, "deny")}
+          onDeny={(feedback) => handleResolve(selected, "deny", feedback)}
           onClose={() => setSelected(null)}
         />
       )}

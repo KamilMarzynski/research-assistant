@@ -31,11 +31,13 @@ export default function PendingExecuteCodeBanner({ activeProjectId, projects }: 
   const handleResolve = async (
     request: ExecuteCodeApprovalPayload,
     action: "approve_once" | "deny",
+    denyReason?: string,
   ) => {
     try {
       await ipc.invoke(IPC.RESOLVE_EXECUTE_CODE_APPROVAL, {
         executionId: request.executionId,
         action,
+        denyReason,
       });
     } catch {
       // Handler may throw if executionId already resolved
@@ -86,7 +88,7 @@ export default function PendingExecuteCodeBanner({ activeProjectId, projects }: 
         <PendingExecuteCodeModal
           request={selected}
           onApprove={() => handleResolve(selected, "approve_once")}
-          onDeny={() => handleResolve(selected, "deny")}
+          onDeny={(feedback) => handleResolve(selected, "deny", feedback)}
           onClose={() => setSelected(null)}
         />
       )}

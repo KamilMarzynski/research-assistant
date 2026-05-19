@@ -31,12 +31,14 @@ export default function PendingCommandBanner({ activeProjectId, projects }: Prop
   const handleResolve = async (
     cmd: BlockedCommandPayload,
     action: "approve_once" | "approve_session" | "deny",
+    denyReason?: string,
   ) => {
     try {
       await ipc.invoke(IPC.RESOLVE_BLOCKED_COMMAND, {
         commandId: cmd.commandId,
         action,
         projectId: cmd.projectId,
+        denyReason,
       });
     } catch {
       // Handler may throw if commandId already resolved
@@ -88,7 +90,7 @@ export default function PendingCommandBanner({ activeProjectId, projects }: Prop
           command={selected}
           onApproveOnce={() => handleResolve(selected, "approve_once")}
           onApproveSession={() => handleResolve(selected, "approve_session")}
-          onDeny={() => handleResolve(selected, "deny")}
+          onDeny={(feedback) => handleResolve(selected, "deny", feedback)}
           onClose={() => setSelected(null)}
         />
       )}
