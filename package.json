@@ -1,5 +1,5 @@
 {
-  "name": "research-assistant",
+  "name": "scholar",
   "version": "0.1.0",
   "description": "Event-driven desktop research assistant",
   "main": "out/main/index.js",
