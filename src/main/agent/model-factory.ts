@@ -12,10 +12,7 @@ export function createModel(opts: ModelFactoryOptions): Model<Api> {
   return resolveBaseConfig(opts.provider, opts.metadata);
 }
 
-function resolveBaseConfig(
-  provider: ModelProvider,
-  metadata?: ProviderModelMetadata,
-): Model<Api> {
+function resolveBaseConfig(provider: ModelProvider, metadata?: ProviderModelMetadata): Model<Api> {
   switch (provider.type) {
     case "openrouter": {
       const model = getRegisteredModel("openrouter", provider.model);

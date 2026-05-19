@@ -49,16 +49,16 @@ vi.mock("./tools", () => ({
 }));
 vi.mock("./providers/ModelMetadataService", () => ({
   modelMetadataService: {
-    getModelMetadata: () => Promise.resolve({
-      id: "test-model",
-      name: "test-model",
-      provider: "openrouter",
-      effectiveContextWindow: 128_000,
-      source: "pi-ai",
-    }),
+    getModelMetadata: () =>
+      Promise.resolve({
+        id: "test-model",
+        name: "test-model",
+        provider: "openrouter",
+        effectiveContextWindow: 128_000,
+        source: "pi-ai",
+      }),
   },
 }));
-
 
 const { createWorkerAgent, makeEvaluatorFn } = await import("./worker-agent");
 

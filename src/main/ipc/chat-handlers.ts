@@ -4,6 +4,7 @@ import { type BrowserWindow, ipcMain } from "electron";
 import { IPC } from "../../shared/ipc-channels";
 import { buildSystemContext } from "../agent/context";
 import { resolveProvider } from "../agent/model-provider";
+import { modelMetadataService } from "../agent/providers/ModelMetadataService";
 import { AgentSession } from "../agent/session";
 import type { EventBus } from "../event-bus";
 import { AbortMessageSchema, ProjectIdSchema, SendMessageSchema } from "../ipc-validation";

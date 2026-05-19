@@ -137,11 +137,11 @@ export interface GetProviderModelsResponse {
   models: Array<{
     id: string;
     name: string;
-    provider: 'ollama' | 'openrouter' | 'openai';
+    provider: "ollama" | "openrouter" | "openai";
     maxContextWindow?: number;
     effectiveContextWindow?: number;
     maxOutputTokens?: number;
-    source: 'provider-api' | 'provider-runtime' | 'pi-ai' | 'static-fallback';
+    source: "provider-api" | "provider-runtime" | "pi-ai" | "static-fallback";
   }>;
   error?: string;
 }

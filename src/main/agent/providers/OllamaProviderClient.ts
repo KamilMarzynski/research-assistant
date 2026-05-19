@@ -1,6 +1,8 @@
 import type { ModelProviderClient, ProviderModelMetadata } from "./provider-client.types";
 
-function parseShowContextWindow(modelInfo: Record<string, unknown> | undefined): number | undefined {
+function parseShowContextWindow(
+  modelInfo: Record<string, unknown> | undefined,
+): number | undefined {
   if (!modelInfo) return undefined;
   const numericValues = Object.entries(modelInfo)
     .filter(([key, value]) => key.includes("context_length") && typeof value === "number")
@@ -40,7 +42,9 @@ export class OllamaProviderClient implements ModelProviderClient {
       signal: AbortSignal.timeout(5000),
     });
     const runtimeData = runtimeRes.ok
-      ? ((await runtimeRes.json()) as { models?: Array<{ name: string; size?: number; context_length?: number }> })
+      ? ((await runtimeRes.json()) as {
+          models?: Array<{ name: string; size?: number; context_length?: number }>;
+        })
       : { models: [] };
     const runtimeMatch = runtimeData.models?.find((model) => model.name === modelId);
 

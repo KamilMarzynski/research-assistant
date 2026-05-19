@@ -1,7 +1,7 @@
 import { getModels } from "@mariozechner/pi-ai";
 import type { ModelProvider } from "../model-provider";
-import { OpenAiProviderClient } from "./OpenAiProviderClient";
 import { OllamaProviderClient } from "./OllamaProviderClient";
+import { OpenAiProviderClient } from "./OpenAiProviderClient";
 import { OpenRouterProviderClient } from "./OpenRouterProviderClient";
 import type { ModelProviderClient, ProviderModelMetadata } from "./provider-client.types";
 import { getDefaultContextWindow, getStaticModelMetadata } from "./static-model-metadata";
@@ -14,7 +14,10 @@ interface CacheEntry {
   value: ProviderModelMetadata;
 }
 
-function fromPiAi(provider: "openrouter" | "openai", modelId: string): ProviderModelMetadata | null {
+function fromPiAi(
+  provider: "openrouter" | "openai",
+  modelId: string,
+): ProviderModelMetadata | null {
   const model = getModels(provider).find((candidate) => candidate.id === modelId);
   if (!model?.contextWindow) return null;
   return {
@@ -107,9 +110,7 @@ export class ModelMetadataService {
   async getEffectiveContextWindow(provider: ModelProvider): Promise<number> {
     const metadata = await this.getModelMetadata(provider);
     return (
-      metadata.effectiveContextWindow ??
-      metadata.maxContextWindow ??
-      getDefaultContextWindow()
+      metadata.effectiveContextWindow ?? metadata.maxContextWindow ?? getDefaultContextWindow()
     );
   }
 }

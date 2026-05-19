@@ -6,7 +6,9 @@ describe("OpenRouterProviderClient", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        data: [{ id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", context_length: 200_000 }],
+        data: [
+          { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", context_length: 200_000 },
+        ],
       }),
     }) as typeof fetch;
 

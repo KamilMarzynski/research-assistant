@@ -7,7 +7,6 @@ import type { ObservabilityService } from "../services/ObservabilityService";
 import { AgentTracer } from "./AgentTracer";
 import { loadSkillsByContent } from "./context";
 import { createModel } from "./model-factory";
-import { modelMetadataService } from "./providers/ModelMetadataService";
 import type { ModelProvider } from "./model-provider";
 import {
   buildAgentDirs,
@@ -17,6 +16,7 @@ import {
   researcherPrompt,
   summarizerPrompt,
 } from "./prompts";
+import { modelMetadataService } from "./providers/ModelMetadataService";
 import type { AgentToolName, AgentType, EvaluationVerdict, SpawnResult } from "./tools";
 import { createAgentTools } from "./tools";
 

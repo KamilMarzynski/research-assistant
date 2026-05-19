@@ -11,6 +11,7 @@ import type { ResearchService } from "../services/ResearchService";
 import { subscribeEvents } from "./EventDispatcher";
 import { MessagePipeline } from "./MessagePipeline";
 import type { ModelProvider } from "./model-provider";
+import type { ProviderModelMetadata } from "./providers/provider-client.types";
 
 export interface AgentSessionOptions {
   messageService: MessageService;

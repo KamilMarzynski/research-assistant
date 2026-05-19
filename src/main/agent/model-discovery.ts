@@ -1,5 +1,5 @@
-import { OpenAiProviderClient } from "./providers/OpenAiProviderClient";
 import { OllamaProviderClient } from "./providers/OllamaProviderClient";
+import { OpenAiProviderClient } from "./providers/OpenAiProviderClient";
 import { OpenRouterProviderClient } from "./providers/OpenRouterProviderClient";
 import type { ProviderModelMetadata } from "./providers/provider-client.types";
 

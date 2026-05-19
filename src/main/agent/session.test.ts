@@ -40,7 +40,6 @@ vi.mock("./tools", () => ({
   createAgentTools: vi.fn().mockReturnValue([{ name: "read_file" }, { name: "write_file" }]),
 }));
 
-
 vi.mock("./worker-agent", () => ({
   makeEvaluatorFn: vi.fn().mockReturnValue(vi.fn()),
 }));
@@ -1083,9 +1082,8 @@ describe("AgentSession", () => {
     });
   });
 
-
-  it('passes resolved model metadata into createModel', async () => {
-    const { createModel } = await import('./model-factory') as unknown as {
+  it("passes resolved model metadata into createModel", async () => {
+    const { createModel } = (await import("./model-factory")) as unknown as {
       createModel: ReturnType<typeof vi.fn>;
     };
 
@@ -1095,34 +1093,34 @@ describe("AgentSession", () => {
       homeService: makeHomeService() as never,
       researchService: makeResearchService() as never,
       memoryManager: makeMemoryManager() as never,
-      initialMemoryContext: { summary: '', recentMessages: [] },
-      projectId: 'p-1',
-      slug: 'test',
-      projectName: 'Test Project',
+      initialMemoryContext: { summary: "", recentMessages: [] },
+      projectId: "p-1",
+      slug: "test",
+      projectName: "Test Project",
       folderPath: null,
       projectPath: null,
-      provider: { type: 'openai', apiKey: 'sk-openai', model: 'gpt-4o' },
+      provider: { type: "openai", apiKey: "sk-openai", model: "gpt-4o" },
       resolvedModelMetadata: {
-        id: 'gpt-4o',
-        name: 'gpt-4o',
-        provider: 'openai',
+        id: "gpt-4o",
+        name: "gpt-4o",
+        provider: "openai",
         maxContextWindow: 128000,
         effectiveContextWindow: 128000,
-        source: 'pi-ai',
+        source: "pi-ai",
       },
       isFirstRun: false,
       allowlistService: new AllowlistService() as never,
     });
 
     expect(createModel).toHaveBeenCalledWith({
-      provider: { type: 'openai', apiKey: 'sk-openai', model: 'gpt-4o' },
+      provider: { type: "openai", apiKey: "sk-openai", model: "gpt-4o" },
       metadata: {
-        id: 'gpt-4o',
-        name: 'gpt-4o',
-        provider: 'openai',
+        id: "gpt-4o",
+        name: "gpt-4o",
+        provider: "openai",
         maxContextWindow: 128000,
         effectiveContextWindow: 128000,
-        source: 'pi-ai',
+        source: "pi-ai",
       },
     });
   });
