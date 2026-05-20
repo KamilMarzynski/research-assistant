@@ -228,22 +228,12 @@ export class MessagePipeline {
     this.state.savedForTurn = 0;
 
     try {
-      await this.tracer.startTurn(
-        { role: "user", content },
-        {
-          turnNumber: this.state.currentTurnId,
-          projectId: this.projectId,
-          systemPrompt: this.agent.state.systemPrompt,
-          messages: this.agent.state.messages,
-        },
-      );
-
       try {
         if (!this.state.skillRouterReady) {
-          await this.skillRouter.buildIndex();
           this.skillRouter.startWatching();
           this.state.skillRouterReady = true;
         }
+        await this.skillRouter.buildIndex();
 
         const memoryContext = await this.memoryManager.buildContext(this.projectId);
         const systemContext = await buildSystemContext(
@@ -264,6 +254,16 @@ export class MessagePipeline {
       } catch (err) {
         console.error("[AgentSession] Failed to refresh system context:", err);
       }
+
+      await this.tracer.startTurn(
+        { role: "user", content },
+        {
+          turnNumber: this.state.currentTurnId,
+          projectId: this.projectId,
+          systemPrompt: this.agent.state.systemPrompt,
+          messages: this.agent.state.messages,
+        },
+      );
 
       if (this.state.pendingSkillDeltas.length > 0) {
         for (const delta of this.state.pendingSkillDeltas) {
