@@ -155,6 +155,14 @@ function makeResearchFinisherService() {
   };
 }
 
+function makeCheckpointService() {
+  return {
+    write: vi.fn().mockResolvedValue(undefined),
+    read: vi.fn().mockResolvedValue(null),
+    delete: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
 describe("ResearchService", () => {
   beforeEach(() => {
     getCaptured().current = null;
@@ -179,6 +187,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskId).toBeTruthy();
@@ -199,6 +208,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -219,6 +229,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       taskPersistence as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskPersistence.saveTask).toHaveBeenCalledWith(
@@ -242,6 +253,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       taskPersistence as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -277,6 +289,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     await expect(svc.startResearch("p1", "My Project", "research X", null)).rejects.toThrow(
       "No API key configured",
@@ -313,6 +326,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       taskPersistence as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -341,6 +355,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -372,6 +387,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -402,6 +418,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -430,6 +447,7 @@ describe("ResearchService", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       finisher as never,
+      makeCheckpointService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -445,6 +463,55 @@ describe("ResearchService", () => {
 
     expect(finisher.finish).toHaveBeenCalledWith(
       expect.objectContaining({ researchOutput: "first chunk second chunk" }),
+    );
+  });
+
+  it("writes checkpoint to workspacePath after turn_end fires", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+
+    let capturedOnTurnEnd: ((messages: unknown[]) => void) | undefined;
+    createWorkerAgent.mockImplementationOnce((config: { onTurnEnd?: (msgs: unknown[]) => void }) => {
+      capturedOnTurnEnd = config.onTurnEnd;
+      return Promise.resolve({
+        agent: {
+          state: { messages: [{ role: "user", content: "hi", timestamp: 1 }] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn().mockResolvedValue(undefined),
+      });
+    });
+
+    const checkpointService = makeCheckpointService();
+
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      { getProject: vi.fn().mockResolvedValue({ modelOverride: null, slug: "my-project" }) } as never,
+      makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
+      makeResearchFinisherService() as never,
+      checkpointService as never,
+    );
+
+    await svc.startResearch("p1", "My Project", "research X", null);
+
+    // Simulate turn_end
+    capturedOnTurnEnd?.([{ role: "user", content: "hi", timestamp: 1 }]);
+
+    expect(checkpointService.write).toHaveBeenCalledWith(
+      expect.stringContaining("workspace"),
+      expect.objectContaining({
+        agentType: "researcher",
+        messages: [{ role: "user", content: "hi", timestamp: 1 }],
+      }),
     );
   });
 });
@@ -473,6 +540,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -500,6 +568,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 5 }));
@@ -520,6 +589,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeObservabilityService() as never,
       taskPersistence as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -547,6 +617,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -567,6 +638,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeObservabilityService() as never,
       taskPersistence as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -606,6 +678,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query A", null);
@@ -638,6 +711,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -671,6 +745,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
 
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
@@ -698,6 +773,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -724,6 +800,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(

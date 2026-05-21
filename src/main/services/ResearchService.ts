@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
+import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { inject, injectable } from "tsyringe";
 import type {
   BlockedCommandPayload,
@@ -12,6 +13,8 @@ import type { AgentType } from "../agent/tools";
 import { AGENT_TYPE_PRESETS, createWorkerAgent } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
+import { CheckpointService } from "./CheckpointService";
+import type { ResearchCheckpoint } from "./CheckpointService";
 import { HomeService } from "./HomeService";
 import { ObservabilityService } from "./ObservabilityService";
 import { ProjectService } from "./ProjectService";
@@ -42,6 +45,8 @@ export class ResearchService {
     private readonly taskPersistence: TaskPersistenceService,
     @inject(ResearchFinisherService)
     private readonly finisherService: ResearchFinisherService,
+    @inject(CheckpointService)
+    private readonly checkpointService: CheckpointService,
   ) {}
 
   async startResearch(
@@ -149,6 +154,18 @@ export class ResearchService {
       allowlistService: this.allowlistService,
       observabilityService: this.observabilityService,
       parentSpanContext,
+      onTurnEnd: (messages: AgentMessage[]) => {
+        const checkpoint: ResearchCheckpoint = {
+          taskId,
+          agentType,
+          researchOutput,
+          messages,
+          savedAt: new Date().toISOString(),
+        };
+        void this.checkpointService.write(workspacePath, checkpoint).catch((err) =>
+          console.error("[ResearchService] checkpoint write failed:", err),
+        );
+      },
     };
     const workerConfig = AGENT_TYPE_PRESETS[agentType](base, workspacePath, depth);
 
