@@ -448,6 +448,14 @@ describe("AGENT_TYPE_PRESETS.finisher", () => {
     const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
     expect(config.toolNames).toContain("read_memory");
   });
+  it("includes execute_code in toolNames", () => {
+    const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
+    expect(config.toolNames).toContain("execute_code");
+  });
+  it("includes read_skill in toolNames", () => {
+    const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
+    expect(config.toolNames).toContain("read_skill");
+  });
   it("has remainingDepth 0", () => {
     const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
     expect(config.remainingDepth).toBe(0);
@@ -455,6 +463,11 @@ describe("AGENT_TYPE_PRESETS.finisher", () => {
   it("system prompt instructs mv usage", () => {
     const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
     expect(config.systemPromptAddition).toContain("mv");
+  });
+  it("forwards brief into systemPromptAddition", () => {
+    const brief = "<research_brief><user_request>X</user_request></research_brief>";
+    const config = AGENT_TYPE_PRESETS.finisher({ ...makeBase(), brief }, "/output", 0);
+    expect(config.systemPromptAddition).toContain(brief);
   });
 });
 
