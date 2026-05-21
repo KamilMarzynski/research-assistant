@@ -50,7 +50,7 @@ export const tasks = sqliteTable("tasks", {
   brief: text("brief"),
   folderPath: text("folder_path"),
   status: text("status", {
-    enum: ["pending", "in_progress", "complete", "failed"],
+    enum: ["pending", "in_progress", "complete", "failed", "interrupted"],
   })
     .notNull()
     .default("in_progress"),

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
+import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { inject, injectable } from "tsyringe";
 import type {
   BlockedCommandPayload,
@@ -12,12 +13,15 @@ import type { AgentType } from "../agent/tools";
 import { AGENT_TYPE_PRESETS, createWorkerAgent } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
+import type { ResearchCheckpoint } from "./CheckpointService";
+import { CheckpointService } from "./CheckpointService";
 import { HomeService } from "./HomeService";
 import { ObservabilityService } from "./ObservabilityService";
 import { ProjectService } from "./ProjectService";
 import type { FinishJob } from "./ResearchFinisherService";
 import { ResearchFinisherService } from "./ResearchFinisherService";
 import { SettingsService } from "./SettingsService";
+import type { ResearchTask } from "./TaskPersistenceService";
 import { TaskPersistenceService } from "./TaskPersistenceService";
 
 interface RunResearchConfig {
@@ -42,6 +46,8 @@ export class ResearchService {
     private readonly taskPersistence: TaskPersistenceService,
     @inject(ResearchFinisherService)
     private readonly finisherService: ResearchFinisherService,
+    @inject(CheckpointService)
+    private readonly checkpointService: CheckpointService,
   ) {}
 
   async startResearch(
@@ -70,6 +76,199 @@ export class ResearchService {
       "orchestrator",
       this.DEFAULT_RESEARCH_DEPTH,
     );
+  }
+
+  async resumeResearch(task: ResearchTask): Promise<void> {
+    const settings = await this.settingsService.getSettings();
+    const homePath = this.homeService.getHomePath();
+    const project = await this.projectService.getProject(task.projectId);
+    const slug = project.slug ?? task.projectId;
+    const workspacePath = join(homePath, "projects", slug, "workspace", task.taskId);
+
+    const checkpoint = await this.checkpointService.read(workspacePath);
+    if (!checkpoint) {
+      await this.taskPersistence.updateTaskStatus(
+        task.taskId,
+        "interrupted",
+        "No checkpoint found",
+      );
+      return;
+    }
+
+    const lastMessage = checkpoint.messages[checkpoint.messages.length - 1];
+    if (!lastMessage || lastMessage.role === "assistant") {
+      await this.taskPersistence.updateTaskStatus(
+        task.taskId,
+        "interrupted",
+        "Checkpoint ended on assistant turn",
+      );
+      return;
+    }
+
+    const provider = resolveProvider({ settings, projectModelOverride: project.modelOverride });
+    if (provider.type !== "ollama" && !provider.apiKey) {
+      await this.taskPersistence.updateTaskStatus(
+        task.taskId,
+        "interrupted",
+        "No API key configured",
+      );
+      return;
+    }
+
+    const projectPath = join(homePath, "projects", slug);
+    let filesMdContent: string | undefined;
+    try {
+      filesMdContent = await readFile(join(projectPath, "FILES.md"), "utf-8");
+    } catch {
+      // FILES.md not yet created — agent will write without routing conventions
+    }
+
+    const agentType = checkpoint.agentType;
+    const depth = agentType === "orchestrator" ? this.DEFAULT_RESEARCH_DEPTH : 0;
+    let researchOutput = checkpoint.researchOutput;
+
+    const researchSpan = await this.observabilityService.startObservation("research", {
+      asType: "agent",
+      input: { query: task.query },
+      metadata: { taskId: task.taskId, projectId: task.projectId, projectName: task.projectName },
+    });
+
+    const parentSpanContext = researchSpan
+      ? { traceId: researchSpan.traceId, spanId: researchSpan.spanId }
+      : undefined;
+
+    const onProgress = (label: string, delta: string) => {
+      if (label) {
+        this.eventBus.emit({
+          type: "research:progress",
+          payload: { taskId: task.taskId, projectId: task.projectId, message: delta, label },
+        });
+      }
+    };
+
+    const base = {
+      projectId: task.projectId,
+      slug,
+      projectName: task.projectName,
+      projectPath: null,
+      folderPath: task.folderPath,
+      homePath,
+      taskWorkspacePath: workspacePath,
+      filesMdContent: filesMdContent || undefined,
+      provider,
+      onProgress,
+      webAccessEnabled: settings.webAccessEnabled,
+      emitBlocked: (payload: BlockedCommandPayload) =>
+        this.eventBus.emit({ type: "bash:blocked", payload }),
+      emitApprovalRequired: (payload: PathApprovalPayload) =>
+        this.eventBus.emit({ type: "path:approval_required", payload }),
+      emitExecuteCodeApprovalRequired: (payload: ExecuteCodeApprovalPayload) =>
+        this.eventBus.emit({ type: "execute_code:approval_required", payload }),
+      allowlistService: this.allowlistService,
+      observabilityService: this.observabilityService,
+      parentSpanContext,
+      onTurnEnd: (messages: AgentMessage[]) => {
+        const newCheckpoint: ResearchCheckpoint = {
+          taskId: task.taskId,
+          agentType,
+          researchOutput,
+          messages,
+          savedAt: new Date().toISOString(),
+        };
+        void this.checkpointService
+          .write(workspacePath, newCheckpoint)
+          .catch((err) => console.error("[ResearchService] checkpoint write failed:", err));
+      },
+    };
+    const workerConfig = AGENT_TYPE_PRESETS[agentType](base, workspacePath, depth);
+
+    const { agent } = await createWorkerAgent(workerConfig);
+
+    agent.state.messages = checkpoint.messages as AgentMessage[];
+
+    this.eventBus.emit({
+      type: "research:started",
+      payload: { taskId: task.taskId, projectId: task.projectId, query: task.query },
+    });
+
+    agent.subscribe(async (event) => {
+      const e = event as {
+        type: string;
+        assistantMessageEvent?: { type: string; delta: string };
+      };
+
+      if (e.type === "message_update") {
+        const ae = e.assistantMessageEvent;
+        if (ae?.type === "text_delta") {
+          researchOutput += ae.delta;
+          this.eventBus.emit({
+            type: "research:progress",
+            payload: { taskId: task.taskId, projectId: task.projectId, message: ae.delta },
+          });
+        }
+      } else if (e.type === "agent_end") {
+        researchSpan?.update({
+          output: { status: "complete" },
+          metadata: { taskId: task.taskId },
+        });
+        researchSpan?.end();
+        try {
+          await this.taskPersistence.updateTaskStatus(task.taskId, "complete");
+          await this.checkpointService.delete(workspacePath);
+          this.eventBus.emit({
+            type: "research:complete",
+            payload: {
+              taskId: task.taskId,
+              projectId: task.projectId,
+              query: task.query,
+              filePaths: [],
+            },
+          });
+          await this.finisherService.finish({
+            projectId: task.projectId,
+            projectName: task.projectName,
+            query: task.query,
+            researchOutput,
+            taskWorkspacePath: workspacePath,
+            projectPath: null,
+            folderPath: task.folderPath,
+            slug,
+            provider,
+            filesMdContent,
+          } satisfies FinishJob);
+        } catch (err) {
+          await this.taskPersistence.updateTaskStatus(task.taskId, "failed", String(err));
+          this.eventBus.emit({
+            type: "research:failed",
+            payload: {
+              taskId: task.taskId,
+              projectId: task.projectId,
+              query: task.query,
+              error: String(err),
+            },
+          });
+        }
+      }
+    });
+
+    agent.continue().catch(async (err) => {
+      researchSpan?.update({
+        output: { status: "failed", error: String(err) },
+        metadata: { taskId: task.taskId },
+      });
+      researchSpan?.end();
+      console.error("[ResearchService] worker error:", err);
+      await this.taskPersistence.updateTaskStatus(task.taskId, "failed", String(err));
+      this.eventBus.emit({
+        type: "research:failed",
+        payload: {
+          taskId: task.taskId,
+          projectId: task.projectId,
+          query: task.query,
+          error: String(err),
+        },
+      });
+    });
   }
 
   private async _runResearch(
@@ -149,6 +348,18 @@ export class ResearchService {
       allowlistService: this.allowlistService,
       observabilityService: this.observabilityService,
       parentSpanContext,
+      onTurnEnd: (messages: AgentMessage[]) => {
+        const checkpoint: ResearchCheckpoint = {
+          taskId,
+          agentType: agentType as "researcher" | "orchestrator",
+          researchOutput,
+          messages,
+          savedAt: new Date().toISOString(),
+        };
+        void this.checkpointService
+          .write(workspacePath, checkpoint)
+          .catch((err) => console.error("[ResearchService] checkpoint write failed:", err));
+      },
     };
     const workerConfig = AGENT_TYPE_PRESETS[agentType](base, workspacePath, depth);
 

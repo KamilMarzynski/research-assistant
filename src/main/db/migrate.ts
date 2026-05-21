@@ -118,8 +118,46 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   } catch (err) {
     if (!isDuplicateColumnError(err)) throw err;
   }
+  // Run 20: add "interrupted" to tasks status CHECK constraint + brief column
+  {
+    const result = await db.run(
+      sql`SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'`,
+    );
+    const tableDefSql = result.rows[0]?.[0] as string | undefined;
+    if (tableDefSql && !tableDefSql.includes("'interrupted'")) {
+      await db.run(sql`PRAGMA foreign_keys=OFF`);
+      try {
+        await db.run(sql`
+          CREATE TABLE tasks_run20 (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            project_name TEXT NOT NULL,
+            query TEXT NOT NULL,
+            brief TEXT,
+            folder_path TEXT,
+            status TEXT NOT NULL DEFAULT 'in_progress'
+              CHECK(status IN ('pending','in_progress','complete','failed','interrupted')),
+            error TEXT,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+          )
+        `);
+        await db.run(sql`
+          INSERT INTO tasks_run20
+            (id, project_id, project_name, query, brief, folder_path, status, error, created_at, updated_at)
+          SELECT
+            id, project_id, project_name, query, NULL, folder_path, status, error, created_at, updated_at
+          FROM tasks
+        `);
+        await db.run(sql`DROP TABLE tasks`);
+        await db.run(sql`ALTER TABLE tasks_run20 RENAME TO tasks`);
+      } finally {
+        await db.run(sql`PRAGMA foreign_keys=ON`);
+      }
+    }
+  }
 
-  // Run 20: add brief to tasks — idempotent
+  // Run 21: add brief to tasks — idempotent
   try {
     await db.run(sql`ALTER TABLE tasks ADD COLUMN brief TEXT`);
   } catch (err) {

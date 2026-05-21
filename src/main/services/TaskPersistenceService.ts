@@ -14,7 +14,7 @@ export interface ResearchTask {
   query: string;
   folderPath: string | null;
   startedAt: string;
-  status?: "pending" | "in_progress" | "complete" | "failed";
+  status?: "pending" | "in_progress" | "complete" | "failed" | "interrupted";
 }
 
 const ResearchTaskSchema = z.object({
@@ -24,7 +24,7 @@ const ResearchTaskSchema = z.object({
   query: z.string(),
   folderPath: z.string().nullable(),
   startedAt: z.string(),
-  status: z.enum(["pending", "in_progress", "complete", "failed"]).optional(),
+  status: z.enum(["pending", "in_progress", "complete", "failed", "interrupted"]).optional(),
 });
 
 @injectable()
@@ -86,13 +86,24 @@ export class TaskPersistenceService {
 
   async updateTaskStatus(
     taskId: string,
-    status: "pending" | "in_progress" | "complete" | "failed",
+    status: "pending" | "in_progress" | "complete" | "failed" | "interrupted",
     error?: string,
   ): Promise<void> {
     await this.db
       .update(tasks)
       .set({ status, error: error ?? null, updatedAt: new Date() })
       .where(eq(tasks.id, taskId));
+  }
+
+  async markAllInProgressAsInterrupted(): Promise<void> {
+    await this.db
+      .update(tasks)
+      .set({
+        status: "interrupted",
+        error: "App closed while research was running",
+        updatedAt: new Date(),
+      })
+      .where(eq(tasks.status, "in_progress"));
   }
 
   async migrateTasksFromJson(): Promise<void> {

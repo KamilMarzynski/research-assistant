@@ -27,12 +27,7 @@ export function registerStartupTasks(deps: {
       const tasks = await taskPersistenceService.getInProgressTasks();
       for (const task of tasks) {
         try {
-          await researchService.startResearch(
-            task.projectId,
-            task.projectName,
-            task.query,
-            task.folderPath,
-          );
+          await researchService.resumeResearch(task);
         } catch (err) {
           const msg = `Failed to resume task ${task.taskId}: ${err instanceof Error ? err.message : String(err)}`;
           console.error("[startup]", msg);
