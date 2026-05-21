@@ -157,11 +157,20 @@ export function orchestratorPrompt(
   dirs: AgentDirs,
   outputPath: string,
   filesMdContent?: string,
+  brief?: string,
 ): string {
+  const briefSection = brief
+    ? `## Research Brief
+\`\`\`
+${brief.trim()}
+\`\`\``
+    : `## Research Brief
+(no brief — orchestrate the query as best you can; legacy invocation)`;
+
   const outputSection = filesMdContent
     ? `## Output Routing
 
-FILES.md defines where research outputs should be saved. Follow it when writing your final synthesis.
+FILES.md defines where research outputs should be saved. Best-effort follow it; the finisher will enforce.
 
 \`\`\`
 ${filesMdContent.trim()}
@@ -174,23 +183,62 @@ Write subtask outputs to subdirectories of \`taskWorkspaceDir\`. Write your fina
 
   return `You are a research orchestrator. Plan and delegate subtasks to specialist agents, then synthesise their findings.
 
+${briefSection}
+
 ${dirSection(dirs)}
+
+## Mutable surfaces — you and your children may write to these
+
+- ~/.scholar/skills/<name>/SKILL.md           — global capabilities
+- ${dirs.assistantProjectSkillsDir}/<name>/SKILL.md — project-scoped capabilities
+- ${dirs.assistantProjectDir}/FILES.md        — output routing for this project
+- ${dirs.assistantProjectDir}/GOAL.md         — project intent
+- ~/.scholar/config.md                        — global user preferences
+- ${dirs.userProjectDir}/<anything>           — research artifacts
+
+Each write here is a persistent system change. Path-jail will ask the user
+to approve. Treat as you would a code commit, not a scratch file.
+
+## Update over create
+
+Before creating a new skill, the same rules apply to you and to your
+spawned children: consult <available_skills>, read_skill on close matches,
+prefer update via write_file, create only when no match exists.
 
 ${outputSection}
 
 ## Planning
 
 1. Break the query into independent subtasks
-2. Use spawn_agents_parallel for tasks that can run simultaneously
-3. Use spawn_agent for sequential tasks with dependencies
-4. Each spawned agent receives its own outputPath within \`taskWorkspaceDir\`
+2. For each subtask, construct a sub-brief — a narrower <research_brief>
+   with <expected_outcomes> and <success_criteria> scoped to that subtask
+   alone. Pass the sub-brief as the query to spawned children. The brief
+   shape is uniform across nesting depth.
+3. Use spawn_agents_parallel for subtasks that can run simultaneously
+4. Use spawn_agent for sequential subtasks with dependencies
+5. Each spawned agent receives its own outputPath within \`taskWorkspaceDir\`
 
-## Handoff
+## Scale autonomy
 
-When all sub-agents have completed, you must aggregate their output file declarations.
+You are running as an orchestrator. You may spawn parallel or sequential
+sub-researchers. If a brief turns out trivial, just answer without
+spawning. Always justify chosen scale in the handoff Summary.
 
-### Output Files
-Take the union of all files declared by sub-agents and list each one on a separate line, as an absolute path. Do not include intermediate or scratch files.`;
+## Handoff (REQUIRED)
+
+End your response with a \`## Handoff\` section:
+
+### Summary
+Free prose. Cover:
+  - what you found
+  - scale you chose and why
+  - for any persistent change: justification
+  - one-line self-check against each <success_criteria> item: pass / fail / unknown + evidence
+
+### Files changed
+Take the union of all \`### Files changed\` lists from spawned agents,
+plus any file you wrote yourself. Dedup by absolute path. One per line.
+If nothing was written, write "(none)".`;
 }
 
 export function coderPrompt(dirs: AgentDirs, outputPath: string): string {

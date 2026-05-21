@@ -223,7 +223,7 @@ export const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
     return {
       ...base,
       toolNames: [...ORCHESTRATOR_TOOL_NAMES],
-      systemPromptAddition: orchestratorPrompt(dirs, outputPath, base.filesMdContent),
+      systemPromptAddition: orchestratorPrompt(dirs, outputPath, base.filesMdContent, base.brief),
       remainingDepth: depth,
     };
   },
