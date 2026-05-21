@@ -105,6 +105,26 @@ describe("PathJail", () => {
       const p = join(HOME, "projects", "other-project", "file.md");
       expect(() => jail.validate(p, "write")).toThrow(/outside the current project/);
     });
+
+    it("strips file:/ URI prefix and allows read inside project folder", () => {
+      expect(() => jail.validate(`file:${FOLDER_PATH}/report.md`, "read")).not.toThrow();
+    });
+
+    it("strips file:// URI prefix and allows read inside project folder", () => {
+      expect(() => jail.validate(`file://${FOLDER_PATH}/report.md`, "read")).not.toThrow();
+    });
+
+    it("strips file:/ URI prefix and allows write inside project folder", () => {
+      expect(() => jail.validate(`file:${FOLDER_PATH}/report.md`, "write")).not.toThrow();
+    });
+
+    it("strips file:// URI prefix and allows write inside project folder", () => {
+      expect(() => jail.validate(`file://${FOLDER_PATH}/report.md`, "write")).not.toThrow();
+    });
+
+    it("strips file:/ URI prefix and still blocks path outside zones", () => {
+      expect(() => jail.validate("file:/etc/passwd", "write")).toThrow(ApprovalRequiredError);
+    });
   });
 
   describe("without folderPath", () => {

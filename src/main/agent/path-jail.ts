@@ -90,7 +90,8 @@ export class PathJail {
   }
 
   validate(inputPath: string, mode: "read" | "write"): string {
-    const resolved = resolve(normalize(inputPath));
+    const stripped = inputPath.replace(/^file:\/\//, "/").replace(/^file:(?=\/)/, "");
+    const resolved = resolve(normalize(stripped));
 
     // Memories dir is always blocked — only accessible via read_memory/save_memory tools
     if (this.isInZone(resolved, [this.memoriesDir])) {
