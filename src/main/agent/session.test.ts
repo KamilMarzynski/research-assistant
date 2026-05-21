@@ -87,7 +87,6 @@ function makeEventBus() {
 
 function makeHomeService() {
   return {
-    isFirstRun: vi.fn().mockResolvedValue(false),
     getHomePath: vi.fn().mockReturnValue("/tmp/.scholar"),
   };
 }
@@ -139,7 +138,6 @@ describe("AgentSession", () => {
       folderPath: null,
       projectPath: null,
       provider: { type: "openrouter", apiKey: "sk-or-test", model: "anthropic/claude-sonnet-4-6" },
-      isFirstRun: false,
       systemContext: "",
       allowlistService: new AllowlistService() as never,
       observabilityService: makeObservabilityService() as never,
@@ -236,7 +234,6 @@ describe("AgentSession", () => {
         folderPath: null,
         projectPath: null,
         provider: { type: "openrouter", apiKey: "sk-test", model: "test" },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
         // no observabilityService
@@ -395,7 +392,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -444,7 +440,6 @@ describe("AgentSession", () => {
         folderPath: null,
         projectPath: null,
         provider: { type: "ollama", host: "http://localhost:11434", model: "llama3" },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -475,7 +470,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -493,8 +487,8 @@ describe("AgentSession", () => {
     });
   });
 
-  describe("first-run prompt injection", () => {
-    it("includes first-run interview instructions when isFirstRun=true", async () => {
+  describe("system prompt — no first-run branch", () => {
+    it("always uses basePrompt regardless of project setup state", async () => {
       const { Agent } = await import("@mariozechner/pi-agent-core");
       new AgentSession({
         eventBus: makeEventBus(),
@@ -513,43 +507,13 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: true,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
       const lastCall = mocked(Agent).mock.calls.at(-1);
       const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
         ?.systemPrompt;
-      expect(prompt).toContain("What we are creating");
-    });
-
-    it("does not include first-run instructions when isFirstRun=false", async () => {
-      const { Agent } = await import("@mariozechner/pi-agent-core");
-      new AgentSession({
-        eventBus: makeEventBus(),
-        messageService: makeMessageService() as never,
-        homeService: makeHomeService() as never,
-        researchService: makeResearchService() as never,
-        memoryManager: makeMemoryManager() as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
-        projectId: "p-1",
-        slug: "test",
-        projectName: "Test",
-        folderPath: null,
-        projectPath: null,
-        provider: {
-          type: "openrouter",
-          apiKey: "sk-or-test",
-          model: "anthropic/claude-sonnet-4-6",
-        },
-        isFirstRun: false,
-        systemContext: "",
-        allowlistService: new AllowlistService() as never,
-      });
-      const lastCall = mocked(Agent).mock.calls.at(-1);
-      const prompt = (lastCall?.[0] as { initialState: { systemPrompt: string } })?.initialState
-        ?.systemPrompt;
-      expect(prompt).not.toContain("How do you organise");
+      expect(prompt).toContain("You are a research coordinator");
     });
   });
 
@@ -623,7 +587,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -660,7 +623,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -692,7 +654,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -721,7 +682,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -763,7 +723,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -808,7 +767,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -839,7 +797,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -979,7 +936,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -1023,7 +979,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -1068,7 +1023,6 @@ describe("AgentSession", () => {
           apiKey: "sk-or-test",
           model: "anthropic/claude-sonnet-4-6",
         },
-        isFirstRun: false,
         systemContext: "",
         allowlistService: new AllowlistService() as never,
       });
@@ -1108,7 +1062,6 @@ describe("AgentSession", () => {
         effectiveContextWindow: 128000,
         source: "pi-ai",
       },
-      isFirstRun: false,
       allowlistService: new AllowlistService() as never,
     });
 

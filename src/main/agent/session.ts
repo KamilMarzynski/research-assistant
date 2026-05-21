@@ -27,7 +27,6 @@ export interface AgentSessionOptions {
   folderPath: string | null;
   provider: ModelProvider;
   resolvedModelMetadata?: ProviderModelMetadata;
-  isFirstRun: boolean;
   systemContext?: string;
   webAccessEnabled?: boolean;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;

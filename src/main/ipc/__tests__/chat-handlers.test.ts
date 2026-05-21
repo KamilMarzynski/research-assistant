@@ -86,7 +86,6 @@ function makeDeps() {
 
   const homeService = {
     getHomePath: vi.fn().mockReturnValue("/mock-home"),
-    isFirstRun: vi.fn().mockResolvedValue(false),
   };
 
   const projectService = {

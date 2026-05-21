@@ -116,16 +116,26 @@ export async function buildSystemContext(
   if (!goalFile?.trim() || !filesFile?.trim()) {
     const goalPath = join(projectPath, "GOAL.md");
     const filesPath = join(projectPath, "FILES.md");
-    parts.push(
+    const setupHint = [
       "<!-- Missing project configuration — Create GOAL.md and FILES.md to guide the assistant -->",
-      "This project has no GOAL.md or FILES.md yet. If the user already described their project in their first message, use the `write_file` tool to create both files directly.",
-      "If they have not yet described it, ask one question at a time:",
-      "1. What is this project about? (write answer to GOAL.md)",
-      "2. How are files organized? (write answer to FILES.md)",
-      "3. Where should research outputs go? (add to FILES.md)",
-      "4. Any naming conventions or folder structures? (add to FILES.md)",
-      `After gathering answers, write GOAL.md to ${goalPath} and FILES.md to ${filesPath} using the write_file tool.`,
-    );
+      "This project has no GOAL.md or FILES.md yet. Ask the user the questions",
+      "below, then construct a <research_brief> with",
+      "<durability>persistent</durability> and <expected_outcomes> covering",
+      "GOAL.md and FILES.md creation. Pass the brief to start_research even",
+      "though it is a setup task — researcher will write the files following",
+      "the same approval flow as any other persistent change.",
+      "",
+      "Questions to gather (one at a time):",
+      "1. What is this project about? (for GOAL.md)",
+      "2. Where should research outputs go? (for FILES.md)",
+      "3. What file types do you mainly work with? (for FILES.md)",
+      "4. Any naming conventions or folder structures? (for FILES.md)",
+      "5. Detailed reports or concise summaries? (for config.md)",
+      "6. Frequently used tools or workflows? (for config.md)",
+      "",
+      `GOAL.md goes to ${goalPath}; FILES.md goes to ${filesPath}.`,
+    ].join("\n");
+    parts.push(setupHint);
   }
 
   // 5. App-level MEMORY.md

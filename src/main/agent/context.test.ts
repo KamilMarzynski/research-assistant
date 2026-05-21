@@ -161,7 +161,8 @@ describe("buildSystemContext", () => {
     const home = join(tmpHome, ".scholar");
     const result = await buildSystemContext(join(home, "projects", "my-project"), null);
     expect(result).toContain("no GOAL.md or FILES.md yet");
-    expect(result).toContain("If the user already described");
+    expect(result).toContain("Missing project configuration");
+    expect(result).toContain("start_research");
   });
 
   it("includes config.md content when present", async () => {
@@ -195,7 +196,7 @@ describe("buildSystemContext", () => {
     await writeFile(join(home, "config.md"), "   ");
 
     const result = await buildSystemContext(join(home, "projects", "my-project"), null);
-    expect(result).not.toContain("config.md");
+    expect(result).not.toContain("User Preferences (config.md)");
   });
 
   it("skips empty GOAL.md and FILES.md", async () => {
@@ -241,7 +242,8 @@ describe("buildSystemContext", () => {
     const home = join(tmpHome, ".scholar");
     const result = await buildSystemContext(join(home, "projects", "test-project"), null);
     expect(result).toContain("no GOAL.md or FILES.md yet");
-    expect(result).toContain("If they have not yet described it");
+    expect(result).toContain("Missing project configuration");
+    expect(result).toContain("start_research");
   });
 
   it("loads existing GOAL.md and FILES.md when present", async () => {

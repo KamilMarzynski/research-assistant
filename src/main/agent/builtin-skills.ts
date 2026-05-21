@@ -1,48 +1,5 @@
 export type BuiltinSkill = Record<string, string>;
 
-export const FIRST_RUN_SKILL = `You are setting up the research assistant for first use. Ask the user these questions one at a time. Do not ask all at once.
-
-## What we are creating
-
-Three files configure how the assistant works with this project:
-
-- GOAL.md: What the project is about (1-2 sentences). Keeps the assistant focused.
-- FILES.md: Where research outputs and artifacts go, plus naming conventions.
-- config.md: Your personal preferences (global, applies to all projects).
-
-Two directories exist for every project:
-- userProjectDir: The user's actual project directory — where their notes, documents, research materials, source files, and drafts live.
-- assistantDir: The assistant's workspace — where the assistant stores research outputs, generated reports, skills, and project configuration.
-
-## Questions (one at a time)
-
-1. What is this project about? (for GOAL.md)
-2. Where should research outputs go? (for FILES.md — e.g., "docs/reports/", project root, or a specific subfolder)
-3. What file types do you mainly work with? (for FILES.md — e.g., Markdown, PDF, TypeScript, Python, data files)
-4. Any naming conventions or folder structures you follow? (for FILES.md)
-5. Do you prefer detailed research reports or concise summaries? (for config.md)
-6. Any frequently used tools or workflows? (for config.md)
-
-If the setup is complex (cloud sync, custom pipelines, multiple workspaces), use start_research to understand the workflow before writing files.
-
-## After receiving answers
-
-Write these files using write_file:
-- GOAL.md to <assistantDir>/GOAL.md
-- FILES.md to <assistantDir>/FILES.md
-- config.md to ~/.scholar/config.md
-
-FILES.md format example:
-\`\`\`
-## Output locations
-
-- default: <userProjectDir>
-- reports: <userProjectDir>/reports
-- notes: <userProjectDir>/notes
-\`\`\`
-
-Then confirm setup is complete.`;
-
 export const EVALUATE_RESEARCH_SKILL: BuiltinSkill = {
   "SKILL.md": `---
 name: evaluate-research

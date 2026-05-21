@@ -102,7 +102,6 @@ export function registerChatHandler(
             return { messageId: randomUUID() };
           }
 
-          const isFirstRun = await homeService.isFirstRun();
           const projectPath =
             project.projectPath ??
             join(homeService.getHomePath(), "projects", project.slug ?? projectId);
@@ -124,7 +123,6 @@ export function registerChatHandler(
             folderPath: project.folderPath,
             provider,
             resolvedModelMetadata,
-            isFirstRun,
             systemContext,
             webAccessEnabled: settings.webAccessEnabled,
             memoryFileService,

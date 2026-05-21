@@ -20,14 +20,30 @@ describe("buildSystemPrompt", () => {
     expect(result).toBe("BASE");
   });
 
-  it("uses firstRunPrompt instead of basePrompt when isFirstRun is true", () => {
-    const result = buildSystemPrompt({
+  it("returns the single base prompt regardless of project setup state", () => {
+    const out = buildSystemPrompt({ basePrompt: "BASE", memorySummary: "MEM" });
+    expect(out).toContain("BASE");
+    expect(out).toContain("MEM");
+  });
+
+  it("does not accept firstRunPrompt", () => {
+    // TypeScript-level assertion: the field should not exist on the type.
+    // Runtime: passing an extra unknown field should not change output.
+    const out = buildSystemPrompt({
       basePrompt: "BASE",
-      firstRunPrompt: "FIRST_RUN",
-      memorySummary: "",
-      systemContext: "",
+      // @ts-expect-error firstRunPrompt is no longer on SystemPromptContext
+      firstRunPrompt: "FIRST",
+    });
+    expect(out).toContain("BASE");
+    expect(out).not.toContain("FIRST");
+  });
+
+  it("does not accept isFirstRun", () => {
+    const out = buildSystemPrompt({
+      basePrompt: "BASE",
+      // @ts-expect-error isFirstRun is no longer on SystemPromptContext
       isFirstRun: true,
     });
-    expect(result).toBe("FIRST_RUN");
+    expect(out).toContain("BASE");
   });
 });

@@ -63,19 +63,6 @@ describe("HomeService", () => {
     await expect(access(join(tmpHome, ".scholar", "tasks"))).resolves.toBeUndefined();
   });
 
-  it("isFirstRun returns true when config.md missing", async () => {
-    const svc = new HomeService();
-    await svc.ensureDirectories();
-    expect(await svc.isFirstRun()).toBe(true);
-  });
-
-  it("isFirstRun returns false after config.md is written", async () => {
-    const svc = new HomeService();
-    await svc.ensureDirectories();
-    await writeFile(join(tmpHome, ".scholar", "config.md"), "# Config");
-    expect(await svc.isFirstRun()).toBe(false);
-  });
-
   it("ensureWorkspaceForProject creates and returns workspace dir", async () => {
     const svc = new HomeService();
     await svc.ensureDirectories();

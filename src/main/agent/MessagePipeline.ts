@@ -11,14 +11,12 @@ import type { MessageService } from "../services/MessageService";
 import type { ObservabilityService } from "../services/ObservabilityService";
 import type { ResearchService } from "../services/ResearchService";
 import { AgentTracer } from "./AgentTracer";
-import { FIRST_RUN_SKILL } from "./builtin-skills";
 import { CompressionService } from "./CompressionService";
 import { buildSystemContext } from "./context";
 import type { SessionState } from "./handlers/types";
 import { pruneMessages } from "./message-context-pruner";
 import { createModel } from "./model-factory";
 import type { ModelProvider } from "./model-provider";
-import { getContextWindow } from "./model-registry";
 import { BASE_SYSTEM_PROMPT } from "./prompts";
 import type { ProviderModelMetadata } from "./providers/provider-client.types";
 import { getDefaultContextWindow } from "./providers/static-model-metadata";
@@ -46,7 +44,6 @@ export interface MessagePipelineOptions {
   approvalPolicyService?: ApprovalPolicyService;
   onFileWrite?: (absolutePath: string, relativePath: string, fileName: string) => void;
   initialMemoryContext: MemoryContext;
-  isFirstRun: boolean;
   systemContext?: string;
   webAccessEnabled?: boolean;
 }
@@ -93,10 +90,8 @@ export class MessagePipeline {
 
     const systemPrompt = buildSystemPrompt({
       basePrompt: BASE_SYSTEM_PROMPT,
-      firstRunPrompt: FIRST_RUN_SKILL,
       memorySummary: options.initialMemoryContext.summary,
       systemContext: options.systemContext,
-      isFirstRun: options.isFirstRun,
     });
 
     const initialMessages = options.initialMemoryContext.recentMessages.map((m) => ({

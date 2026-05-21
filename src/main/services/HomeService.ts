@@ -22,15 +22,6 @@ export class HomeService {
     await this.copyBuiltinSkillsIfNeeded();
   }
 
-  async isFirstRun(): Promise<boolean> {
-    try {
-      await access(join(this.getHomePath(), "config.md"));
-      return false;
-    } catch {
-      return true;
-    }
-  }
-
   async ensureWorkspaceForProject(slug: string): Promise<string> {
     const home = this.getHomePath();
     const workspaceDir = join(home, "projects", slug, "workspace");
