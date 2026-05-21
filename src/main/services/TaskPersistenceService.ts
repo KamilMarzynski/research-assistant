@@ -12,6 +12,7 @@ export interface ResearchTask {
   projectId: string;
   projectName: string;
   query: string;
+  brief?: string;
   folderPath: string | null;
   startedAt: string;
   status?: "pending" | "in_progress" | "complete" | "failed" | "interrupted";
@@ -22,6 +23,7 @@ const ResearchTaskSchema = z.object({
   projectId: z.string(),
   projectName: z.string(),
   query: z.string(),
+  brief: z.string().optional(),
   folderPath: z.string().nullable(),
   startedAt: z.string(),
   status: z.enum(["pending", "in_progress", "complete", "failed", "interrupted"]).optional(),
@@ -42,6 +44,7 @@ export class TaskPersistenceService {
         projectId: task.projectId,
         projectName: task.projectName,
         query: task.query,
+        brief: task.brief ?? null,
         folderPath: task.folderPath,
         status: "in_progress",
         createdAt: new Date(task.startedAt),
@@ -61,6 +64,7 @@ export class TaskPersistenceService {
       projectId: r.projectId,
       projectName: r.projectName,
       query: r.query,
+      brief: r.brief ?? undefined,
       folderPath: r.folderPath,
       startedAt: new Date(r.createdAt).toISOString(),
       status: r.status,
@@ -78,6 +82,7 @@ export class TaskPersistenceService {
       projectId: r.projectId,
       projectName: r.projectName,
       query: r.query,
+      brief: r.brief ?? undefined,
       folderPath: r.folderPath,
       startedAt: new Date(r.createdAt).toISOString(),
       status: r.status,
