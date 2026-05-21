@@ -108,9 +108,7 @@ describe("MessageList — jump-to-bottom button", () => {
   }
 
   it("jump button is hidden initially", () => {
-    const { container } = render(
-      <MessageList messages={someMessages} streamingSegments={[]} processing={false} />,
-    );
+    render(<MessageList messages={someMessages} streamingSegments={[]} processing={false} />);
     expect(screen.queryByText("↓ Jump to bottom")).toBeNull();
   });
 
@@ -140,7 +138,7 @@ describe("MessageList — jump-to-bottom button", () => {
     );
     const scrollEl = getScrollContainer(container);
     simulateScrolledUp(scrollEl);
-    screen.getByText("↓ Jump to bottom").click();
+    fireEvent.click(screen.getByText("↓ Jump to bottom"));
     expect(screen.queryByText("↓ Jump to bottom")).toBeNull();
   });
 

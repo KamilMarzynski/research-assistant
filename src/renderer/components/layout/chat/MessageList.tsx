@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Message } from "../../../../shared/types";
 import type { StreamSegment } from "../../../contexts/StreamStateContext";
 import ActivityPill from "../../shared/ActivityPill";
@@ -11,12 +11,46 @@ interface MessageListProps {
 }
 
 export default function MessageList({ messages, streamingSegments, processing }: MessageListProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const isAtBottom = useRef(true);
+  const [showJumpButton, setShowJumpButton] = useState(false);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when messages or streaming segments change to auto-scroll
+  // Track whether user is within 50px of the bottom
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingSegments]);
+    const container = containerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+      isAtBottom.current = atBottom;
+      setShowJumpButton(!atBottom);
+    };
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Instant scroll on each chunk — only when already at the bottom
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when streaming segments change to auto-scroll
+  useEffect(() => {
+    if (!isAtBottom.current || !containerRef.current) return;
+    containerRef.current.scrollTop = containerRef.current.scrollHeight;
+  }, [streamingSegments]);
+
+  // Always jump to bottom when a new message is committed
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when message count changes
+  useEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    isAtBottom.current = true;
+    setShowJumpButton(false);
+  }, [messages.length]);
+
+  const handleJumpToBottom = () => {
+    if (!containerRef.current) return;
+    containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    isAtBottom.current = true;
+    setShowJumpButton(false);
+  };
 
   let lastUserIndex = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -44,13 +78,17 @@ export default function MessageList({ messages, streamingSegments, processing }:
     !hasRunningTool &&
     (streamingSegments.length === 0 || lastSeg?.type === "activity");
 
+  const hasContent = messages.length > 0 || streamingSegments.length > 0 || !!processing;
+
   return (
     <div
+      ref={containerRef}
       className="thin-scroll"
       style={{
         flex: 1,
         overflowY: "auto",
         padding: "20px 24px",
+        position: "relative",
       }}
     >
       <style>{`
@@ -229,6 +267,40 @@ export default function MessageList({ messages, streamingSegments, processing }:
           </div>
         )}
       </div>
+
+      {showJumpButton && hasContent && (
+        <div
+          style={{
+            position: "sticky",
+            bottom: 16,
+            display: "flex",
+            justifyContent: "flex-end",
+            pointerEvents: "none",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleJumpToBottom}
+            style={{
+              pointerEvents: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 14px",
+              borderRadius: 20,
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              color: "var(--ink-2)",
+              fontSize: 12,
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            }}
+          >
+            ↓ Jump to bottom
+          </button>
+        </div>
+      )}
+
       <div ref={bottomRef} />
     </div>
   );
