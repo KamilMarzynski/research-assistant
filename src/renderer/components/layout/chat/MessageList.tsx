@@ -12,7 +12,6 @@ interface MessageListProps {
 
 export default function MessageList({ messages, streamingSegments, processing }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const isAtBottom = useRef(true);
   const [showJumpButton, setShowJumpButton] = useState(false);
 
@@ -280,6 +279,7 @@ export default function MessageList({ messages, streamingSegments, processing }:
         >
           <button
             type="button"
+            aria-label="Jump to bottom"
             onClick={handleJumpToBottom}
             style={{
               pointerEvents: "auto",
@@ -300,8 +300,6 @@ export default function MessageList({ messages, streamingSegments, processing }:
           </button>
         </div>
       )}
-
-      <div ref={bottomRef} />
     </div>
   );
 }
