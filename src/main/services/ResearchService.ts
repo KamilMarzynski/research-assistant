@@ -107,7 +107,12 @@ export class ResearchService {
 
     const provider = resolveProvider({ settings, projectModelOverride: project.modelOverride });
     if (provider.type !== "ollama" && !provider.apiKey) {
-      throw new Error("No API key configured for the active provider");
+      await this.taskPersistence.updateTaskStatus(
+        task.taskId,
+        "interrupted",
+        "No API key configured",
+      );
+      return;
     }
 
     const projectPath = join(homePath, "projects", slug);
@@ -219,20 +224,18 @@ export class ResearchService {
               filePaths: [],
             },
           });
-          void this.finisherService
-            .finish({
-              projectId: task.projectId,
-              projectName: task.projectName,
-              query: task.query,
-              researchOutput,
-              taskWorkspacePath: workspacePath,
-              projectPath: null,
-              folderPath: task.folderPath,
-              slug,
-              provider,
-              filesMdContent,
-            } satisfies FinishJob)
-            .catch((err) => console.error("[ResearchService] finisherService.finish failed:", err));
+          await this.finisherService.finish({
+            projectId: task.projectId,
+            projectName: task.projectName,
+            query: task.query,
+            researchOutput,
+            taskWorkspacePath: workspacePath,
+            projectPath: null,
+            folderPath: task.folderPath,
+            slug,
+            provider,
+            filesMdContent,
+          } satisfies FinishJob);
         } catch (err) {
           await this.taskPersistence.updateTaskStatus(task.taskId, "failed", String(err));
           this.eventBus.emit({

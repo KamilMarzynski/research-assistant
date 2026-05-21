@@ -93,9 +93,9 @@ export default function ResearchHistoryPanel({
 
   const handleRetry = useCallback(
     (query: string) => {
-      ipc.invoke(IPC.RETRY_RESEARCH, { projectId, query }).catch((err) =>
-        console.error("[ResearchHistoryPanel] retry failed:", err),
-      );
+      ipc
+        .invoke(IPC.RETRY_RESEARCH, { projectId, query })
+        .catch((err) => console.error("[ResearchHistoryPanel] retry failed:", err));
     },
     [projectId],
   );

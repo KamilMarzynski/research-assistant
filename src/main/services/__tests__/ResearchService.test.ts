@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { readFile } from "node:fs/promises";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +18,12 @@ vi.mock("electron", () => ({
   dialog: {
     showErrorBox: vi.fn(),
   },
+}));
+
+vi.mock("node:fs/promises", () => ({
+  readFile: vi.fn().mockRejectedValue(new Error("ENOENT")),
+  mkdir: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../agent/worker-agent", () => {
@@ -528,6 +535,7 @@ describe("ResearchService", () => {
       };
       const taskPersistence = makeTaskPersistenceService();
       const bus = makeEventBus();
+      const finisherService = makeResearchFinisherService();
       const svc = new ResearchService(
         bus as never,
         makeSettingsService() as never,
@@ -544,11 +552,16 @@ describe("ResearchService", () => {
         } as never,
         makeObservabilityService() as never,
         taskPersistence as never,
-        makeResearchFinisherService() as never,
+        finisherService as never,
         checkpointService as never,
       );
-      return { svc, checkpointService, taskPersistence, bus };
+      return { svc, checkpointService, taskPersistence, bus, finisherService };
     }
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      getCaptured().current = null;
+    });
 
     it("marks task as interrupted when no checkpoint exists", async () => {
       const { svc, checkpointService, taskPersistence } = makeResearchServiceForResume();
@@ -677,6 +690,1148 @@ describe("ResearchService", () => {
 
       expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith("t1", "complete");
       expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:complete" }));
+    });
+
+    it("marks task as interrupted when checkpoint last message is assistant", async () => {
+      const { svc, checkpointService, taskPersistence } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [{ role: "assistant", content: "done", timestamp: 1 }],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(
+        "t1",
+        "interrupted",
+        "Checkpoint ended on assistant turn",
+      );
+    });
+
+    it("marks task as interrupted when no API key configured", async () => {
+      const settingsSvc = makeSettingsService();
+      settingsSvc.getSettings.mockResolvedValue({
+        activeProvider: "openrouter",
+        defaultCloudProvider: "openrouter",
+        providerCredentials: {
+          openrouter: { apiKey: null, defaultModel: "anthropic/claude-sonnet-4-5" },
+          openai: { apiKey: null, defaultModel: "gpt-4o" },
+          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
+          ollama: { host: "http://localhost:11434", defaultModel: "llama3.2:3b" },
+        },
+        langfuseEnabled: false,
+        webAccessEnabled: true,
+      } as never);
+
+      const checkpointService = makeCheckpointService();
+      const taskPersistence = makeTaskPersistenceService();
+      const bus = makeEventBus();
+
+      const svc = new ResearchService(
+        bus as never,
+        settingsSvc as never,
+        makeHomeService() as never,
+        new AllowlistService() as never,
+        {
+          getProject: vi.fn().mockResolvedValue({
+            name: "My Project",
+            modelOverride: null,
+            slug: "my-project-abc123",
+            folderPath: null,
+            projectPath: null,
+          }),
+        } as never,
+        makeObservabilityService() as never,
+        taskPersistence as never,
+        makeResearchFinisherService() as never,
+        checkpointService as never,
+      );
+
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(
+        "t1",
+        "interrupted",
+        "No API key configured",
+      );
+    });
+
+    it("emits research:started when resuming", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "research:started",
+          payload: expect.objectContaining({ taskId: "t1", projectId: "p1", query: "research X" }),
+        }),
+      );
+    });
+
+    it("accumulates researchOutput on text_delta during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "previous ",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      await getCaptured().current?.({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "new text" },
+      });
+
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "research:progress",
+          payload: expect.objectContaining({ taskId: "t1", projectId: "p1", message: "new text" }),
+        }),
+      );
+    });
+
+    it("deletes checkpoint and calls finisher on agent_end", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, finisherService } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "output",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      await getCaptured().current?.({ type: "agent_end" });
+
+      expect(checkpointService.delete).toHaveBeenCalled();
+      expect(finisherService.finish).toHaveBeenCalledWith(
+        expect.objectContaining({ researchOutput: "output" }),
+      );
+    });
+
+    it("marks task failed when finisher throws on agent_end", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, taskPersistence, bus, finisherService } =
+        makeResearchServiceForResume();
+      finisherService.finish.mockRejectedValue(new Error("finisher failed"));
+
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "output",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      await getCaptured().current?.({ type: "agent_end" });
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(
+        "t1",
+        "failed",
+        expect.stringContaining("finisher failed"),
+      );
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "research:failed",
+          payload: expect.objectContaining({ taskId: "t1", projectId: "p1" }),
+        }),
+      );
+    });
+
+    it("marks task failed when agent.continue() throws", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockRejectedValue(new Error("continue crashed")),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, taskPersistence, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(
+        "t1",
+        "failed",
+        expect.stringContaining("continue crashed"),
+      );
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "research:failed",
+          payload: expect.objectContaining({ taskId: "t1", projectId: "p1" }),
+        }),
+      );
+    });
+
+    it("calls onProgress with label during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      const call = createWorkerAgent.mock.calls[0][0];
+      call.onProgress?.("[researcher-1]", "some delta");
+
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "research:progress",
+          payload: expect.objectContaining({ label: "[researcher-1]", message: "some delta" }),
+        }),
+      );
+    });
+
+    it("writes checkpoint on onTurnEnd during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "output",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      const call = createWorkerAgent.mock.calls[0][0];
+      call.onTurnEnd?.([{ role: "user", content: "hi", timestamp: 1 }]);
+
+      expect(checkpointService.write).toHaveBeenCalledWith(
+        expect.stringContaining("workspace"),
+        expect.objectContaining({
+          agentType: "researcher",
+          messages: [{ role: "user", content: "hi", timestamp: 1 }],
+        }),
+      );
+    });
+
+    it("emits bash:blocked via emitBlocked during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      const call = createWorkerAgent.mock.calls[0][0];
+      call.emitBlocked?.({ command: "rm -rf /", reason: "blocked" });
+
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "bash:blocked",
+          payload: { command: "rm -rf /", reason: "blocked" },
+        }),
+      );
+    });
+
+    it("emits path:approval_required via emitApprovalRequired during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      const call = createWorkerAgent.mock.calls[0][0];
+      call.emitApprovalRequired?.({ path: "/etc", operation: "read" });
+
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "path:approval_required",
+          payload: { path: "/etc", operation: "read" },
+        }),
+      );
+    });
+
+    it("emits execute_code:approval_required via emitExecuteCodeApprovalRequired during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      const call = createWorkerAgent.mock.calls[0][0];
+      call.emitExecuteCodeApprovalRequired?.({ code: "print(1)", language: "python" });
+
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "execute_code:approval_required",
+          payload: { code: "print(1)", language: "python" },
+        }),
+      );
+    });
+
+    it("does not emit research:progress for non-text_delta message_update during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      await getCaptured().current?.({
+        type: "message_update",
+        assistantMessageEvent: { type: "thinking_delta", delta: "hmm" },
+      });
+
+      const progressCalls = bus.emit.mock.calls.filter(
+        (c: unknown[]) => (c[0] as { type: string }).type === "research:progress",
+      );
+      expect(progressCalls).toHaveLength(0);
+    });
+
+    it("handles null researchSpan during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const observabilityService = makeObservabilityService();
+      observabilityService.startObservation.mockResolvedValue(null);
+
+      const { svc, checkpointService, taskPersistence, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      await getCaptured().current?.({ type: "agent_end" });
+
+      expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith("t1", "complete");
+      expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:complete" }));
+    });
+
+    it("logs error when checkpoint write fails on turn_end in resumeResearch", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService } = makeResearchServiceForResume();
+      checkpointService.write.mockRejectedValue(new Error("write failed"));
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "output",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      const call = createWorkerAgent.mock.calls[0][0];
+      call.onTurnEnd?.([{ role: "user", content: "hi", timestamp: 1 }]);
+      await new Promise((r) => setTimeout(r, 10));
+      expect(checkpointService.write).toHaveBeenCalled();
+    });
+
+    it("uses remainingDepth: 5 when checkpoint agentType is orchestrator", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "orchestrator",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      expect(createWorkerAgent).toHaveBeenCalledWith(
+        expect.objectContaining({ remainingDepth: 5 }),
+      );
+    });
+
+    it("handles null researchSpan when agent.continue() rejects", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockRejectedValue(new Error("continue crashed")),
+        },
+        run: vi.fn(),
+      });
+
+      const observabilityService = makeObservabilityService();
+      observabilityService.startObservation.mockResolvedValue(null);
+
+      const { svc, checkpointService, taskPersistence, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(
+        "t1",
+        "failed",
+        expect.stringContaining("continue crashed"),
+      );
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "research:failed",
+          payload: expect.objectContaining({ taskId: "t1", projectId: "p1" }),
+        }),
+      );
+    });
+
+    it("reads FILES.md when it exists during resumeResearch", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      vi.mocked(readFile).mockResolvedValueOnce("FILES content");
+
+      const { svc, checkpointService } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      expect(createWorkerAgent).toHaveBeenCalledWith(
+        expect.objectContaining({ filesMdContent: "FILES content" }),
+      );
+    });
+
+    it("does not emit research:progress when onProgress label is empty during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      const call = createWorkerAgent.mock.calls[0][0];
+      vi.clearAllMocks();
+      call.onProgress?.("", "some delta");
+
+      expect(bus.emit).not.toHaveBeenCalled();
+    });
+
+    it("ignores unknown event types during resumed run", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, bus, taskPersistence } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "read_file",
+            content: [{ type: "text", text: "result" }],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      await getCaptured().current?.({ type: "unknown_event" });
+
+      const relevantCalls = bus.emit.mock.calls.filter(
+        (c: unknown[]) => {
+          const type = (c[0] as { type: string }).type;
+          return type === "research:progress" || type === "research:complete" || type === "research:failed";
+        },
+      );
+      expect(relevantCalls).toHaveLength(0);
+      expect(taskPersistence.updateTaskStatus).not.toHaveBeenCalled();
     });
   });
 });
@@ -974,6 +2129,413 @@ describe("ResearchService – _runResearch internals", () => {
         parentSpanContext: { traceId: "t", spanId: "s" },
       }),
     );
+  });
+
+  it("emits bash:blocked via emitBlocked in startResearch", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+    const bus = makeEventBus();
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
+      makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
+    );
+    await svc.startResearch("p1", "My Project", "query", null);
+    const call = createWorkerAgent.mock.calls[0][0];
+    call.emitBlocked?.({ command: "rm -rf /", reason: "blocked" });
+    expect(bus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "bash:blocked",
+        payload: { command: "rm -rf /", reason: "blocked" },
+      }),
+    );
+  });
+
+  it("emits path:approval_required via emitApprovalRequired in startResearch", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+    const bus = makeEventBus();
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
+      makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
+    );
+    await svc.startResearch("p1", "My Project", "query", null);
+    const call = createWorkerAgent.mock.calls[0][0];
+    call.emitApprovalRequired?.({ path: "/etc", operation: "read" });
+    expect(bus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "path:approval_required",
+        payload: { path: "/etc", operation: "read" },
+      }),
+    );
+  });
+
+  it("emits execute_code:approval_required via emitExecuteCodeApprovalRequired in startResearch", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+    const bus = makeEventBus();
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
+      makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
+    );
+    await svc.startResearch("p1", "My Project", "query", null);
+    const call = createWorkerAgent.mock.calls[0][0];
+    call.emitExecuteCodeApprovalRequired?.({ code: "print(1)", language: "python" });
+    expect(bus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "execute_code:approval_required",
+        payload: { code: "print(1)", language: "python" },
+      }),
+    );
+  });
+
+  it("logs error when checkpoint write fails on turn_end", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+    const checkpointService = makeCheckpointService();
+    checkpointService.write.mockRejectedValue(new Error("write failed"));
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
+      makeResearchFinisherService() as never,
+      checkpointService as never,
+    );
+    await svc.startResearch("p1", "My Project", "query", null);
+    const call = createWorkerAgent.mock.calls[0][0];
+    call.onTurnEnd?.([{ role: "user", content: "hi", timestamp: 1 }]);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(checkpointService.write).toHaveBeenCalled();
+  });
+
+  it("handles null researchSpan in startResearch", async () => {
+    const observabilityService = makeObservabilityService();
+    observabilityService.startObservation.mockResolvedValue(null);
+
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+
+    createWorkerAgent.mockResolvedValueOnce({
+      agent: {
+        ...getMockAgent(),
+        subscribe: vi.fn((cb) => {
+          getCaptured().current = cb;
+          return () => {};
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      } as never,
+      run: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const bus = makeEventBus();
+    const taskPersistence = makeTaskPersistenceService();
+
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      observabilityService as never,
+      taskPersistence as never,
+      makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
+    );
+
+    const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
+
+    await getCaptured().current?.({ type: "agent_end" });
+
+    expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
+    expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:complete" }));
+  });
+
+  it("marks task failed when updateTaskStatus throws on agent_end in startResearch", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+
+    createWorkerAgent.mockResolvedValueOnce({
+      agent: {
+        ...getMockAgent(),
+        subscribe: vi.fn((cb) => {
+          getCaptured().current = cb;
+          return () => {};
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      } as never,
+      run: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const taskPersistence = makeTaskPersistenceService();
+    taskPersistence.updateTaskStatus.mockImplementation((_id: string, status: string) => {
+      if (status === "complete") {
+        return Promise.reject(new Error("db error"));
+      }
+      return Promise.resolve(undefined);
+    });
+    const bus = makeEventBus();
+
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      taskPersistence as never,
+      makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
+    );
+
+    const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
+
+    await getCaptured().current?.({ type: "agent_end" });
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(
+      taskId,
+      "failed",
+      expect.any(String),
+    );
+    expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:failed" }));
+  });
+
+  it("logs error when finisher throws on agent_end in startResearch", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+
+    createWorkerAgent.mockResolvedValueOnce({
+      agent: {
+        ...getMockAgent(),
+        subscribe: vi.fn((cb) => {
+          getCaptured().current = cb;
+          return () => {};
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      } as never,
+      run: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const finisherService = makeResearchFinisherService();
+    finisherService.finish.mockRejectedValue(new Error("finisher failed"));
+
+    const taskPersistence = makeTaskPersistenceService();
+    const bus = makeEventBus();
+
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      taskPersistence as never,
+      finisherService as never,
+      makeCheckpointService() as never,
+    );
+
+    const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
+
+    await getCaptured().current?.({ type: "agent_end" });
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(taskId, "complete");
+    expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:complete" }));
+    expect(finisherService.finish).toHaveBeenCalled();
+  });
+
+  it("handles null researchSpan when run() rejects", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+
+    createWorkerAgent.mockResolvedValueOnce({
+      agent: {
+        ...getMockAgent(),
+        subscribe: vi.fn((cb) => {
+          getCaptured().current = cb;
+          return () => {};
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      } as never,
+      run: vi.fn().mockRejectedValue(new Error("run crashed")),
+    });
+
+    const observabilityService = makeObservabilityService();
+    observabilityService.startObservation.mockResolvedValue(null);
+
+    const taskPersistence = makeTaskPersistenceService();
+    const bus = makeEventBus();
+
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      observabilityService as never,
+      taskPersistence as never,
+      makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
+    );
+
+    const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(
+      taskId,
+      "failed",
+      expect.stringContaining("run crashed"),
+    );
+    expect(bus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "research:failed",
+        payload: expect.objectContaining({ taskId, projectId: "p1" }),
+      }),
+    );
+  });
+
+  it("reads FILES.md when it exists during startResearch", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+
+    vi.mocked(readFile).mockResolvedValueOnce("FILES content");
+
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      makeTaskPersistenceService() as never,
+      makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
+    );
+
+    await svc.startResearch("p1", "My Project", "research X", null);
+
+    expect(createWorkerAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ filesMdContent: "FILES content" }),
+    );
+  });
+
+  it("ignores unknown event types during startResearch", async () => {
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+
+    createWorkerAgent.mockResolvedValueOnce({
+      agent: {
+        ...getMockAgent(),
+        subscribe: vi.fn((cb) => {
+          getCaptured().current = cb;
+          return () => {};
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      } as never,
+      run: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const bus = makeEventBus();
+    const taskPersistence = makeTaskPersistenceService();
+
+    const svc = new ResearchService(
+      bus as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      taskPersistence as never,
+      makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
+    );
+
+    const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
+
+    await getCaptured().current?.({ type: "unknown_event" });
+
+    const relevantCalls = bus.emit.mock.calls.filter(
+      (c: unknown[]) => {
+        const type = (c[0] as { type: string }).type;
+        return type === "research:progress" || type === "research:complete" || type === "research:failed";
+      },
+    );
+    expect(relevantCalls).toHaveLength(0);
+    expect(taskPersistence.updateTaskStatus).not.toHaveBeenCalled();
   });
 });
 
