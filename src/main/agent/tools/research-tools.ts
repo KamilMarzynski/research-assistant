@@ -1,8 +1,21 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 
+const startResearchParameters = Type.Object({
+  brief: Type.String({
+    description:
+      "A <research_brief> XML chunk built by the coordinator. Must contain all required tags: user_request, coordinator_read, durability, expected_outcomes, success_criteria, existing_state_to_consult, constraints, out_of_scope. Forwarded verbatim to the research worker — code does not parse it.",
+  }),
+  deep: Type.Optional(
+    Type.Boolean({
+      description:
+        "true → orchestrator with parallel subtasks. false → single researcher. Default false.",
+    }),
+  ),
+});
+
 export function createStartResearchTool(
-  startResearchFn: (query: string, deep?: boolean) => Promise<{ taskId: string }>,
+  startResearchFn: (brief: string, deep?: boolean) => Promise<{ taskId: string }>,
 ): AgentTool<typeof startResearchParameters, { taskId: string }> {
   return {
     name: "start_research",
@@ -10,8 +23,8 @@ export function createStartResearchTool(
     description:
       "Dispatch a background research task. Returns immediately with a taskId. A summary will be injected into this conversation when the research completes.",
     parameters: startResearchParameters,
-    execute: async (_id, { query, deep }) => {
-      const { taskId } = await startResearchFn(query, deep);
+    execute: async (_id, { brief, deep }) => {
+      const { taskId } = await startResearchFn(brief, deep);
       return {
         content: [
           {
@@ -24,15 +37,3 @@ export function createStartResearchTool(
     },
   };
 }
-
-const startResearchParameters = Type.Object({
-  query: Type.String({
-    description: "A clear, self-contained research question including all necessary context",
-  }),
-  deep: Type.Optional(
-    Type.Boolean({
-      description:
-        "Set true for complex multi-source research requiring parallel subtopic investigation, code execution, or hierarchical orchestration. Defaults to false (single researcher).",
-    }),
-  ),
-});

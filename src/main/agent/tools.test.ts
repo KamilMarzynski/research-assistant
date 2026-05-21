@@ -139,6 +139,22 @@ it("includes save_memory and read_memory when functions are provided", () => {
   expect(names).toContain("read_memory");
 });
 
+describe("createStartResearchTool", () => {
+  it("start_research tool accepts brief and forwards it", async () => {
+    const startFn = vi.fn().mockResolvedValue({ taskId: "t1" });
+    const { createStartResearchTool } = await import("./tools/research-tools");
+    const tool = createStartResearchTool(startFn);
+    await tool.execute("call-1", {
+      brief: "<research_brief><user_request>hi</user_request></research_brief>",
+      deep: false,
+    });
+    expect(startFn).toHaveBeenCalledWith(
+      "<research_brief><user_request>hi</user_request></research_brief>",
+      false,
+    );
+  });
+});
+
 describe("createAgentTools – start_research deep flag", () => {
   it("passes deep=true to startResearchFn when tool called with deep: true", async () => {
     const startResearchFn = vi.fn().mockResolvedValue({ taskId: "t1" });
