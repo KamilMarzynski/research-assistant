@@ -22,6 +22,12 @@ describe("getOllamaModels", () => {
     expect(result.error).toBe("Connection refused");
   });
 
+  it("returns fallback error when thrown value is not an Error", async () => {
+    global.fetch = vi.fn().mockRejectedValue("random string");
+    const result = await getOllamaModels("http://localhost:11434");
+    expect(result.error).toBe("Ollama not reachable");
+  });
+
   it("returns error for non-http protocol", async () => {
     const result = await getOllamaModels("file:///etc/passwd");
     expect(result.models).toEqual([]);
@@ -98,6 +104,12 @@ describe("getOpenRouterModels", () => {
     expect(result.error).toBe("Network error");
   });
 
+  it("returns fallback error when thrown value is not an Error", async () => {
+    global.fetch = vi.fn().mockRejectedValue(123);
+    const result = await getOpenRouterModels();
+    expect(result.error).toBe("OpenRouter request failed");
+  });
+
   it("returns error on non-ok", async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 429 });
     const result = await getOpenRouterModels();
@@ -136,6 +148,12 @@ describe("getOpenAiModels", () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("Timeout"));
     const result = await getOpenAiModels("sk-test");
     expect(result.error).toBe("Timeout");
+  });
+
+  it("returns fallback error when thrown value is not an Error", async () => {
+    global.fetch = vi.fn().mockRejectedValue({ foo: "bar" });
+    const result = await getOpenAiModels("sk-test");
+    expect(result.error).toBe("OpenAI request failed");
   });
 
   it("returns error on non-ok non-401", async () => {

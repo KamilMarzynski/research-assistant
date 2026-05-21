@@ -6,7 +6,7 @@ const mockBaseModel = {
   api: "openai-completions",
   baseUrl: "https://openrouter.ai/api/v1",
   headers: { "HTTP-Referer": "https://example.com" },
-};
+} as any;
 
 vi.mock("@mariozechner/pi-ai", () => ({
   getModel: vi.fn().mockReturnValue(mockBaseModel),
@@ -50,6 +50,17 @@ describe("createModel", () => {
     const model = createModel({ provider: openaiProvider });
     expect(model.baseUrl).toBe("https://api.openai.com/v1");
     expect(model.id).toBe("gpt-4o");
+  });
+
+  it("returns registered openai model directly when found in registry", async () => {
+    const { getModels } = await import("@mariozechner/pi-ai");
+    vi.mocked(getModels).mockReturnValueOnce([
+      { ...mockBaseModel, id: "gpt-4o", provider: "openai" },
+    ]);
+    const openaiProvider = { type: "openai" as const, apiKey: "sk-openai", model: "gpt-4o" };
+    const model = createModel({ provider: openaiProvider });
+    expect(model.id).toBe("gpt-4o");
+    expect(model.baseUrl).toBe("https://openrouter.ai/api/v1");
   });
 
   it("throws for anthropic provider", () => {

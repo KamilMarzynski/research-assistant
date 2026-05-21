@@ -153,4 +153,14 @@ describe("CompressionService", () => {
     expect(result.strategy).toBe("none");
     expect(result.content).toBe(raw);
   });
+
+  it("returns raw content for unknown strategy", async () => {
+    const raw = "a".repeat(500);
+    const rules = [{ tool: "test_tool", thresholdChars: 100, strategy: "unknown" as any }];
+    const result = await service.compress("test_tool", raw, rules);
+
+    expect(result.wasCompressed).toBe(false);
+    expect(result.strategy).toBe("none");
+    expect(result.content).toBe(raw);
+  });
 });

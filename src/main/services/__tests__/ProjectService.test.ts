@@ -343,5 +343,17 @@ describe("ProjectService", () => {
         resolution: { status: "failed", error: "boom" },
       });
     });
+
+    it("returns stringified error for non-Error rejection", async () => {
+      vi.mocked(approvalResolver.resolvePendingApprovals).mockRejectedValue("plain string");
+
+      const result = await service.transitionApprovalLevel(
+        "proj-1",
+        "bypass_approvals",
+        approvalResolver,
+      );
+
+      expect(result.resolution).toEqual({ status: "failed", error: "plain string" });
+    });
   });
 });

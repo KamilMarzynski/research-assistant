@@ -76,4 +76,78 @@ describe("ModelMetadataService", () => {
     expect(second).toBe(first);
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
+
+  it("returns static fallback for anthropic provider", async () => {
+    const service = new ModelMetadataService();
+    const meta = await service.getModelMetadata({
+      type: "anthropic",
+      apiKey: "sk-ant",
+      model: "claude-3-5-sonnet-20241022",
+    });
+    expect(meta.source).toBe("static-fallback");
+    expect(meta.effectiveContextWindow).toBe(200_000);
+  });
+
+  it("uses openrouter runtime metadata when available", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [{ id: "openai/gpt-4o", name: "GPT-4o", context_length: 128_000 }],
+      }),
+    }) as typeof fetch;
+
+    const service = new ModelMetadataService();
+    const meta = await service.getModelMetadata({
+      type: "openrouter",
+      apiKey: "sk",
+      model: "openai/gpt-4o",
+    });
+    expect(meta.source).toBe("provider-api");
+    expect(meta.effectiveContextWindow).toBe(128_000);
+  });
+
+  it("falls back to pi-ai for openrouter on fetch failure", async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error("network")) as typeof fetch;
+    const service = new ModelMetadataService();
+    const meta = await service.getModelMetadata({
+      type: "openrouter",
+      apiKey: "sk",
+      model: "gpt-4o",
+    });
+    expect(meta.source).toBe("pi-ai");
+    expect(meta.effectiveContextWindow).toBe(128_000);
+  });
+
+  it("falls back to maxContextWindow when effectiveContextWindow is missing", async () => {
+    const service = new ModelMetadataService();
+    vi.spyOn(service, "getModelMetadata").mockResolvedValue({
+      id: "test",
+      name: "test",
+      provider: "openai",
+      maxContextWindow: 64_000,
+      source: "static-fallback",
+    });
+    const window = await service.getEffectiveContextWindow({
+      type: "openai",
+      apiKey: "sk",
+      model: "test",
+    });
+    expect(window).toBe(64_000);
+  });
+
+  it("falls back to default context window when both are missing", async () => {
+    const service = new ModelMetadataService();
+    vi.spyOn(service, "getModelMetadata").mockResolvedValue({
+      id: "test",
+      name: "test",
+      provider: "openai",
+      source: "static-fallback",
+    });
+    const window = await service.getEffectiveContextWindow({
+      type: "openai",
+      apiKey: "sk",
+      model: "test",
+    });
+    expect(window).toBe(128_000);
+  });
 });

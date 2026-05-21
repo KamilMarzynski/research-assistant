@@ -148,6 +148,15 @@ describe("searchDuckDuckGo", () => {
     const results = await searchDuckDuckGo("test", 5);
     expect(results).toHaveLength(0);
   });
+
+  it("throws when response is not ok", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+    });
+
+    await expect(searchDuckDuckGo("test", 5)).rejects.toThrow("DuckDuckGo search failed: HTTP 500");
+  });
 });
 
 describe("createWebSearchTool", () => {

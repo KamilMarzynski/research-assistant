@@ -50,15 +50,29 @@ describe("ArtifactService", () => {
     });
   });
 
-  describe("listArtifacts", () => {
-    it("returns artifacts from repo.listByProject", async () => {
-      const list = [makeArtifact({ id: "a" }), makeArtifact({ id: "b" })];
-      (repo.listByProject as ReturnType<typeof vi.fn>).mockResolvedValue(list);
+  describe("listUnacknowledged", () => {
+    it("delegates to repo.findUnacknowledged", async () => {
+      const list = [makeArtifact({ id: "a", acknowledged: false })];
+      (repo.findUnacknowledged as ReturnType<typeof vi.fn>).mockResolvedValue(list);
 
-      const result = await service.listArtifacts("proj-1");
+      const result = await service.listUnacknowledged("proj-1");
 
-      expect(repo.listByProject).toHaveBeenCalledWith("proj-1");
+      expect(repo.findUnacknowledged).toHaveBeenCalledWith("proj-1", 50);
       expect(result).toEqual(list);
+    });
+  });
+
+  describe("acknowledge", () => {
+    it("delegates to repo.acknowledge", async () => {
+      await service.acknowledge("proj-1", "art-1");
+      expect(repo.acknowledge).toHaveBeenCalledWith("art-1");
+    });
+  });
+
+  describe("acknowledgeAll", () => {
+    it("delegates to repo.acknowledgeAllByProject", async () => {
+      await service.acknowledgeAll("proj-1");
+      expect(repo.acknowledgeAllByProject).toHaveBeenCalledWith("proj-1");
     });
   });
 });

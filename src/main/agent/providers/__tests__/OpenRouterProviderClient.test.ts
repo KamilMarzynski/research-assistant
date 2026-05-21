@@ -64,4 +64,15 @@ describe("OpenRouterProviderClient", () => {
     const client = new OpenRouterProviderClient("sk-test");
     await expect(client.listModels()).rejects.toThrow("OpenRouter returned 429");
   });
+
+  it("handles response without data array", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    }) as typeof fetch;
+
+    const client = new OpenRouterProviderClient();
+    const models = await client.listModels();
+    expect(models).toEqual([]);
+  });
 });

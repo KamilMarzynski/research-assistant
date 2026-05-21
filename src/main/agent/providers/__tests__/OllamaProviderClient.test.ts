@@ -77,4 +77,14 @@ describe("OllamaProviderClient", () => {
       { id: "mistral:7b", name: "mistral:7b", provider: "ollama", source: "provider-api" },
     ]);
   });
+
+  it("throws for invalid protocol in listModels", async () => {
+    const client = new OllamaProviderClient("ftp://localhost:11434");
+    await expect(client.listModels()).rejects.toThrow("Invalid protocol");
+  });
+
+  it("throws for invalid protocol in getModelMetadata", async () => {
+    const client = new OllamaProviderClient("ftp://localhost:11434");
+    await expect(client.getModelMetadata("llama3")).rejects.toThrow("Invalid protocol");
+  });
 });

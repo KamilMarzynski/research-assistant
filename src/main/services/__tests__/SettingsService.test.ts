@@ -128,6 +128,39 @@ describe("SettingsService", () => {
       expect(settings.webAccessEnabled).toBe(true);
     });
 
+    it("does not rewrite file when settings are already v1", async () => {
+      await writeFile(
+        join(tmpDir, "settings.json"),
+        JSON.stringify({ version: 1, activeProvider: "openai", theme: "dark" }),
+        "utf-8",
+      );
+      const before = await readFile(join(tmpDir, "settings.json"), "utf-8");
+      await service.getSettings();
+      const after = await readFile(join(tmpDir, "settings.json"), "utf-8");
+      expect(after).toBe(before);
+    });
+
+    it("falls back to defaults when v1 file is missing fields", async () => {
+      await writeFile(
+        join(tmpDir, "settings.json"),
+        JSON.stringify({ version: 1, activeProvider: "openai" }),
+        "utf-8",
+      );
+      const settings = await service.getSettings();
+      expect(settings.defaultCloudProvider).toBe("openrouter");
+      expect(settings.providerCredentials.openrouter.defaultModel).toBe(
+        "anthropic/claude-sonnet-4-6",
+      );
+      expect(settings.providerCredentials.openai.defaultModel).toBe("gpt-4o");
+      expect(settings.providerCredentials.anthropic.defaultModel).toBe(
+        "claude-3-5-sonnet-20241022",
+      );
+      expect(settings.providerCredentials.ollama.host).toBe("http://localhost:11434");
+      expect(settings.langfuseEnabled).toBe(false);
+      expect(settings.webAccessEnabled).toBe(true);
+      expect(settings.theme).toBe("system");
+    });
+
     it("allows clearing API key by passing null", async () => {
       await service.saveSettings({
         providerCredentials: {
@@ -160,6 +193,38 @@ describe("SettingsService", () => {
         },
       });
       expect(safeStorage.encryptString).toHaveBeenCalledWith("sk-or-test");
+    });
+
+    it("saveSettings without providerCredentials does not touch credentials", async () => {
+      await service.saveSettings({ langfuseEnabled: true });
+      const settings = await service.getSettings();
+      expect(settings.langfuseEnabled).toBe(true);
+    });
+
+    it("saveSettings with providerCredentials but no ollama host skips URL validation", async () => {
+      await service.saveSettings({
+        providerCredentials: {
+          openrouter: { apiKey: null, defaultModel: "anthropic/claude-sonnet-4-6" },
+          openai: { apiKey: null, defaultModel: "gpt-4o" },
+          anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
+          ollama: { host: "", defaultModel: "llama3.2:3b" },
+        },
+      });
+      const settings = await service.getSettings();
+      expect(settings.providerCredentials.ollama.host).toBe("");
+    });
+
+    it("rejects invalid ollama host protocol", async () => {
+      await expect(
+        service.saveSettings({
+          providerCredentials: {
+            openrouter: { apiKey: null, defaultModel: "anthropic/claude-sonnet-4-6" },
+            openai: { apiKey: null, defaultModel: "gpt-4o" },
+            anthropic: { apiKey: null, defaultModel: "claude-3-5-sonnet-20241022" },
+            ollama: { host: "ftp://invalid", defaultModel: "llama3.2:3b" },
+          },
+        }),
+      ).rejects.toThrow("Invalid Ollama host protocol");
     });
   });
 

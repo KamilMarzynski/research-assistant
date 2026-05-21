@@ -94,6 +94,16 @@ describe("AllowlistService", () => {
         needsApproval: true,
       });
     });
+
+    it("handles re-approving the same path", () => {
+      service.approveSession("proj-1", "/tmp/same.txt", "read");
+      service.approveSession("proj-1", "/tmp/same.txt", "read");
+
+      expect(service.isAllowed("proj-1", "/tmp/same.txt", "read", [])).toEqual({
+        allowed: true,
+        needsApproval: false,
+      });
+    });
   });
 
   describe("clearSession", () => {

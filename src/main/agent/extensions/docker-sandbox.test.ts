@@ -103,6 +103,12 @@ describe("runExecuteCode", () => {
     expect(result.outputFiles).toEqual([]);
   });
 
+  it("returns error for non-Error thrown values", async () => {
+    mockCreateContainer.mockRejectedValue("plain string error");
+    const result = await runExecuteCode({ code: 'print("hi")', language: "python" });
+    expect(result.error).toBe("plain string error");
+  });
+
   it("writes input.files to workspace before running container", async () => {
     await runExecuteCode({
       code: 'print("hi")',

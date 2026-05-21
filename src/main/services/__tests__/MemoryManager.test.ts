@@ -224,6 +224,77 @@ describe("MemoryManager", () => {
         { role: "user", content: "plain string content" },
       ]);
     });
+
+    it("falls back to JSON.stringify for non-string non-v2 content", async () => {
+      mockMemory.getContext.mockResolvedValue({
+        systemMessage: "",
+        messages: [
+          {
+            role: "assistant",
+            content: { format: 3, parts: [] },
+            id: "1",
+            threadId: "proj-1",
+            resourceId: "proj-1",
+            createdAt: new Date(),
+          },
+        ],
+        hasObservations: false,
+        omRecord: null,
+        continuationMessage: undefined,
+        otherThreadsContext: undefined,
+      });
+
+      const ctx = await manager.buildContext("proj-1");
+
+      expect(ctx.recentMessages[0].content).toBe('{"format":3,"parts":[]}');
+    });
+
+    it("filters out non-text parts from v2 content", async () => {
+      mockMemory.getContext.mockResolvedValue({
+        systemMessage: "",
+        messages: [
+          {
+            role: "assistant",
+            content: {
+              format: 2,
+              parts: [
+                { type: "text", text: "hello " },
+                { type: "image", url: "http://x" },
+                null,
+                { type: "text", text: "world" },
+              ],
+            },
+            id: "1",
+            threadId: "proj-1",
+            resourceId: "proj-1",
+            createdAt: new Date(),
+          },
+        ],
+        hasObservations: false,
+        omRecord: null,
+        continuationMessage: undefined,
+        otherThreadsContext: undefined,
+      });
+
+      const ctx = await manager.buildContext("proj-1");
+
+      expect(ctx.recentMessages[0].content).toBe("hello world");
+    });
+
+    it("uses empty summary when systemMessage is null", async () => {
+      mockMemory.getContext.mockResolvedValue({
+        systemMessage: null,
+        messages: [],
+        hasObservations: false,
+        omRecord: null,
+        continuationMessage: undefined,
+        otherThreadsContext: undefined,
+      });
+
+      const ctx = await manager.buildContext("proj-1");
+
+      expect(ctx.summary).toBe("");
+    });
   });
 
   // ------------------------------------------------------------------ save
@@ -335,6 +406,13 @@ describe("MemoryManager", () => {
       expect(mockOmEngine.observe).toHaveBeenCalledTimes(2);
       expect(mockOmEngine.observe).toHaveBeenCalledWith({ threadId: "proj-a" });
       expect(mockOmEngine.observe).toHaveBeenCalledWith({ threadId: "proj-b" });
+    });
+
+    it("does not throw when omEngine resolves to null", async () => {
+      mockMemory.omEngine = Promise.resolve(null) as any;
+      await manager.save("proj-1", [{ role: "user", content: "Hello" }]);
+      await vi.advanceTimersByTimeAsync(1000);
+      // Should not throw
     });
   });
 

@@ -435,6 +435,50 @@ function makeBase() {
   };
 }
 
+describe("AGENT_TYPE_PRESETS.researcher", () => {
+  it("uses taskWorkspacePath when provided", () => {
+    const config = AGENT_TYPE_PRESETS.researcher(makeBase(), "/output", 0);
+    expect(config.toolNames).toContain("fetch_url");
+    expect(config.remainingDepth).toBe(0);
+    expect(config.systemPromptAddition).toContain("workspace");
+  });
+
+  it("falls back to dirname(outputPath) when taskWorkspacePath omitted", () => {
+    const base = { ...makeBase(), taskWorkspacePath: undefined };
+    const config = AGENT_TYPE_PRESETS.researcher(base, "/tmp/out.md", 0);
+    expect(config.systemPromptAddition).toContain("workspace");
+  });
+});
+
+describe("AGENT_TYPE_PRESETS.coder", () => {
+  it("uses taskWorkspacePath when provided", () => {
+    const config = AGENT_TYPE_PRESETS.coder(makeBase(), "/output", 0);
+    expect(config.toolNames).toContain("execute_code");
+    expect(config.remainingDepth).toBe(0);
+  });
+
+  it("falls back to dirname(outputPath) when taskWorkspacePath omitted", () => {
+    const base = { ...makeBase(), taskWorkspacePath: undefined };
+    const config = AGENT_TYPE_PRESETS.coder(base, "/tmp/out.md", 0);
+    expect(config.systemPromptAddition).toContain("workspace");
+  });
+});
+
+describe("AGENT_TYPE_PRESETS.orchestrator", () => {
+  it("includes all orchestrator tools and keeps remainingDepth", () => {
+    const config = AGENT_TYPE_PRESETS.orchestrator(makeBase(), "/output", 2);
+    expect(config.toolNames).toContain("spawn_agent");
+    expect(config.toolNames).toContain("spawn_agents_parallel");
+    expect(config.remainingDepth).toBe(2);
+  });
+
+  it("falls back to dirname(outputPath) when taskWorkspacePath omitted", () => {
+    const base = { ...makeBase(), taskWorkspacePath: undefined };
+    const config = AGENT_TYPE_PRESETS.orchestrator(base, "/tmp/out.md", 1);
+    expect(config.systemPromptAddition).toContain("workspace");
+  });
+});
+
 describe("AGENT_TYPE_PRESETS.finisher", () => {
   it("includes safe_bash in toolNames", () => {
     const config = AGENT_TYPE_PRESETS.finisher(makeBase(), "/output", 0);
@@ -468,6 +512,12 @@ describe("AGENT_TYPE_PRESETS.finisher", () => {
     const brief = "<research_brief><user_request>X</user_request></research_brief>";
     const config = AGENT_TYPE_PRESETS.finisher({ ...makeBase(), brief }, "/output", 0);
     expect(config.systemPromptAddition).toContain(brief);
+  });
+
+  it("falls back to homePath when taskWorkspacePath omitted", () => {
+    const base = { ...makeBase(), taskWorkspacePath: undefined };
+    const config = AGENT_TYPE_PRESETS.finisher(base, "/output", 0);
+    expect(config.systemPromptAddition).toContain("workspace");
   });
 });
 

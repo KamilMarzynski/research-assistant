@@ -66,10 +66,22 @@ describe("ApprovalPolicyService", () => {
     await expect(service.getLevel("missing")).rejects.toThrow(NotFoundError);
   });
 
+  it("returns default level when project approvalLevel is null", async () => {
+    vi.mocked(repo.get).mockResolvedValue({ ...makeProject(), approvalLevel: null } as never);
+    const level = await service.getLevel("proj-1");
+    expect(level).toBe("default");
+  });
+
   it("throws NotFoundError from setLevel when the project does not exist", async () => {
     vi.mocked(repo.setApprovalLevel).mockRejectedValue(new Error("Project not found: missing"));
 
     await expect(service.setLevel("missing", "bypass_approvals")).rejects.toThrow(NotFoundError);
     expect(repo.setApprovalLevel).toHaveBeenCalledWith("missing", "bypass_approvals");
+  });
+
+  it("re-throws non-not-found errors from setLevel", async () => {
+    vi.mocked(repo.setApprovalLevel).mockRejectedValue(new Error("database locked"));
+
+    await expect(service.setLevel("proj-1", "bypass_approvals")).rejects.toThrow("database locked");
   });
 });

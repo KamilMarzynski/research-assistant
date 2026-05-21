@@ -77,6 +77,23 @@ describe("checkBlocklist", () => {
     expect(checkBlocklist("cat README.md")).toBeNull();
     expect(checkBlocklist("bun run test")).toBeNull();
   });
+
+  it("returns null for allowed builtins", () => {
+    expect(checkBlocklist("exit")).toBeNull();
+    expect(checkBlocklist("cd /tmp")).toBeNull();
+    expect(checkBlocklist("pwd")).toBeNull();
+  });
+
+  it("returns null when binary extraction yields nothing", () => {
+    expect(checkBlocklist("> /dev/null")).toBeNull();
+    expect(checkBlocklist("2>&1")).toBeNull();
+    expect(checkBlocklist("FOO=bar ls")).toBeNull();
+  });
+
+  it("strips path prefix from binary", () => {
+    expect(checkBlocklist("/usr/bin/ls")).toBeNull();
+    expect(checkBlocklist("./node_modules/.bin/bun")).toBeNull();
+  });
 });
 
 describe("detectInlineCode", () => {
@@ -734,6 +751,20 @@ describe("detectFileExecution", () => {
       expect(detectFileExecution("ls -la")).toBeNull();
       expect(detectFileExecution("git status")).toBeNull();
       expect(detectFileExecution("grep -r foo .")).toBeNull();
+    });
+
+    it("returns null for python3 -c flag (inline code, not file)", () => {
+      expect(detectFileExecution('python3 -c "print(1)"')).toBeNull();
+    });
+
+    it("detects file execution after -c= flag", () => {
+      const result = detectFileExecution("python3 -c=print(1) script.py");
+      expect(result).not.toBeNull();
+      expect(result?.interpreter).toBe("python3");
+    });
+
+    it("returns null for python3 -c= with no positional arg", () => {
+      expect(detectFileExecution("python3 -c=print(1)")).toBeNull();
     });
   });
 

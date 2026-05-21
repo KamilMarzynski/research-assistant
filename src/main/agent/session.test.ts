@@ -13,7 +13,7 @@ const mockAgent = {
   prompt: vi.fn().mockResolvedValue(undefined),
   abort: vi.fn(),
   followUp: vi.fn(),
-  state: { tools: [], systemPrompt: "" },
+  state: { tools: [], systemPrompt: "", messages: [] },
 };
 
 vi.mock("@mariozechner/pi-agent-core", () => ({
@@ -279,6 +279,20 @@ describe("AgentSession", () => {
       );
     });
 
+    it("flushes streaming message every 5 chunks", async () => {
+      await session.send("my question");
+      for (let i = 0; i < 5; i++) {
+        await triggerEvent({
+          type: "message_update",
+          assistantMessageEvent: { type: "text_delta", delta: String(i) },
+        });
+      }
+      await triggerEvent({ type: "agent_end", messages: [] });
+      // flush at chunk 5 + final update on agent_end
+      expect(messageService.updateMessage).toHaveBeenCalledTimes(2);
+      expect(messageService.updateMessage).toHaveBeenNthCalledWith(1, expect.any(String), "01234");
+    });
+
     it("does not persist empty assistant content on agent_end", async () => {
       await triggerEvent({ type: "agent_end", messages: [] });
       // updateMessage should NOT be called when content is empty
@@ -328,6 +342,18 @@ describe("AgentSession", () => {
         expect.any(Error),
       );
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe("injectAssistantMessage", () => {
+    it("pushes an assistant message into agent state", () => {
+      session.injectAssistantMessage("injected content");
+      const lastMsg = mockAgent.state.messages.at(-1);
+      expect(lastMsg).toMatchObject({
+        role: "assistant",
+        content: [{ type: "text", text: "injected content" }],
+      });
+      expect(lastMsg).toHaveProperty("timestamp");
     });
   });
 
@@ -900,6 +926,75 @@ describe("AgentSession", () => {
       expect(eventBus.emit).toHaveBeenCalledWith(
         expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
       );
+    });
+
+    it("logs error when deleteMessage throws during abort", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      messageService.deleteMessage.mockRejectedValueOnce(new Error("db locked"));
+      let resolvePrompt: (() => void) | undefined;
+      mockAgent.prompt.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolvePrompt = resolve;
+          }),
+      );
+
+      const sendPromise = session.send("my question");
+      while (mockAgent.prompt.mock.calls.length === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      session.abort();
+      resolvePrompt?.();
+      await sendPromise.catch(() => {});
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[AgentSession] failed to delete empty placeholder:",
+        expect.any(Error),
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it("logs error when updateMessage throws during abort", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      messageService.updateMessage.mockRejectedValueOnce(new Error("db locked"));
+      await session.send("my question");
+      await triggerEvent({
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "Partial" },
+      });
+      session.abort();
+
+      // The catch handler is fire-and-forget (void), so we need to wait a tick
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Partial");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[AgentSession] failed to finalize partial message:",
+        expect.any(Error),
+      );
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("send() error handling", () => {
+    it("catches and logs error when system context refresh fails", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { buildSystemContext } = await import("./context");
+      (buildSystemContext as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        new Error("disk full"),
+      );
+
+      await session.send("hello");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[AgentSession] Failed to refresh system context:",
+        expect.any(Error),
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it("throws when agent.prompt throws and ends tracer turn", async () => {
+      mockAgent.prompt.mockRejectedValueOnce(new Error("model overload"));
+      await expect(session.send("hello")).rejects.toThrow("model overload");
     });
   });
 

@@ -117,6 +117,23 @@ describe("createFetchUrlTool", () => {
       );
     });
 
+    it("re-throws non-AbortError fetch failures", async () => {
+      const okResponse = new Response("OK", {
+        status: 200,
+        statusText: "OK",
+        headers: new Headers(),
+      });
+      const networkError = new Error("Network failure");
+
+      mockFetch.mockResolvedValueOnce(okResponse);
+      mockFetch.mockRejectedValueOnce(networkError);
+
+      const tool = createFetchUrlTool();
+      await expect(tool.execute("test-id", { url: "https://example.com" })).rejects.toThrow(
+        "Network failure",
+      );
+    });
+
     it("throws content too large when content-length exceeds 10MB", async () => {
       const okResponse = new Response("OK", {
         status: 200,

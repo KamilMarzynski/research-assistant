@@ -227,3 +227,83 @@ describe("createAgentTools – compression", () => {
     expect(tools.map((t) => t.name)).not.toContain("compress");
   });
 });
+
+describe("createAgentTools – capabilities overload", () => {
+  it("builds tools from capabilities (all enabled)", () => {
+    const tools = createAgentTools(
+      {
+        webAccess: true,
+        memory: true,
+        codeExecution: true,
+        research: true,
+        evaluation: true,
+        spawn: true,
+      },
+      {
+        ...BASE,
+        saveMemoryFn: vi.fn().mockResolvedValue({ path: "/tmp/test.md" }),
+        readMemoryFn: vi.fn().mockResolvedValue("test"),
+        startResearchFn: vi.fn().mockResolvedValue({ taskId: "x" }),
+        requestEvaluationFn: vi.fn().mockResolvedValue({ pass: true, criteria: [] }),
+        spawnAgentFn: vi.fn().mockResolvedValue({ outputPath: "/p", summary: "done" }),
+        spawnAgentsParallelFn: vi.fn().mockResolvedValue([]),
+      },
+    );
+    const names = tools.map((t) => t.name);
+    expect(names).toContain("fetch_url");
+    expect(names).toContain("web_search");
+    expect(names).toContain("save_memory");
+    expect(names).toContain("read_memory");
+    expect(names).toContain("start_research");
+    expect(names).toContain("request_evaluation");
+    expect(names).toContain("spawn_agent");
+    expect(names).toContain("spawn_agents_parallel");
+  });
+
+  it("builds tools from capabilities (all disabled)", () => {
+    const tools = createAgentTools(
+      {
+        webAccess: false,
+        memory: false,
+        codeExecution: false,
+        research: false,
+        evaluation: false,
+        spawn: false,
+      },
+      BASE,
+    );
+    const names = tools.map((t) => t.name);
+    expect(names).not.toContain("fetch_url");
+    expect(names).not.toContain("web_search");
+    expect(names).not.toContain("save_memory");
+    expect(names).not.toContain("read_memory");
+    expect(names).not.toContain("start_research");
+    expect(names).not.toContain("request_evaluation");
+    expect(names).not.toContain("spawn_agent");
+    expect(names).not.toContain("spawn_agents_parallel");
+  });
+
+  it("filters to only the tool names matching capabilities", () => {
+    const tools = createAgentTools(
+      {
+        webAccess: true,
+        memory: false,
+        codeExecution: false,
+        research: false,
+        evaluation: false,
+        spawn: false,
+      },
+      BASE,
+    );
+    expect(tools.map((t) => t.name)).toEqual([
+      "read_file",
+      "write_file",
+      "list_dir",
+      "safe_bash",
+      "read_skill",
+      "fetch_url",
+      "web_search",
+      "execute_code",
+    ]);
+  });
+});

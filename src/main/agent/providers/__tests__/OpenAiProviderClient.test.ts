@@ -48,4 +48,15 @@ describe("OpenAiProviderClient", () => {
     const client = new OpenAiProviderClient("sk-openai");
     await expect(client.getModelMetadata("unknown")).resolves.toBeNull();
   });
+
+  it("handles response without data array", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    }) as typeof fetch;
+
+    const client = new OpenAiProviderClient("sk-openai");
+    const models = await client.listModels();
+    expect(models).toEqual([]);
+  });
 });

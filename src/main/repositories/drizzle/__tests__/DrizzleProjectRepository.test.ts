@@ -300,4 +300,44 @@ describe("DrizzleProjectRepository", () => {
       );
     });
   });
+
+  describe("unlinkFolder", () => {
+    it("clears folderPath", async () => {
+      const project = await repo.create({
+        name: "Unlink Me",
+        slug: null,
+        folderPath: "/some/path",
+        projectPath: null,
+      });
+      await repo.unlinkFolder(project.id);
+
+      const found = await repo.get(project.id);
+      expect(found?.folderPath).toBeNull();
+    });
+
+    it("throws when project does not exist", async () => {
+      await expect(repo.unlinkFolder("nonexistent-id")).rejects.toThrow("Project not found");
+    });
+  });
+
+  describe("setProjectPath", () => {
+    it("persists projectPath", async () => {
+      const project = await repo.create({
+        name: "Path Me",
+        slug: null,
+        folderPath: null,
+        projectPath: null,
+      });
+      await repo.setProjectPath(project.id, "/new/path");
+
+      const found = await repo.get(project.id);
+      expect(found?.projectPath).toBe("/new/path");
+    });
+
+    it("throws when project does not exist", async () => {
+      await expect(repo.setProjectPath("nonexistent-id", "/new/path")).rejects.toThrow(
+        "Project not found",
+      );
+    });
+  });
 });

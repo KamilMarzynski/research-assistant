@@ -127,4 +127,71 @@ describe("SkillWatcherService", () => {
       expect(emit2).not.toHaveBeenCalled();
     });
   });
+
+  it("returns early when skillDirs is empty", async () => {
+    const emit = vi.fn();
+    const service = new SkillWatcherService({
+      skillDirs: [],
+      emit,
+      manifestPath: join("/tmp", "manifest.json"),
+    });
+    await service.start();
+    service.stop();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("ignores non-SKILL.md file changes", async () => {
+    await withTempDir("skill-watcher-ignore", async (dir) => {
+      const skillDir = join(dir, "skills");
+      await mkdir(skillDir, { recursive: true });
+      const otherFile = join(skillDir, "README.md");
+      await writeFile(otherFile, "# readme");
+
+      const emit = vi.fn();
+      const manifestPath = join(dir, "manifest.json");
+      const service = new SkillWatcherService({
+        skillDirs: [skillDir],
+        emit,
+        manifestPath,
+      });
+
+      await service.start();
+      await new Promise((r) => setTimeout(r, 300));
+
+      // Modify non-SKILL.md file
+      await writeFile(otherFile, "# updated");
+      await new Promise((r) => setTimeout(r, 300));
+
+      service.stop();
+
+      // Should not emit for README.md
+      expect(emit).not.toHaveBeenCalled();
+    });
+  });
+
+  it("uses unknown name and empty description when frontmatter is missing", async () => {
+    await withTempDir("skill-watcher-no-meta", async (dir) => {
+      const skillDir = join(dir, "skills");
+      await mkdir(skillDir, { recursive: true });
+      const skillFile = join(skillDir, "bare-skill", "SKILL.md");
+      await mkdir(join(skillDir, "bare-skill"), { recursive: true });
+      await writeFile(skillFile, "Just content, no frontmatter.");
+
+      const emit = vi.fn();
+      const manifestPath = join(dir, "manifest.json");
+      const service = new SkillWatcherService({
+        skillDirs: [skillDir],
+        emit,
+        manifestPath,
+      });
+
+      await service.start();
+      await new Promise((r) => setTimeout(r, 300));
+      service.stop();
+
+      expect(emit).toHaveBeenCalled();
+      const call = emit.mock.calls.find((call) => call[0].payload.skillName === "unknown");
+      expect(call).toBeDefined();
+    });
+  });
 });

@@ -28,4 +28,35 @@ describe("pruneMessages", () => {
     const result = pruneMessages(messages as any, 10);
     expect(result).toHaveLength(1);
   });
+
+  it("handles array content messages", () => {
+    const messages = [
+      { role: "user", content: [{ text: "hello" }] },
+      { role: "assistant", content: [{ text: "world" }] },
+    ];
+    const result = pruneMessages(messages as any, 200_000);
+    expect(result).toHaveLength(2);
+  });
+
+  it("handles non-string non-array content", () => {
+    const messages = [
+      { role: "user", content: { foo: "bar" } },
+      { role: "assistant", content: "plain text" },
+    ];
+    const result = pruneMessages(messages as any, 200_000);
+    expect(result).toHaveLength(2);
+  });
+
+  it("keeps user message when budget exceeded by an earlier message", () => {
+    const messages = [makeMsg("assistant", "a".repeat(100)), makeMsg("user", "x".repeat(100))];
+    const result = pruneMessages(messages as any, 40);
+    expect(result.length).toBe(1);
+    expect(result[0].role).toBe("user");
+  });
+
+  it("handles array content with missing text property", () => {
+    const messages = [{ role: "user", content: [{ text: "hello " }, {}, { text: "world" }] }];
+    const result = pruneMessages(messages as any, 200_000);
+    expect(result).toHaveLength(1);
+  });
 });
