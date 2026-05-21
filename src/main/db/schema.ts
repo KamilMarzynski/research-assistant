@@ -49,7 +49,7 @@ export const tasks = sqliteTable("tasks", {
   query: text("query").notNull(),
   folderPath: text("folder_path"),
   status: text("status", {
-    enum: ["pending", "in_progress", "complete", "failed"],
+    enum: ["pending", "in_progress", "complete", "failed", "interrupted"],
   })
     .notNull()
     .default("in_progress"),

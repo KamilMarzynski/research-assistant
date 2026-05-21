@@ -795,4 +795,65 @@ describe("TaskPersistenceService", () => {
     expect(result[1].taskId).toBe("t1");
     expect(result[1].status).toBe("in_progress");
   });
+
+  it("allows 'interrupted' status via updateTaskStatus", async () => {
+    const db = await createTestDb();
+    const svc = new TaskPersistenceService(db, "/tmp/home");
+
+    await db.insert(projects).values({
+      id: "proj-a",
+      name: "A",
+      createdAt: new Date("2026-05-01"),
+      updatedAt: new Date("2026-05-01"),
+    });
+    await svc.saveTask({
+      taskId: "t1",
+      projectId: "proj-a",
+      projectName: "A",
+      query: "q",
+      folderPath: null,
+      startedAt: new Date().toISOString(),
+    });
+
+    await svc.updateTaskStatus("t1", "interrupted", "app closed");
+    const rows = await svc.getTasksByProject("proj-a");
+    expect(rows[0].status).toBe("interrupted");
+  });
+
+  it("markAllInProgressAsInterrupted updates all in_progress tasks", async () => {
+    const db = await createTestDb();
+    const svc = new TaskPersistenceService(db, "/tmp/home");
+
+    await db.insert(projects).values({
+      id: "proj-a",
+      name: "A",
+      createdAt: new Date("2026-05-01"),
+      updatedAt: new Date("2026-05-01"),
+    });
+    await svc.saveTask({
+      taskId: "t1",
+      projectId: "proj-a",
+      projectName: "A",
+      query: "q1",
+      folderPath: null,
+      startedAt: new Date().toISOString(),
+    });
+    await svc.saveTask({
+      taskId: "t2",
+      projectId: "proj-a",
+      projectName: "A",
+      query: "q2",
+      folderPath: null,
+      startedAt: new Date().toISOString(),
+    });
+    await svc.updateTaskStatus("t2", "complete");
+
+    await svc.markAllInProgressAsInterrupted();
+
+    const rows = await svc.getTasksByProject("proj-a");
+    const t1 = rows.find((r) => r.taskId === "t1");
+    const t2 = rows.find((r) => r.taskId === "t2");
+    expect(t1?.status).toBe("interrupted");
+    expect(t2?.status).toBe("complete");
+  });
 });
