@@ -15,7 +15,10 @@ function makeWin() {
 
 function makeSessionManager(processing = false) {
   return {
-    get: vi.fn().mockReturnValue({ isProcessing: () => processing }),
+    get: vi.fn().mockReturnValue({
+      isProcessing: () => processing,
+      injectAssistantMessage: vi.fn(),
+    }),
   };
 }
 
@@ -79,7 +82,6 @@ describe("SummaryStreamCoordinator", () => {
   });
 
   it("on research:summary_ready drains immediately when session is idle", async () => {
-    queue.push("p1", "Result here.");
     eventBus.emit({
       type: "research:summary_ready",
       payload: { projectId: "p1", text: "Result here.", movedFiles: [] },
@@ -91,36 +93,43 @@ describe("SummaryStreamCoordinator", () => {
     expect(doneCalls).toHaveLength(1);
   });
 
-  it("on research:summary_ready defers when session is processing", async () => {
+  it("on research:summary_ready injects message into session history when idle", async () => {
+    const session = sessionManager.get("p1");
+    eventBus.emit({
+      type: "research:summary_ready",
+      payload: { projectId: "p1", text: "Injected.", movedFiles: [] },
+    });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(session?.injectAssistantMessage).toHaveBeenCalledWith("Injected.");
+  });
+
+  it("on research:summary_ready when session is processing: injects into history but does not drain", async () => {
     const busyManager = makeSessionManager(true);
     coordinator = new SummaryStreamCoordinator(win, eventBus, queue, busyManager as never, 0);
     coordinator.register();
 
-    queue.push("p1", "Deferred.");
     eventBus.emit({
       type: "research:summary_ready",
       payload: { projectId: "p1", text: "Deferred.", movedFiles: [] },
     });
     await new Promise((r) => setTimeout(r, 10));
+
+    const session = busyManager.get("p1");
+    expect(session?.injectAssistantMessage).toHaveBeenCalledWith("Deferred.");
+
     const doneCalls = (emitPush as ReturnType<typeof vi.fn>).mock.calls.filter(
       ([, e]) => e.type === "MESSAGE_DONE",
     );
     expect(doneCalls).toHaveLength(0);
-    eventBus.emit({ type: "agent:done", payload: { projectId: "p1" } });
-    await new Promise((r) => setTimeout(r, 10));
-    const doneAfter = (emitPush as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([, e]) => e.type === "MESSAGE_DONE",
-    );
-    expect(doneAfter).toHaveLength(1);
   });
 
-  it("on agent:done drains pending queue for that project", async () => {
+  it("agent:done does not drain the queue", async () => {
     queue.push("p1", "Pending result.");
     eventBus.emit({ type: "agent:done", payload: { projectId: "p1" } });
     await new Promise((r) => setTimeout(r, 10));
     const doneCalls = (emitPush as ReturnType<typeof vi.fn>).mock.calls.filter(
       ([, e]) => e.type === "MESSAGE_DONE",
     );
-    expect(doneCalls).toHaveLength(1);
+    expect(doneCalls).toHaveLength(0);
   });
 });

@@ -376,6 +376,14 @@ export class MessagePipeline {
     this.eventBus.emit({ type: "agent:done", payload: { projectId: this.projectId } });
   }
 
+  injectAssistantMessage(content: string): void {
+    this.agent.state.messages.push({
+      role: "assistant",
+      content: [{ type: "text", text: content }],
+      timestamp: Date.now(),
+    } as import("@mariozechner/pi-agent-core").AgentMessage);
+  }
+
   isProcessing(): boolean {
     return this.state.processing;
   }

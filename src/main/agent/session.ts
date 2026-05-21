@@ -79,6 +79,10 @@ export class AgentSession {
     return this.pipeline.queueFollowUp(content);
   }
 
+  injectAssistantMessage(content: string): void {
+    this.pipeline.injectAssistantMessage(content);
+  }
+
   abort(): void {
     this.pipeline.abort();
   }

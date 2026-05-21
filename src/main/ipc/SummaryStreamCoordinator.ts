@@ -31,18 +31,14 @@ export class SummaryStreamCoordinator {
   register(): void {
     SummaryStreamCoordinator._activeByEventBus.set(this.eventBus, this);
 
-    this.eventBus.on("research:summary_ready", ({ projectId }) => {
+    this.eventBus.on("research:summary_ready", ({ projectId, text }) => {
       if (SummaryStreamCoordinator._activeByEventBus.get(this.eventBus) !== this) return;
       const session = this.sessionManager.get(projectId);
+      session?.injectAssistantMessage(text);
       if (!session?.isProcessing()) {
-        void this.drainQueue(projectId);
-      }
-      // else: agent:done will trigger drain
-    });
-
-    this.eventBus.on("agent:done", ({ projectId }) => {
-      if (SummaryStreamCoordinator._activeByEventBus.get(this.eventBus) !== this) return;
-      if (this.summaryQueue.hasItems(projectId)) {
+        // Stream the message when chat is free; the processing case relies on
+        // the DB reload triggered by the agent's own MESSAGE_DONE.
+        this.summaryQueue.push(projectId, text);
         void this.drainQueue(projectId);
       }
     });
