@@ -166,7 +166,7 @@ describe("createAgentTools – start_research deep flag", () => {
     const tool = tools.find((t) => t.name === "start_research");
     expect(tool).toBeDefined();
     // biome-ignore lint/style/noNonNullAssertion: expect above confirmed defined
-    await tool!.execute("call-1", { query: "research X", deep: true });
+    await tool!.execute("call-1", { brief: "research X", deep: true });
     expect(startResearchFn).toHaveBeenCalledWith("research X", true);
   });
 
@@ -179,7 +179,7 @@ describe("createAgentTools – start_research deep flag", () => {
     });
     const tool = tools.find((t) => t.name === "start_research");
     // biome-ignore lint/style/noNonNullAssertion: expect above confirmed defined
-    await tool!.execute("call-1", { query: "research X" });
+    await tool!.execute("call-1", { brief: "research X" });
     expect(startResearchFn).toHaveBeenCalledWith("research X", undefined);
   });
 });

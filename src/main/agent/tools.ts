@@ -57,7 +57,7 @@ export interface ToolContext {
   toolNames?: readonly AgentToolName[];
   apiKey?: string;
   model?: string;
-  startResearchFn?: (query: string, deep?: boolean) => Promise<{ taskId: string }>;
+  startResearchFn?: (brief: string, deep?: boolean) => Promise<{ taskId: string }>;
   requestEvaluationFn?: (filePath: string, criteria: string[]) => Promise<EvaluationVerdict>;
   spawnAgentFn?: (
     type: AgentType,

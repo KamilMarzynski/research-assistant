@@ -26,7 +26,11 @@ export function registerResearchHandlers(
 
   ipcMain.handle(IPC.RETRY_RESEARCH, (_event, payload: unknown) =>
     wrapIpc(async () => {
-      const { projectId, query } = parseOrThrow(RetryResearchSchema, payload, "RETRY_RESEARCH");
+      const { projectId, query: brief } = parseOrThrow(
+        RetryResearchSchema,
+        payload,
+        "RETRY_RESEARCH",
+      );
       let project: Awaited<ReturnType<typeof projectService.getProject>>;
       try {
         project = await projectService.getProject(projectId);
@@ -36,7 +40,7 @@ export function registerResearchHandlers(
       return researchService.startResearch(
         projectId,
         project.name,
-        query,
+        brief,
         project.folderPath,
         project.projectPath,
       );

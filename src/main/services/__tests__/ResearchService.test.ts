@@ -54,13 +54,13 @@ vi.mock("../../agent/worker-agent", () => {
       researcher: (base: Record<string, unknown>, outputPath: string) => ({
         ...base,
         toolNames: ["read_file", "write_file", "web_search"],
-        systemPromptAddition: `You are a background researcher. Output: ${outputPath}. Use meaningful filenames.`,
+        systemPromptAddition: `${base.brief ? `${base.brief}\n\n` : ""}You are a background researcher. Output: ${outputPath}. Use meaningful filenames.`,
         remainingDepth: 0,
       }),
       orchestrator: (base: Record<string, unknown>, outputPath: string, depth: number) => ({
         ...base,
         toolNames: ["read_file", "write_file", "spawn_agent", "spawn_agents_parallel"],
-        systemPromptAddition: `You are a research orchestrator. Output: ${outputPath}.`,
+        systemPromptAddition: `${base.brief ? `${base.brief}\n\n` : ""}You are a research orchestrator. Output: ${outputPath}.`,
         remainingDepth: depth,
       }),
       coder: (base: Record<string, unknown>, outputPath: string) => ({
@@ -242,6 +242,43 @@ describe("ResearchService", () => {
     expect(taskPersistence.saveTask).toHaveBeenCalledWith(
       expect.objectContaining({ taskId, projectId: "p1", query: "research X" }),
     );
+  });
+
+  it("forwards brief into the worker prompt and persists it", async () => {
+    const brief = "<research_brief><user_request>investigate X</user_request></research_brief>";
+    const taskPersistence = makeTaskPersistenceService();
+    const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+      createWorkerAgent: MockFn;
+    };
+    const svc = new ResearchService(
+      makeEventBus() as never,
+      makeSettingsService() as never,
+      makeHomeService() as never,
+      new AllowlistService() as never,
+      {
+        getProject: vi
+          .fn()
+          .mockResolvedValue({ modelOverride: "openrouter:anthropic/claude_sonnet-4-5" }),
+      } as never,
+      makeObservabilityService() as never,
+      taskPersistence as never,
+      makeResearchFinisherService() as never,
+      makeCheckpointService() as never,
+    );
+    const { taskId } = await svc.startResearch(
+      "p1",
+      "My Project",
+      brief,
+      /* folderPath */ null,
+      /* projectPath */ null,
+    );
+    expect(taskPersistence.saveTask).toHaveBeenCalledWith(expect.objectContaining({ brief }));
+    expect(createWorkerAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemPromptAddition: expect.stringContaining(brief),
+      }),
+    );
+    expect(typeof taskId).toBe("string");
   });
 
   it("calls updateTaskStatus with complete on research:complete", async () => {

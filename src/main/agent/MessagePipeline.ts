@@ -132,19 +132,19 @@ export class MessagePipeline {
         ? (projectId) =>
             options.approvalPolicyService?.shouldBypass(projectId) ?? Promise.resolve(false)
         : undefined,
-      startResearchFn: (query, deep) =>
+      startResearchFn: (brief, deep) =>
         deep === true
           ? options.researchService.startOrchestratedResearch(
               options.projectId,
               options.projectName,
-              query,
+              brief,
               options.folderPath,
               options.projectPath,
             )
           : options.researchService.startResearch(
               options.projectId,
               options.projectName,
-              query,
+              brief,
               options.folderPath,
               options.projectPath,
             ),

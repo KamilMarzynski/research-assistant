@@ -29,6 +29,7 @@ interface RunResearchConfig {
   projectName: string;
   projectPath: string | null;
   query: string;
+  brief: string;
   folderPath: string | null;
 }
 
@@ -53,12 +54,19 @@ export class ResearchService {
   async startResearch(
     projectId: string,
     projectName: string,
-    query: string,
+    brief: string,
     folderPath: string | null,
     projectPath?: string | null,
   ): Promise<{ taskId: string }> {
     return this._runResearch(
-      { projectId, projectName, projectPath: projectPath ?? null, query, folderPath },
+      {
+        projectId,
+        projectName,
+        projectPath: projectPath ?? null,
+        query: deriveQueryLabel(brief),
+        brief,
+        folderPath,
+      },
       "researcher",
       0,
     );
@@ -67,12 +75,19 @@ export class ResearchService {
   async startOrchestratedResearch(
     projectId: string,
     projectName: string,
-    query: string,
+    brief: string,
     folderPath: string | null,
     projectPath?: string | null,
   ): Promise<{ taskId: string }> {
     return this._runResearch(
-      { projectId, projectName, projectPath: projectPath ?? null, query, folderPath },
+      {
+        projectId,
+        projectName,
+        projectPath: projectPath ?? null,
+        query: deriveQueryLabel(brief),
+        brief,
+        folderPath,
+      },
       "orchestrator",
       this.DEFAULT_RESEARCH_DEPTH,
     );
@@ -151,6 +166,7 @@ export class ResearchService {
       slug,
       projectName: task.projectName,
       projectPath: null,
+      brief: task.brief ?? task.query,
       folderPath: task.folderPath,
       homePath,
       taskWorkspacePath: workspacePath,
@@ -291,6 +307,7 @@ export class ResearchService {
       projectId: config.projectId,
       projectName: config.projectName,
       query: config.query,
+      brief: config.brief,
       folderPath: config.folderPath,
       startedAt: new Date().toISOString(),
     });
@@ -332,6 +349,7 @@ export class ResearchService {
       slug,
       projectName: config.projectName,
       projectPath: config.projectPath,
+      brief: config.brief,
       folderPath: config.folderPath,
       homePath,
       taskWorkspacePath: workspacePath,
@@ -454,4 +472,15 @@ export class ResearchService {
 
     return { taskId };
   }
+}
+
+/**
+ * Extract a short human-readable label from a brief for use as the
+ * task `query` field (back-compat: TaskPersistenceService.query is NOT NULL).
+ * Falls back to the first 200 chars of the brief when no tag is found.
+ */
+function deriveQueryLabel(brief: string): string {
+  const match = brief.match(/<user_request>([\s\S]*?)<\/user_request>/);
+  const raw = (match?.[1] ?? brief).trim();
+  return raw.length > 200 ? `${raw.slice(0, 197)}...` : raw;
 }
