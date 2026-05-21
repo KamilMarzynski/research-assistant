@@ -90,6 +90,7 @@ export default function PendingPathBanner({ activeProjectId, projects }: Props) 
       {selected && (
         <PendingPathModal
           request={selected}
+          projectName={projects.find((p) => p.id === selected.projectId)?.name ?? "background"}
           onApproveOnce={() => handleResolve(selected, "approve_once")}
           onApproveSession={() => handleResolve(selected, "approve_session")}
           onDeny={(feedback) => handleResolve(selected, "deny", feedback)}

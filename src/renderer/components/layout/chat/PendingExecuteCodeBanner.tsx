@@ -87,6 +87,7 @@ export default function PendingExecuteCodeBanner({ activeProjectId, projects }: 
       {selected && (
         <PendingExecuteCodeModal
           request={selected}
+          projectName={projects.find((p) => p.id === selected.projectId)?.name ?? "background"}
           onApprove={() => handleResolve(selected, "approve_once")}
           onDeny={(feedback) => handleResolve(selected, "deny", feedback)}
           onClose={() => setSelected(null)}

@@ -9,6 +9,7 @@ function categoryChipClass(category: string): string {
 
 interface PendingCommandModalProps {
   command: BlockedCommandPayload;
+  projectName: string;
   onApproveOnce: () => void;
   onApproveSession: () => void;
   onDeny: (feedback?: string) => void;
@@ -17,6 +18,7 @@ interface PendingCommandModalProps {
 
 export default function PendingCommandModal({
   command,
+  projectName,
   onApproveOnce,
   onApproveSession,
   onDeny,
@@ -58,7 +60,7 @@ export default function PendingCommandModal({
         <strong>Reason:</strong> {command.reason}
       </span>
       <span className="t-mono t-tertiary" style={{ fontSize: 12, marginTop: 8, display: "block" }}>
-        <strong>Intent:</strong> {command.intent} · <strong>Project:</strong> {command.projectId}
+        <strong>Intent:</strong> {command.intent} · <strong>Project:</strong> {projectName}
       </span>
     </ReviewDialog>
   );

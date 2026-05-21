@@ -9,6 +9,7 @@ function modeChipClass(mode: string): string {
 
 interface PendingPathModalProps {
   request: PathApprovalPayload;
+  projectName: string;
   onApproveOnce: () => void;
   onApproveSession: () => void;
   onDeny: (feedback?: string) => void;
@@ -17,6 +18,7 @@ interface PendingPathModalProps {
 
 export default function PendingPathModal({
   request,
+  projectName,
   onApproveOnce,
   onApproveSession,
   onDeny,
@@ -58,7 +60,7 @@ export default function PendingPathModal({
         {request.path}
       </pre>
       <span className="t-mono t-tertiary" style={{ fontSize: 12, marginTop: 8, display: "block" }}>
-        <strong>Project:</strong> {request.projectId}
+        <strong>Project:</strong> {projectName}
       </span>
     </ReviewDialog>
   );

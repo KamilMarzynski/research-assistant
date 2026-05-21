@@ -88,6 +88,7 @@ export default function PendingCommandBanner({ activeProjectId, projects }: Prop
       {selected && (
         <PendingCommandModal
           command={selected}
+          projectName={projects.find((p) => p.id === selected.projectId)?.name ?? "background"}
           onApproveOnce={() => handleResolve(selected, "approve_once")}
           onApproveSession={() => handleResolve(selected, "approve_session")}
           onDeny={(feedback) => handleResolve(selected, "deny", feedback)}

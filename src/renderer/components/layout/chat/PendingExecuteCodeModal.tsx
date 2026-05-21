@@ -3,6 +3,7 @@ import ReviewDialog from "./ReviewDialog";
 
 interface PendingExecuteCodeModalProps {
   request: ExecuteCodeApprovalPayload;
+  projectName: string;
   onApprove: () => void;
   onDeny: (feedback?: string) => void;
   onClose: () => void;
@@ -10,6 +11,7 @@ interface PendingExecuteCodeModalProps {
 
 export default function PendingExecuteCodeModal({
   request,
+  projectName,
   onApprove,
   onDeny,
   onClose,
@@ -33,7 +35,7 @@ export default function PendingExecuteCodeModal({
         The agent wants to run sandboxed code. Review the intent, inputs, and code before approving.
       </p>
       <span className="t-mono t-tertiary" style={{ fontSize: 12, display: "block" }}>
-        <strong>Intent:</strong> {request.intent}
+        <strong>Intent:</strong> {request.intent} · <strong>Project:</strong> {projectName}
       </span>
       <span className="t-mono t-tertiary" style={{ fontSize: 12, marginTop: 8, display: "block" }}>
         <strong>Code hash:</strong> {request.codeHash}
