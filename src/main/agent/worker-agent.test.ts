@@ -13,7 +13,11 @@ async function broadcastEvent(event: unknown): Promise<void> {
 }
 
 const mockAgent = {
-  state: { tools: [] as never[], systemPrompt: "" },
+  state: {
+    tools: [] as never[],
+    systemPrompt: "",
+    messages: [] as { role: string; content: string; timestamp: number }[],
+  },
   subscribe: vi.fn((cb: (event: unknown) => Promise<void>) => {
     subscribers.push(cb);
     return mockUnsubscribe;
@@ -157,6 +161,21 @@ describe("createWorkerAgent", () => {
         parentSpanContext: { traceId: "parent-t", spanId: "parent-s" },
       }),
     );
+  });
+
+  it("calls onTurnEnd with agent state messages after turn_end event", async () => {
+    const onTurnEnd = vi.fn();
+    mockAgent.state.messages = [
+      { role: "user", content: "hello", timestamp: 1 },
+      { role: "assistant", content: "hi", timestamp: 2 },
+    ];
+    mockAgent.prompt.mockImplementation(async () => {
+      await broadcastEvent({ type: "turn_end" });
+      await broadcastEvent({ type: "agent_end" });
+    });
+    const { run } = await createWorkerAgent({ ...BASE_CONFIG, onTurnEnd });
+    await run("test prompt");
+    expect(onTurnEnd).toHaveBeenCalledWith(mockAgent.state.messages);
   });
 });
 

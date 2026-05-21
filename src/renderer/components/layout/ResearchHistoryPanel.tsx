@@ -6,7 +6,7 @@ import { IconChevD, IconChevR } from "../shared/Icons";
 interface ResearchItem {
   id: string;
   query: string;
-  status: "pending" | "in_progress" | "complete" | "failed";
+  status: "pending" | "in_progress" | "complete" | "failed" | "interrupted";
   startedAt: Date;
 }
 
@@ -36,6 +36,7 @@ const statusConfig: Record<
   },
   complete: { dotClass: "dot--success", label: "Done", borderColor: "oklch(0.82 0.05 145)" },
   failed: { dotClass: "dot--danger", label: "Failed", borderColor: "oklch(0.82 0.07 25)" },
+  interrupted: { dotClass: "dot--warn", label: "Interrupted", borderColor: "oklch(0.85 0.06 75)" },
 };
 
 export default function ResearchHistoryPanel({
@@ -89,6 +90,15 @@ export default function ResearchHistoryPanel({
     });
     return unsub;
   }, [projectId, load]);
+
+  const handleRetry = useCallback(
+    (query: string) => {
+      ipc
+        .invoke(IPC.RETRY_RESEARCH, { projectId, query })
+        .catch((err) => console.error("[ResearchHistoryPanel] retry failed:", err));
+    },
+    [projectId],
+  );
 
   return (
     <div
@@ -205,6 +215,24 @@ export default function ResearchHistoryPanel({
                     >
                       {item.query}
                     </span>
+                    {item.status === "interrupted" && (
+                      <button
+                        type="button"
+                        onClick={() => handleRetry(item.query)}
+                        style={{
+                          marginTop: 4,
+                          padding: "2px 8px",
+                          fontSize: 11,
+                          cursor: "pointer",
+                          background: "var(--surface-3)",
+                          border: "1px solid var(--line)",
+                          borderRadius: "var(--r-sm)",
+                          color: "var(--ink-2)",
+                        }}
+                      >
+                        Retry
+                      </button>
+                    )}
                   </div>
                 );
               })}
