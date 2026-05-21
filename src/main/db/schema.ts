@@ -47,6 +47,7 @@ export const tasks = sqliteTable("tasks", {
     .references(() => projects.id, { onDelete: "cascade" }),
   projectName: text("project_name").notNull(),
   query: text("query").notNull(),
+  brief: text("brief"),
   folderPath: text("folder_path"),
   status: text("status", {
     enum: ["pending", "in_progress", "complete", "failed"],

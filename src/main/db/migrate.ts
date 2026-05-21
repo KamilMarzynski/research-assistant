@@ -118,4 +118,11 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   } catch (err) {
     if (!isDuplicateColumnError(err)) throw err;
   }
+
+  // Run 20: add brief to tasks — idempotent
+  try {
+    await db.run(sql`ALTER TABLE tasks ADD COLUMN brief TEXT`);
+  } catch (err) {
+    if (!isDuplicateColumnError(err)) throw err;
+  }
 }
