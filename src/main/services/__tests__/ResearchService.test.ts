@@ -472,20 +472,22 @@ describe("ResearchService", () => {
     };
 
     let capturedOnTurnEnd: ((messages: unknown[]) => void) | undefined;
-    createWorkerAgent.mockImplementationOnce((config: { onTurnEnd?: (msgs: unknown[]) => void }) => {
-      capturedOnTurnEnd = config.onTurnEnd;
-      return Promise.resolve({
-        agent: {
-          state: { messages: [{ role: "user", content: "hi", timestamp: 1 }] },
-          subscribe: vi.fn((cb: (event: unknown) => void) => {
-            getCaptured().current = cb;
-            return () => {};
-          }),
-          prompt: vi.fn().mockResolvedValue(undefined),
-        },
-        run: vi.fn().mockResolvedValue(undefined),
-      });
-    });
+    createWorkerAgent.mockImplementationOnce(
+      (config: { onTurnEnd?: (msgs: unknown[]) => void }) => {
+        capturedOnTurnEnd = config.onTurnEnd;
+        return Promise.resolve({
+          agent: {
+            state: { messages: [{ role: "user", content: "hi", timestamp: 1 }] },
+            subscribe: vi.fn((cb: (event: unknown) => void) => {
+              getCaptured().current = cb;
+              return () => {};
+            }),
+            prompt: vi.fn().mockResolvedValue(undefined),
+          },
+          run: vi.fn().mockResolvedValue(undefined),
+        });
+      },
+    );
 
     const checkpointService = makeCheckpointService();
 
@@ -494,7 +496,9 @@ describe("ResearchService", () => {
       makeSettingsService() as never,
       makeHomeService() as never,
       new AllowlistService() as never,
-      { getProject: vi.fn().mockResolvedValue({ modelOverride: null, slug: "my-project" }) } as never,
+      {
+        getProject: vi.fn().mockResolvedValue({ modelOverride: null, slug: "my-project" }),
+      } as never,
       makeObservabilityService() as never,
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
@@ -513,6 +517,167 @@ describe("ResearchService", () => {
         messages: [{ role: "user", content: "hi", timestamp: 1 }],
       }),
     );
+  });
+
+  describe("resumeResearch", () => {
+    function makeResearchServiceForResume() {
+      const checkpointService = {
+        write: vi.fn().mockResolvedValue(undefined),
+        read: vi.fn().mockResolvedValue(null),
+        delete: vi.fn().mockResolvedValue(undefined),
+      };
+      const taskPersistence = makeTaskPersistenceService();
+      const bus = makeEventBus();
+      const svc = new ResearchService(
+        bus as never,
+        makeSettingsService() as never,
+        makeHomeService() as never,
+        new AllowlistService() as never,
+        {
+          getProject: vi.fn().mockResolvedValue({
+            name: "My Project",
+            modelOverride: null,
+            slug: "my-project-abc123",
+            folderPath: null,
+            projectPath: null,
+          }),
+        } as never,
+        makeObservabilityService() as never,
+        taskPersistence as never,
+        makeResearchFinisherService() as never,
+        checkpointService as never,
+      );
+      return { svc, checkpointService, taskPersistence, bus };
+    }
+
+    it("marks task as interrupted when no checkpoint exists", async () => {
+      const { svc, checkpointService, taskPersistence } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue(null);
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith(
+        "t1",
+        "interrupted",
+        "No checkpoint found",
+      );
+    });
+
+    it("calls agent.continue() (not prompt) when checkpoint exists", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      const continueMock = vi.fn().mockResolvedValue(undefined);
+      const agentMock = {
+        state: {
+          messages: [] as unknown[],
+        },
+        subscribe: vi.fn((cb: (event: unknown) => void) => {
+          getCaptured().current = cb;
+          return () => {};
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+        continue: continueMock,
+      };
+      createWorkerAgent.mockResolvedValueOnce({ agent: agentMock, run: vi.fn() });
+
+      const savedMessages = [
+        { role: "user", content: "research X", timestamp: 1 },
+        {
+          role: "toolResult",
+          toolCallId: "tc1",
+          toolName: "read_file",
+          content: [{ type: "text", text: "result" }],
+          details: null,
+          isError: false,
+          timestamp: 2,
+        },
+      ];
+
+      const { svc, checkpointService } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "partial output",
+        messages: savedMessages,
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      expect(continueMock).toHaveBeenCalled();
+      expect(agentMock.prompt).not.toHaveBeenCalled();
+    });
+
+    it("emits research:complete and marks task complete when resumed agent ends", async () => {
+      const { createWorkerAgent } = (await import("../../agent/worker-agent")) as unknown as {
+        createWorkerAgent: MockFn;
+      };
+
+      createWorkerAgent.mockResolvedValueOnce({
+        agent: {
+          state: { messages: [] },
+          subscribe: vi.fn((cb: (event: unknown) => void) => {
+            getCaptured().current = cb;
+            return () => {};
+          }),
+          prompt: vi.fn(),
+          continue: vi.fn().mockResolvedValue(undefined),
+        },
+        run: vi.fn(),
+      });
+
+      const { svc, checkpointService, taskPersistence, bus } = makeResearchServiceForResume();
+      checkpointService.read.mockResolvedValue({
+        taskId: "t1",
+        agentType: "researcher",
+        researchOutput: "",
+        messages: [
+          {
+            role: "toolResult",
+            toolCallId: "tc1",
+            toolName: "t",
+            content: [],
+            details: null,
+            isError: false,
+            timestamp: 1,
+          },
+        ],
+        savedAt: new Date().toISOString(),
+      });
+
+      await svc.resumeResearch({
+        taskId: "t1",
+        projectId: "p1",
+        projectName: "My Project",
+        query: "research X",
+        folderPath: null,
+        startedAt: new Date().toISOString(),
+        status: "in_progress",
+      });
+
+      await getCaptured().current?.({ type: "agent_end" });
+
+      expect(taskPersistence.updateTaskStatus).toHaveBeenCalledWith("t1", "complete");
+      expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:complete" }));
+    });
   });
 });
 
