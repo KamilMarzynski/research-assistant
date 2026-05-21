@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { Agent } from "@mariozechner/pi-agent-core";
+import { Agent, type AgentMessage } from "@mariozechner/pi-agent-core";
 import { z } from "zod/v4";
 import type {
   BlockedCommandPayload,
@@ -57,6 +57,7 @@ export interface WorkerAgentConfig {
   remainingDepth?: number; // defaults to 0 (leaf)
   agentLabel?: string;
   onProgress?: (label: string, delta: string) => void;
+  onTurnEnd?: (messages: AgentMessage[]) => void;
   webAccessEnabled?: boolean;
   emitBlocked?: (payload: BlockedCommandPayload) => void;
   emitApprovalRequired?: (payload: PathApprovalPayload) => void;
@@ -172,7 +173,7 @@ export function makeEvaluatorFn(
 
 type WorkerAgentBase = Omit<
   WorkerAgentConfig,
-  "toolNames" | "systemPromptAddition" | "skills" | "remainingDepth" | "agentLabel"
+  "toolNames" | "systemPromptAddition" | "skills" | "remainingDepth" | "agentLabel" | "onTurnEnd"
 >;
 
 type PresetBuilder = (
@@ -401,6 +402,8 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
               output += ae.delta;
               config.onProgress?.(config.agentLabel ?? "", ae.delta);
             }
+          } else if (e.type === "turn_end") {
+            config.onTurnEnd?.(agent.state.messages);
           } else if (e.type === "agent_end") {
             unsubscribe();
             unsubscribeTracer();
