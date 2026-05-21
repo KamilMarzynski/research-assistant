@@ -104,7 +104,7 @@ export function createWebSearchTool(
     name: "web_search",
     label: "Search the web",
     description:
-      "Search the web using DuckDuckGo. Returns titles, URLs, and snippets. No API key required.",
+      "Search the web using DuckDuckGo. Use this to discover relevant sources by keyword, then fetch specific pages with fetch_url. Returns titles, URLs, and snippets. No API key required.",
     parameters: webSearchParameters(),
     execute: async (_id, { query, maxResults }): Promise<AgentToolResult<WebSearchResult[]>> => {
       const cappedMax = Math.min(

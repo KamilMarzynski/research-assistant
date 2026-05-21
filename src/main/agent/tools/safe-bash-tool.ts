@@ -16,7 +16,8 @@ export function createSafeBashTool(
     label: "Run safe bash command",
     description:
       "Execute a bash command in the project workspace. " +
-      "Use for CLI operations, package managers, git, and running existing project scripts. " +
+      "Use for file operations (mv, cp, grep, find), package managers, git, and running project scripts. " +
+      "Do NOT use for fetching URLs or web requests — use fetch_url or web_search instead. " +
       "For inline code execution (python3 -c, node -e, bun -e) or interactive interpreters, use execute_code instead. " +
       "Always state your intent. Dangerous commands are blocked automatically.",
     parameters: safeBashParameters,

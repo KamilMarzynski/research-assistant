@@ -11,7 +11,7 @@ export function createFetchUrlTool(
     name: "fetch_url",
     label: "Fetch URL",
     description:
-      "Fetch a web page and return its content as Markdown. The URL must be http or https. Private IP addresses and local network addresses are blocked for security.",
+      "Fetch a web page and return its content as Markdown. Use this instead of curl or wget. The URL must be http or https. Private IP addresses and local network addresses are blocked for security.",
     parameters: fetchUrlParameters,
     execute: async (
       _id,
