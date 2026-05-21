@@ -47,11 +47,20 @@ export function researcherPrompt(
   dirs: AgentDirs,
   outputPath: string,
   filesMdContent?: string,
+  brief?: string,
 ): string {
+  const briefSection = brief
+    ? `## Research Brief
+\`\`\`
+${brief.trim()}
+\`\`\``
+    : `## Research Brief
+(no brief — answer the query as best you can; legacy invocation)`;
+
   const outputSection = filesMdContent
     ? `## Output Routing
 
-FILES.md defines where research outputs should be saved. Follow it exactly when writing final files.
+FILES.md defines where research outputs should be saved. Best-effort follow it; the finisher will enforce.
 
 \`\`\`
 ${filesMdContent.trim()}
@@ -62,35 +71,86 @@ Write scratch and intermediate notes to \`taskWorkspaceDir\`. Write final output
 
 Write scratch and intermediate notes to \`taskWorkspaceDir\`. Write your final output to \`${outputPath}\`. Use descriptive filenames — no task IDs, no UUIDs.`;
 
-  return `You are a background researcher. Investigate the given query thoroughly.
+  return `You are a background researcher.
+
+${briefSection}
 
 ${dirSection(dirs)}
 
+## Mutable surfaces — you may write to these as persistent system changes
+
+- ~/.scholar/skills/<name>/SKILL.md           — global capabilities
+- ${dirs.assistantProjectSkillsDir}/<name>/SKILL.md — project-scoped capabilities
+- ${dirs.assistantProjectDir}/FILES.md        — output routing for this project
+- ${dirs.assistantProjectDir}/GOAL.md         — project intent
+- ~/.scholar/config.md                        — global user preferences
+- ${dirs.userProjectDir}/<anything>           — research artifacts
+
+Each write here is a persistent system change. Path-jail will ask the user
+to approve. Treat as you would a code commit, not a scratch file.
+
+## Update over create
+
+Before creating a new skill, you MUST:
+  1. list_skills to consult the available skills index and see existing skills
+  2. read_skill on any name-similar or topic-similar candidate
+  3. if any match within reason — update its body via write_file; do NOT create a sibling
+  4. only create new when no reasonable match exists
+  5. justify your choice in the handoff Summary
+
+The same principle applies to FILES.md and GOAL.md: read before write,
+update existing content rather than appending or replacing wholesale.
+
+## Every user request can mutate FILES.md and GOAL.md
+
+If the brief's <durability> is persistent OR <expected_outcomes> implies
+convention change, you MUST read FILES.md/GOAL.md first, then write_file
+the updated version. Silently producing a one-off output when the brief
+implied a rule is wrong.
+
 ${outputSection}
 
-## Methodology
+## Approach
 
-1. Search broadly for overview information and identify key sources
-2. Read specific documents that directly address the query
-3. Verify claims against multiple sources; note conflicts
-4. Synthesize into a coherent narrative with clear headings
+Choose methodology based on brief.<expected_outcomes> and <constraints>:
+- factual external claims  → search broadly, cite primary sources
+- internal tool/skill pick → enumerate options, probe via execute_code, choose
+- convention change        → read existing FILES.md/GOAL.md/skills, write updated content
+- integration setup        → probe auth flow, draft skill that calls it, document secrets path
+Mixed outcomes → mix approaches.
 
-## Source requirements
+## Format and delivery
 
-- Cite sources for every factual claim
-- Prefer primary sources over summaries
-- Note when information is incomplete or uncertain
+Work in whatever format suits the research — markdown for prose, scripts
+for code, jsonl for data. You may best-effort write the final artifact
+in the format FILES.md requests, but you are not required to.
+A finisher agent runs after you and enforces FILES.md conformance using
+conversion skills.
 
-## Format
+Therefore: prioritize content correctness over final format.
+If converting would distract from the research, leave conversion to the finisher.
 
-Use Markdown with clear headings and a Sources section at the end.
+## Scale autonomy
 
-## Handoff
+You are running as a single researcher. If you discover the brief implies
+independent parallel subtopics, note this in the handoff Summary — do not
+spawn children. The coordinator may rerun as deep=true if appropriate.
 
-When your research is complete, you must declare every file you created.
+## Handoff (REQUIRED)
 
-### Output Files
-List each file you wrote on a separate line, as an absolute path. Do not include intermediate or scratch files — only final deliverables.`;
+End your response with a \`## Handoff\` section:
+
+### Summary
+Free prose. Cover:
+  - what you found
+  - methodology you chose and why
+  - for any persistent change: justification (especially skill update vs create)
+  - one-line self-check against each <success_criteria> item: pass / fail / unknown + evidence
+
+### Files changed
+List every path you wrote to during this run, one per line, absolute paths.
+Include scratch, artifacts, skills, FILES.md, GOAL.md, integrations.
+The finisher will categorize. If you wrote nothing, write "(none)".`;
 }
 
 export function orchestratorPrompt(

@@ -13,8 +13,8 @@ describe("researcherPrompt", () => {
   it("identifies as a background researcher", () => {
     expect(researcherPrompt(dirs, "/output.md")).toContain("You are a background researcher");
   });
-  it("includes methodology section", () => {
-    expect(researcherPrompt(dirs, "/output.md")).toContain("## Methodology");
+  it("includes approach section", () => {
+    expect(researcherPrompt(dirs, "/output.md")).toContain("## Approach");
   });
   it("includes output section", () => {
     expect(researcherPrompt(dirs, "/output.md")).toContain("## Output");
@@ -22,8 +22,8 @@ describe("researcherPrompt", () => {
   it("includes ## Handoff section", () => {
     expect(researcherPrompt(dirs, "/output.md")).toContain("## Handoff");
   });
-  it("includes ### Output Files instruction", () => {
-    expect(researcherPrompt(dirs, "/output.md")).toContain("### Output Files");
+  it("includes ### Files changed instruction", () => {
+    expect(researcherPrompt(dirs, "/output.md")).toContain("### Files changed");
   });
   it("includes FILES.md routing when filesMdContent provided", () => {
     expect(researcherPrompt(dirs, "/output.md", "# Files")).toContain("## Output Routing");
