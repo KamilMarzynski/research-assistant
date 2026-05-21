@@ -1824,12 +1824,12 @@ describe("ResearchService", () => {
 
       await getCaptured().current?.({ type: "unknown_event" });
 
-      const relevantCalls = bus.emit.mock.calls.filter(
-        (c: unknown[]) => {
-          const type = (c[0] as { type: string }).type;
-          return type === "research:progress" || type === "research:complete" || type === "research:failed";
-        },
-      );
+      const relevantCalls = bus.emit.mock.calls.filter((c: unknown[]) => {
+        const type = (c[0] as { type: string }).type;
+        return (
+          type === "research:progress" || type === "research:complete" || type === "research:failed"
+        );
+      });
       expect(relevantCalls).toHaveLength(0);
       expect(taskPersistence.updateTaskStatus).not.toHaveBeenCalled();
     });
@@ -2524,16 +2524,16 @@ describe("ResearchService – _runResearch internals", () => {
       makeCheckpointService() as never,
     );
 
-    const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
+    await svc.startResearch("p1", "My Project", "research X", null);
 
     await getCaptured().current?.({ type: "unknown_event" });
 
-    const relevantCalls = bus.emit.mock.calls.filter(
-      (c: unknown[]) => {
-        const type = (c[0] as { type: string }).type;
-        return type === "research:progress" || type === "research:complete" || type === "research:failed";
-      },
-    );
+    const relevantCalls = bus.emit.mock.calls.filter((c: unknown[]) => {
+      const type = (c[0] as { type: string }).type;
+      return (
+        type === "research:progress" || type === "research:complete" || type === "research:failed"
+      );
+    });
     expect(relevantCalls).toHaveLength(0);
     expect(taskPersistence.updateTaskStatus).not.toHaveBeenCalled();
   });
