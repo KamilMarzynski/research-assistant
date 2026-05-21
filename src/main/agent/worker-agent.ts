@@ -237,7 +237,7 @@ export const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
     return {
       ...base,
       toolNames: ["read_file", "list_dir", "read_memory", "safe_bash", "write_file"],
-      systemPromptAddition: finisherPrompt(dirs, base.filesMdContent),
+      systemPromptAddition: finisherPrompt(dirs, base.filesMdContent, base.brief),
       remainingDepth: 0,
     };
   },

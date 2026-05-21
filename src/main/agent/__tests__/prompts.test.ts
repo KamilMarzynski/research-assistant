@@ -57,13 +57,13 @@ describe("finisherPrompt", () => {
   it("instructs to use read_memory", () => {
     expect(finisherPrompt(dirs)).toContain("read_memory");
   });
-  it("instructs never to recreate files", () => {
-    expect(finisherPrompt(dirs)).toContain("Never recreate");
+  it("documents idempotency — do not overwrite correct work", () => {
+    expect(finisherPrompt(dirs)).toContain("Do not overwrite correct work");
   });
-  it("includes Output Routing section when filesMdContent provided", () => {
-    expect(finisherPrompt(dirs, "# Files")).toContain("Output Routing");
+  it("includes Delivery contract section when filesMdContent provided", () => {
+    expect(finisherPrompt(dirs, "# Files")).toContain("Delivery contract — FILES.md");
   });
-  it("omits Output Routing section when no filesMdContent", () => {
+  it("omits old Output Routing section", () => {
     expect(finisherPrompt(dirs)).not.toContain("Output Routing");
   });
 });

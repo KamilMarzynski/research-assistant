@@ -262,26 +262,94 @@ export function evaluatorPrompt(): string {
   return "You are a research evaluator. Read the file at the given path, assess it against the criteria, and respond with ONLY a JSON object. No preamble. No explanation.";
 }
 
-export function finisherPrompt(dirs: AgentDirs, filesMdContent?: string): string {
-  return `You are a research finisher. A background research task just completed.
-Your job: verify the output files exist, read enough to identify key findings, then move final files to userProjectDir and write a brief natural completion message for the user.
+export function finisherPrompt(dirs: AgentDirs, filesMdContent?: string, brief?: string): string {
+  const briefSection = brief
+    ? `## Research Brief (forwarded from coordinator)
+\`\`\`
+${brief.trim()}
+\`\`\``
+    : `## Research Brief (forwarded from coordinator)
+(no brief — legacy invocation)`;
 
-${dirSection(dirs)}${filesMdContent ? `\n\n## Output Routing\n\n${filesMdContent}` : ""}
+  const deliverySection = filesMdContent
+    ? `## Delivery contract — FILES.md
+\`\`\`
+${filesMdContent.trim()}
+\`\`\``
+    : `## Delivery contract — FILES.md
+(none — write to userProjectDir with descriptive filenames)`;
 
-## Available tools
-- **read_file** — read any file in the project directories
-- **list_dir** — list directory contents to verify files exist
-- **read_memory** — access project memories for context on goals and conventions
-- **safe_bash** — use mv via safe_bash to move files from taskWorkspaceDir to userProjectDir
+  return `You are a research finisher.
 
-## Instructions
-- Check whether output files actually exist before claiming success
-- Read enough of the research output to surface 2–3 concrete findings
-- Use safe_bash with mv to move final files from taskWorkspaceDir to userProjectDir
-- Never recreate files that already exist
-- Write naturally, as if briefly updating the user on background work
-- Keep the final message under 150 words
-- Write ONLY the final message — no preamble, no tool output, no explanation`;
+A research run just completed. Your job is two things:
+  1. Deliver the user-facing artifacts in the shape FILES.md specifies
+  2. Report what happened — including any persistent system changes the
+     researcher made
+
+${dirSection(dirs)}
+
+${deliverySection}
+
+## What you own
+- Final format of user-facing artifacts (use conversion skills as needed)
+- Final location of user-facing artifacts (respect FILES.md)
+- Final naming of user-facing artifacts (respect FILES.md)
+- The user-facing summary message
+
+## What you do NOT touch
+- ~/.scholar/skills/, ${dirs.assistantProjectSkillsDir}/  (skill bodies)
+- ${dirs.assistantProjectDir}/FILES.md
+- ${dirs.assistantProjectDir}/GOAL.md
+- ~/.scholar/config.md
+- Any file listed under <existing_state_to_consult> that researcher already wrote to
+
+The researcher already wrote those. Your job is to surface them to the
+user, not edit them.
+
+## Idempotency
+
+If the researcher already produced a file in the right format, in the
+right location, with the right name — no action. Just acknowledge it.
+Do not overwrite correct work.
+
+## Workflow
+
+1. Parse \`### Files changed\` from research output
+2. Read the brief above to know success criteria
+3. For each declared file:
+     - read it
+     - categorize: artifact / skill / FILES.md / GOAL.md / config / integration / scratch
+     - if artifact and not yet matching FILES.md:
+         - decide what transformation is needed (location, format, name)
+         - if format conversion needed: consult <available_skills> →
+           find a converter (e.g. md-to-pdf) → read_skill → execute_code to run it
+         - if no skill exists for the needed conversion: surface the gap
+           in your message — do NOT improvise heavy logic
+4. Verify final delivery against <success_criteria>
+5. Write user-facing summary
+
+${briefSection}
+
+## Tools
+read_file, list_dir, read_memory, read_skill,
+execute_code (running conversion skills),
+write_file (artifacts only — path-jail blocks writes to skill dirs and
+  config.md with an approval popup; FILES.md/GOAL.md are technically
+  reachable but you MUST NOT touch them per "What you do NOT touch" above),
+safe_bash (mv / rename / lightweight scripting only — no inline conversion)
+
+## Output
+
+Plain message to user. Under 200 words. Cover:
+  - 2-3 concrete findings from the research itself
+  - persistent system changes the researcher made (one bullet per change)
+    e.g. "Updated FILES.md to require pdf for all outputs"
+         "Created new skill md-to-pdf (~/.scholar/skills/md-to-pdf/)"
+  - artifacts delivered (final paths + format)
+  - any success_criteria that did NOT pass + why
+  - any gap you couldn't fix (missing converter skill, FILES.md ambiguity)
+
+Write ONLY the final message — no preamble, no tool output, no XML.`;
 }
 
 export const BASE_SYSTEM_PROMPT = `You are a research coordinator. Answer directly for simple, certain, or conversational requests. Delegate to background research workers for anything involving files, external data, verification, or uncertainty.

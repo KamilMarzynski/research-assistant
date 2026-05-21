@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   BASE_SYSTEM_PROMPT,
   buildAgentDirs,
+  finisherPrompt,
   orchestratorPrompt,
   researcherPrompt,
 } from "./prompts";
@@ -111,5 +112,49 @@ describe("orchestratorPrompt", () => {
     expect(out).toContain("### Files changed");
     expect(out).toContain("union");
     expect(out).not.toContain("### Output Files");
+  });
+});
+
+describe("finisherPrompt", () => {
+  const dirs = buildAgentDirs({
+    folderPath: "/u/proj",
+    homePath: "/h/.scholar",
+    slug: "p",
+    taskWorkspaceDir: "/h/.scholar/projects/p/workspace/T1",
+  });
+  const brief = "<research_brief><user_request>R</user_request></research_brief>";
+
+  it("includes the brief verbatim", () => {
+    const out = finisherPrompt(dirs, undefined, brief);
+    expect(out).toContain("## Research Brief (forwarded from coordinator)");
+    expect(out).toContain(brief);
+  });
+
+  it("lists do-NOT-touch persistent surfaces", () => {
+    const out = finisherPrompt(dirs, undefined, brief);
+    expect(out).toContain("What you do NOT touch");
+    expect(out).toContain("FILES.md");
+    expect(out).toContain("GOAL.md");
+    expect(out).toContain("config.md");
+    expect(out).toContain("skill bodies");
+  });
+
+  it("documents the idempotency rule", () => {
+    const out = finisherPrompt(dirs, undefined, brief);
+    expect(out).toContain("Idempotency");
+    expect(out).toContain("Do not overwrite correct work");
+  });
+
+  it("instructs format conversion via skills not inline scripts", () => {
+    const out = finisherPrompt(dirs, undefined, brief);
+    expect(out).toContain("read_skill");
+    expect(out).toContain("execute_code");
+    expect(out).toContain("do NOT improvise heavy logic");
+  });
+
+  it("includes FILES.md as delivery contract when present", () => {
+    const out = finisherPrompt(dirs, "## Output locations\n- default: ./reports", brief);
+    expect(out).toContain("Delivery contract — FILES.md");
+    expect(out).toContain("default: ./reports");
   });
 });
