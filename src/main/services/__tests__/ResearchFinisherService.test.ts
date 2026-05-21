@@ -7,10 +7,12 @@ const mockRun = vi
   .mockResolvedValue("Research done. Files at /project/output.md. Key finding: X.");
 const mockAgent = { subscribe: vi.fn(), abort: vi.fn() };
 
+const presetSpy = vi.fn().mockReturnValue({});
+
 vi.mock("../../agent/worker-agent", () => ({
   createWorkerAgent: vi.fn().mockResolvedValue({ run: mockRun, agent: mockAgent }),
   AGENT_TYPE_PRESETS: {
-    finisher: vi.fn().mockReturnValue({}),
+    finisher: presetSpy,
   },
 }));
 
@@ -25,7 +27,7 @@ vi.mock("node:fs/promises", () => ({
   readFile: mockReadFile,
 }));
 
-const { ResearchFinisherService } = await import("../ResearchFinisherService");
+const { ResearchFinisherService, parseFilesChanged } = await import("../ResearchFinisherService");
 
 function makeMessageService() {
   return {
@@ -53,20 +55,21 @@ function makeEventBus() {
   return bus;
 }
 
-function makeJob(researchOutput?: string) {
+function makeJob(researchOutput?: string, brief?: string) {
   return {
     projectId: "p1",
     projectName: "Test Project",
     query: "What is the best model?",
     researchOutput:
       researchOutput ??
-      "Some research.\n\n## Handoff\nWent well.\n\n### Output Files\n/project/output.md",
+      "Some research.\n\n## Handoff\nWent well.\n\n### Files changed\n/project/output.md",
     taskWorkspacePath: "/tmp/.scholar/projects/test/workspace/abc",
     projectPath: "/tmp/.scholar/projects/test",
     folderPath: null,
     slug: "test",
     provider: { type: "openrouter" as const, apiKey: "sk-test", model: "test-model" },
     filesMdContent: undefined,
+    brief,
   };
 }
 
@@ -108,7 +111,7 @@ describe("ResearchFinisherService", () => {
     );
   });
 
-  it("movedFiles is empty when ### Output Files section absent", async () => {
+  it("movedFiles is empty when ### Files changed section absent", async () => {
     await service.finish(makeJob("Research done, no handoff section."));
     expect(eventBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -120,7 +123,7 @@ describe("ResearchFinisherService", () => {
 
   it("movedFiles parses multiple paths", async () => {
     await service.finish(
-      makeJob("## Handoff\nDone.\n\n### Output Files\n/project/a.md\n/project/b.md"),
+      makeJob("## Handoff\nDone.\n\n### Files changed\n/project/a.md\n/project/b.md"),
     );
     expect(eventBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -171,7 +174,7 @@ describe("ResearchFinisherService", () => {
   });
 
   it("passes researchOutput to agent task prompt", async () => {
-    await service.finish(makeJob("## Handoff\nAll good.\n\n### Output Files\n/a.md"));
+    await service.finish(makeJob("## Handoff\nAll good.\n\n### Files changed\n/a.md"));
     expect(mockRun).toHaveBeenCalledWith(expect.stringContaining("## Handoff"));
   });
 
@@ -199,5 +202,55 @@ describe("ResearchFinisherService", () => {
     await p1;
     await p2;
     expect(order).toEqual(["first", "second"]);
+  });
+});
+
+describe("parseFilesChanged", () => {
+  it("parses paths under ### Files changed", () => {
+    const text = `
+## Handoff
+### Files changed
+/abs/path/one.md
+/abs/path/two.pdf
+`;
+    expect(parseFilesChanged(text)).toEqual(["/abs/path/one.md", "/abs/path/two.pdf"]);
+  });
+
+  it("returns empty array when section absent", () => {
+    expect(parseFilesChanged("no handoff here")).toEqual([]);
+  });
+
+  it("treats (none) as no files", () => {
+    const text = "### Files changed\n(none)\n";
+    expect(parseFilesChanged(text)).toEqual([]);
+  });
+});
+
+describe("ResearchFinisherService — brief plumbing", () => {
+  let service: InstanceType<typeof ResearchFinisherService>;
+  let messageService: ReturnType<typeof makeMessageService>;
+  let eventBus: EventBus;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    messageService = makeMessageService();
+    eventBus = makeEventBus();
+    service = new ResearchFinisherService(
+      messageService as never,
+      makeHomeService() as never,
+      makeAllowlistService() as never,
+      eventBus,
+    );
+  });
+
+  it("forwards brief into the finisher worker config", async () => {
+    const brief = "<research_brief><user_request>X</user_request></research_brief>";
+    const job = makeJob(undefined, brief);
+    await service.finish(job);
+    expect(presetSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ brief }),
+      expect.any(String),
+      expect.any(Number),
+    );
   });
 });

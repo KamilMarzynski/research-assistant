@@ -12,6 +12,7 @@ export interface FinishJob {
   projectId: string;
   projectName: string;
   query: string;
+  brief?: string;
   researchOutput: string;
   taskWorkspacePath: string;
   projectPath: string | null;
@@ -21,10 +22,10 @@ export interface FinishJob {
   filesMdContent?: string;
 }
 
-function parseOutputFiles(text: string): string[] {
-  const idx = text.indexOf("### Output Files");
+export function parseFilesChanged(text: string): string[] {
+  const idx = text.indexOf("### Files changed");
   if (idx === -1) return [];
-  const section = text.slice(idx + "### Output Files".length);
+  const section = text.slice(idx + "### Files changed".length);
   return section
     .split("\n")
     .map((line) => line.trim())
@@ -65,7 +66,7 @@ export class ResearchFinisherService {
   }
 
   private async _processJob(job: FinishJob): Promise<void> {
-    const movedFiles = parseOutputFiles(job.researchOutput);
+    const movedFiles = parseFilesChanged(job.researchOutput);
     let text: string;
     try {
       text = await this._runFinisher(job);
@@ -113,6 +114,7 @@ export class ResearchFinisherService {
         homePath,
         taskWorkspacePath: job.taskWorkspacePath,
         filesMdContent,
+        brief: job.brief,
         provider: job.provider,
         allowlistService: this.allowlistService,
       },
