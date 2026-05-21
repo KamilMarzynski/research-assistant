@@ -49,7 +49,7 @@ describe("MessageList — segments", () => {
 
   it("shows thinking spinner when processing and no running tool", () => {
     render(<MessageList messages={noMessages} streamingSegments={[]} processing={true} />);
-    expect(screen.getByText("Agent is thinking...")).toBeTruthy();
+    expect(screen.getByText("Thinking...")).toBeTruthy();
   });
 
   it("does not show thinking spinner when a tool is running", () => {
@@ -63,7 +63,7 @@ describe("MessageList — segments", () => {
       },
     ];
     render(<MessageList messages={noMessages} streamingSegments={segments} processing={true} />);
-    expect(screen.queryByText("Agent is thinking...")).toBeNull();
+    expect(screen.queryByText("Thinking...")).toBeNull();
   });
 
   it("renders historical messages unchanged", () => {

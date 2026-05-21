@@ -188,7 +188,7 @@ export default function MessageList({ messages, streamingSegments, processing }:
               }}
             >
               <span className="dot dot--accent dot--pulse" />
-              <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Agent is thinking...</span>
+              <span style={{ fontSize: 13, color: "var(--ink-2)" }}>Thinking...</span>
             </div>
           </div>
         )}
