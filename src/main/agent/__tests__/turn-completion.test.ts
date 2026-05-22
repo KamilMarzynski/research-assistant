@@ -61,6 +61,7 @@ describe("handleTurnCompletion", () => {
       "msg-1",
       "answer",
       expect.arrayContaining([expect.objectContaining({ toolCallId: "tc-1" })]),
+      undefined,
     );
   });
 
@@ -117,5 +118,64 @@ describe("handleTurnCompletion", () => {
     });
     await handleTurnCompletion({ type: "agent_end" } as any, ctx);
     expect(ctx.memoryManager.save).not.toHaveBeenCalled();
+  });
+
+  it("passes segmentLog to messageService.addMessage on commit", async () => {
+    const ctx = makeCtx();
+    ctx.state.assistantContent = "Hi there.";
+    ctx.state.lastUserContent = "hi";
+    ctx.state.currentTurnId = 1;
+    ctx.state.segmentLog = [
+      { type: "text", content: "Hi " },
+      {
+        type: "activity",
+        toolCallId: "tc-1",
+        toolName: "read_file",
+        description: "Read",
+        status: "done",
+      },
+      { type: "text", content: "there." },
+    ];
+
+    await handleTurnCompletion({ type: "agent_end" } as never, ctx);
+
+    expect(ctx.messageService.addMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        segments: [
+          { type: "text", content: "Hi " },
+          {
+            type: "activity",
+            toolCallId: "tc-1",
+            toolName: "read_file",
+            description: "Read",
+            status: "done",
+          },
+          { type: "text", content: "there." },
+        ],
+      }),
+    );
+  });
+
+  it("clears segmentLog after turn commit", async () => {
+    const ctx = makeCtx();
+    ctx.state.assistantContent = "ok";
+    ctx.state.lastUserContent = "hi";
+    ctx.state.currentTurnId = 1;
+    ctx.state.segmentLog = [{ type: "text", content: "ok" }];
+    await handleTurnCompletion({ type: "agent_end" } as never, ctx);
+    expect(ctx.state.segmentLog).toEqual([]);
+  });
+
+  it("passes segmentLog to messageService.updateMessage when streamingMessageId is set", async () => {
+    const ctx = makeCtx();
+    ctx.state.assistantContent = "ok";
+    ctx.state.lastUserContent = "hi";
+    ctx.state.currentTurnId = 1;
+    ctx.state.streamingMessageId = "msg-existing";
+    ctx.state.segmentLog = [{ type: "text", content: "ok" }];
+    await handleTurnCompletion({ type: "agent_end" } as never, ctx);
+    expect(ctx.messageService.updateMessage).toHaveBeenCalledWith("msg-existing", "ok", undefined, [
+      { type: "text", content: "ok" },
+    ]);
   });
 });

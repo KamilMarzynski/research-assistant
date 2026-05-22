@@ -269,7 +269,12 @@ describe("AgentSession", () => {
       });
       await triggerEvent({ type: "agent_end", messages: [] });
 
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Hello world");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "Hello world",
+        undefined,
+        [{ type: "text", content: "Hello world" }],
+      );
     });
 
     it("sends MESSAGE_DONE on agent_end", async () => {
@@ -316,7 +321,12 @@ describe("AgentSession", () => {
       });
       await triggerEvent({ type: "agent_end", messages: [] });
 
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Second");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "Second",
+        undefined,
+        [{ type: "text", content: "Second" }],
+      );
     });
 
     it("ignores non-text_delta message_update events", async () => {
@@ -864,7 +874,12 @@ describe("AgentSession", () => {
 
       expect(messageService.addMessage).toHaveBeenCalledTimes(2); // 1 user + 1 assistant placeholder
       expect(messageService.updateMessage).toHaveBeenCalledTimes(1);
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "answer");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "answer",
+        undefined,
+        [{ type: "text", content: "answer" }],
+      );
     });
 
     it("resets dedup guard for the next turn", async () => {
@@ -885,7 +900,12 @@ describe("AgentSession", () => {
       await triggerEvent({ type: "agent_end", messages: [] });
 
       expect(messageService.updateMessage).toHaveBeenCalledTimes(1);
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "B");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "B",
+        undefined,
+        [{ type: "text", content: "B" }],
+      );
     });
   });
 
