@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { MessageSegment } from "../../shared/types";
 import type { EventBus } from "../event-bus";
 import type { AllowlistService } from "../services/AllowlistService";
 import type { ApprovalPolicyService } from "../services/ApprovalPolicyService";
@@ -54,6 +55,7 @@ export class AgentSession {
       sessionId: randomUUID(),
       streamingMessageId: null,
       streamChunkCount: 0,
+      segmentLog: [] as MessageSegment[],
     };
 
     this.pipeline = new MessagePipeline(options, state);

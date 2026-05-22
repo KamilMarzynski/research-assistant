@@ -7,6 +7,14 @@ export async function handleStreamChunk(event: AgentEvent, ctx: HandlerContext):
     if (ae?.type === "text_delta") {
       ctx.state.assistantContent += ae.delta;
       ctx.state.streamChunkCount++;
+
+      const last = ctx.state.segmentLog[ctx.state.segmentLog.length - 1];
+      if (last?.type === "text") {
+        last.content += ae.delta;
+      } else {
+        ctx.state.segmentLog.push({ type: "text", content: ae.delta });
+      }
+
       ctx.eventBus.emit({
         type: "agent:chunk",
         payload: { projectId: ctx.projectId, delta: ae.delta },
@@ -44,6 +52,13 @@ export async function handleStreamChunk(event: AgentEvent, ctx: HandlerContext):
       description,
       status: "running",
     });
+    ctx.state.segmentLog.push({
+      type: "activity",
+      toolCallId: event.toolCallId,
+      toolName: event.toolName,
+      description,
+      status: "done",
+    });
     return;
   }
 
@@ -61,6 +76,12 @@ export async function handleStreamChunk(event: AgentEvent, ctx: HandlerContext):
     const existing = idx >= 0 ? ctx.state.pendingToolCalls[idx] : undefined;
     if (existing) {
       ctx.state.pendingToolCalls[idx] = { ...existing, status: event.isError ? "error" : "done" };
+    }
+    if (event.isError) {
+      const seg = ctx.state.segmentLog.find(
+        (s) => s.type === "activity" && s.toolCallId === event.toolCallId,
+      );
+      if (seg && seg.type === "activity") seg.status = "error";
     }
   }
 }

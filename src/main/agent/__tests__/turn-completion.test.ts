@@ -19,6 +19,7 @@ function makeCtx(
     sessionId: "sid-1",
     streamingMessageId: null,
     streamChunkCount: 0,
+    segmentLog: [],
     ...overrides,
   };
   return {
