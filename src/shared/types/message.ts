@@ -7,6 +7,16 @@ export type ToolCallRecord = {
   status: "done" | "error";
 };
 
+export type MessageSegment =
+  | { type: "text"; content: string }
+  | {
+      type: "activity";
+      toolCallId: string;
+      toolName: string;
+      description: string;
+      status: "done" | "error";
+    };
+
 export type Message = {
   id: string;
   projectId: string;
@@ -14,4 +24,5 @@ export type Message = {
   content: string;
   createdAt: Date;
   toolCalls?: ToolCallRecord[];
+  segments?: MessageSegment[];
 };
