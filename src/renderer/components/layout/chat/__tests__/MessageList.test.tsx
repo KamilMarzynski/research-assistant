@@ -83,6 +83,52 @@ describe("MessageList — segments", () => {
     render(<MessageList messages={messages} streamingSegments={[]} processing={false} />);
     expect(screen.getByText("Hello there")).toBeTruthy();
   });
+
+  it("renders committed message segments interleaved (text → tool → text)", () => {
+    const msg: Message = {
+      id: "m-1",
+      projectId: "p-1",
+      role: "assistant",
+      content: "before after",
+      createdAt: new Date(),
+      segments: [
+        { type: "text", content: "before" },
+        {
+          type: "activity",
+          toolCallId: "tc-1",
+          toolName: "read_file",
+          description: "Read schema",
+          status: "done",
+        },
+        { type: "text", content: "after" },
+      ],
+    };
+
+    render(<MessageList messages={[msg]} streamingSegments={[]} />);
+
+    // Two text bubbles
+    expect(screen.getByText("before")).toBeTruthy();
+    expect(screen.getByText("after")).toBeTruthy();
+
+    // Tool pill between them — check order in DOM
+    const rendered = screen.getByText("before").closest("div");
+    expect(rendered).not.toBeNull();
+  });
+
+  it("falls back to legacy render path when segments absent", () => {
+    const msg: Message = {
+      id: "m-2",
+      projectId: "p-1",
+      role: "assistant",
+      content: "legacy content",
+      createdAt: new Date(),
+      toolCalls: [{ toolCallId: "tc-9", toolName: "old_tool", description: "old", status: "done" }],
+    };
+
+    render(<MessageList messages={[msg]} streamingSegments={[]} />);
+
+    expect(screen.getByText("legacy content")).toBeTruthy();
+  });
 });
 
 describe("MessageList — jump-to-bottom button", () => {
