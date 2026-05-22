@@ -25,6 +25,8 @@ export async function handleStreamChunk(event: AgentEvent, ctx: HandlerContext):
           await ctx.messageService.updateMessage(
             ctx.state.streamingMessageId,
             ctx.state.assistantContent,
+            undefined,
+            ctx.state.segmentLog.length > 0 ? [...ctx.state.segmentLog] : undefined,
           );
         } catch (err) {
           console.error("[AgentSession] failed to update streaming message:", err);

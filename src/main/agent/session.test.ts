@@ -295,7 +295,13 @@ describe("AgentSession", () => {
       await triggerEvent({ type: "agent_end", messages: [] });
       // flush at chunk 5 + final update on agent_end
       expect(messageService.updateMessage).toHaveBeenCalledTimes(2);
-      expect(messageService.updateMessage).toHaveBeenNthCalledWith(1, expect.any(String), "01234");
+      expect(messageService.updateMessage).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        "01234",
+        undefined,
+        [{ type: "text", content: "01234" }],
+      );
     });
 
     it("does not persist empty assistant content on agent_end", async () => {
@@ -942,7 +948,12 @@ describe("AgentSession", () => {
       });
       session.abort();
 
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Partial");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "Partial",
+        undefined,
+        [{ type: "text", content: "Partial" }],
+      );
       expect(eventBus.emit).toHaveBeenCalledWith(
         expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
       );
@@ -987,7 +998,12 @@ describe("AgentSession", () => {
       // The catch handler is fire-and-forget (void), so we need to wait a tick
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Partial");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "Partial",
+        undefined,
+        [{ type: "text", content: "Partial" }],
+      );
       expect(consoleSpy).toHaveBeenCalledWith(
         "[AgentSession] failed to finalize partial message:",
         expect.any(Error),

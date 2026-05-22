@@ -356,9 +356,11 @@ export class MessagePipeline {
           console.error("[AgentSession] failed to delete empty placeholder:", err);
         });
       } else {
-        void this.messageService.updateMessage(streamingId, content).catch((err) => {
-          console.error("[AgentSession] failed to finalize partial message:", err);
-        });
+        void this.messageService
+          .updateMessage(streamingId, content, undefined, [...this.state.segmentLog])
+          .catch((err) => {
+            console.error("[AgentSession] failed to finalize partial message:", err);
+          });
       }
       this.state.streamingMessageId = null;
     }
@@ -366,6 +368,7 @@ export class MessagePipeline {
     this.state.assistantContent = "";
     this.state.lastUserContent = "";
     this.state.streamChunkCount = 0;
+    this.state.segmentLog = [];
     this.state.processing = false;
 
     this.eventBus.emit({ type: "agent:done", payload: { projectId: this.projectId } });
