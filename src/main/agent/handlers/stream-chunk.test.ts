@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { MessageSegment } from "../../../shared/types";
 import { handleStreamChunk } from "./stream-chunk";
 import type { HandlerContext } from "./types";
 
@@ -22,6 +23,7 @@ function makeCtx(overrides: Partial<HandlerContext> = {}): HandlerContext {
       streamingMessageId: null,
       streamChunkCount: 0,
       pendingToolDescriptions: new Map(),
+      segmentLog: [],
     },
     ...overrides,
   };
@@ -190,5 +192,125 @@ describe("handleStreamChunk — tool events", () => {
       type: "agent:chunk",
       payload: { projectId: "proj-1", delta: "Hello" },
     });
+  });
+});
+
+describe("handleStreamChunk — segmentLog", () => {
+  it("starts a new text segment on first text_delta", async () => {
+    const ctx = makeCtx();
+    await handleStreamChunk(
+      {
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "Hello" },
+      } as never,
+      ctx,
+    );
+    expect(ctx.state.segmentLog).toEqual([
+      { type: "text", content: "Hello" },
+    ] satisfies MessageSegment[]);
+  });
+
+  it("appends to last text segment on subsequent text_delta", async () => {
+    const ctx = makeCtx();
+    await handleStreamChunk(
+      {
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "Hi " },
+      } as never,
+      ctx,
+    );
+    await handleStreamChunk(
+      {
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "there" },
+      } as never,
+      ctx,
+    );
+    expect(ctx.state.segmentLog).toEqual([{ type: "text", content: "Hi there" }]);
+  });
+
+  it("pushes activity segment on tool_execution_start", async () => {
+    const ctx = makeCtx();
+    ctx.state.pendingToolDescriptions.set("tc-1", "Reading file");
+    await handleStreamChunk(
+      {
+        type: "tool_execution_start",
+        toolCallId: "tc-1",
+        toolName: "read_file",
+        args: {},
+      } as never,
+      ctx,
+    );
+    expect(ctx.state.segmentLog).toEqual([
+      {
+        type: "activity",
+        toolCallId: "tc-1",
+        toolName: "read_file",
+        description: "Reading file",
+        status: "done",
+      },
+    ]);
+  });
+
+  it("starts a new text segment after a tool call (text-after-tool = new bubble)", async () => {
+    const ctx = makeCtx();
+    await handleStreamChunk(
+      {
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "before" },
+      } as never,
+      ctx,
+    );
+    await handleStreamChunk(
+      {
+        type: "tool_execution_start",
+        toolCallId: "tc-1",
+        toolName: "read_file",
+        args: {},
+      } as never,
+      ctx,
+    );
+    await handleStreamChunk(
+      {
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "after" },
+      } as never,
+      ctx,
+    );
+    expect(ctx.state.segmentLog).toEqual([
+      { type: "text", content: "before" },
+      {
+        type: "activity",
+        toolCallId: "tc-1",
+        toolName: "read_file",
+        description: "read_file",
+        status: "done",
+      },
+      { type: "text", content: "after" },
+    ]);
+  });
+
+  it("marks activity segment as error on tool_execution_end with isError", async () => {
+    const ctx = makeCtx();
+    await handleStreamChunk(
+      {
+        type: "tool_execution_start",
+        toolCallId: "tc-1",
+        toolName: "read_file",
+        args: {},
+      } as never,
+      ctx,
+    );
+    await handleStreamChunk(
+      {
+        type: "tool_execution_end",
+        toolCallId: "tc-1",
+        toolName: "read_file",
+        isError: true,
+        result: "",
+      } as never,
+      ctx,
+    );
+    expect(ctx.state.segmentLog[0]).toMatchObject({ type: "activity", status: "error" });
   });
 });

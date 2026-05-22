@@ -49,6 +49,12 @@ describe("MessageList — segments", () => {
     expect(screen.getByText("Let me search.")).toBeTruthy();
     expect(screen.getByText("Searching")).toBeTruthy();
     expect(screen.getByText("Found results.")).toBeTruthy();
+
+    const textA = screen.getByText("Let me search.");
+    const pill = screen.getByText("Searching");
+    const textB = screen.getByText("Found results.");
+    expect(textA.compareDocumentPosition(pill) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(pill.compareDocumentPosition(textB) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("shows thinking spinner when processing and no running tool", () => {
@@ -82,6 +88,57 @@ describe("MessageList — segments", () => {
     ];
     render(<MessageList messages={messages} streamingSegments={[]} processing={false} />);
     expect(screen.getByText("Hello there")).toBeTruthy();
+  });
+
+  it("renders committed message segments interleaved (text → tool → text)", () => {
+    const msg: Message = {
+      id: "m-1",
+      projectId: "p-1",
+      role: "assistant",
+      content: "before after",
+      createdAt: new Date(),
+      segments: [
+        { type: "text", content: "before" },
+        {
+          type: "activity",
+          toolCallId: "tc-1",
+          toolName: "read_file",
+          description: "Read schema",
+          status: "done",
+        },
+        { type: "text", content: "after" },
+      ],
+    };
+
+    render(<MessageList messages={[msg]} streamingSegments={[]} />);
+
+    // Two text bubbles
+    expect(screen.getByText("before")).toBeTruthy();
+    expect(screen.getByText("after")).toBeTruthy();
+
+    // Tool pill between them — check order in DOM
+    expect(screen.getByText("Read schema")).toBeTruthy();
+    const textA = screen.getByText("before");
+    const pill = screen.getByText("Read schema");
+    const textB = screen.getByText("after");
+    expect(textA.compareDocumentPosition(pill) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(pill.compareDocumentPosition(textB) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("falls back to legacy render path when segments absent", () => {
+    const msg: Message = {
+      id: "m-2",
+      projectId: "p-1",
+      role: "assistant",
+      content: "legacy content",
+      createdAt: new Date(),
+      toolCalls: [{ toolCallId: "tc-9", toolName: "old_tool", description: "old", status: "done" }],
+    };
+
+    render(<MessageList messages={[msg]} streamingSegments={[]} />);
+
+    expect(screen.getByText("legacy content")).toBeTruthy();
+    expect(screen.getByText("old")).toBeTruthy();
   });
 });
 

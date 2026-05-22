@@ -1,5 +1,5 @@
 import type { AgentEvent } from "@mariozechner/pi-agent-core";
-import type { ToolCallRecord } from "../../../shared/types";
+import type { MessageSegment, ToolCallRecord } from "../../../shared/types";
 import type { EventBus } from "../../event-bus";
 import type { IMemoryManager } from "../../services/MemoryManager";
 import type { MessageService } from "../../services/MessageService";
@@ -24,6 +24,7 @@ export interface SessionState {
   sessionId: string;
   streamingMessageId: string | null;
   streamChunkCount: number;
+  segmentLog: MessageSegment[];
 }
 
 /** Dependencies injected into every event handler. */

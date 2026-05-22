@@ -185,4 +185,51 @@ describe("DrizzleMessageRepository", () => {
       expect(msgs[1]?.toolCalls).toEqual(toolCalls);
     });
   });
+
+  describe("segments round-trip", () => {
+    it("persists and parses segments round-trip", async () => {
+      const segments = [
+        { type: "text" as const, content: "Looking at the schema." },
+        {
+          type: "activity" as const,
+          toolCallId: "tc-1",
+          toolName: "read_file",
+          description: "Read schema.ts",
+          status: "done" as const,
+        },
+        { type: "text" as const, content: "Schema has no ordering field." },
+      ] satisfies import("../../../../shared/types").MessageSegment[];
+
+      const created = await repo.create({
+        projectId,
+        role: "assistant",
+        content: "Looking at the schema. Schema has no ordering field.",
+        segments,
+      });
+
+      expect(created.segments).toEqual(segments);
+
+      const fetched = await repo.listByProject(projectId);
+      expect(fetched.at(-1)?.segments).toEqual(segments);
+    });
+
+    it("updateContent persists segments when provided", async () => {
+      const created = await repo.create({ projectId, role: "assistant", content: "initial" });
+
+      const segments = [
+        { type: "text" as const, content: "final" },
+      ] satisfies import("../../../../shared/types").MessageSegment[];
+
+      await repo.updateContent(created.id, "final", undefined, segments);
+
+      const fetched = await repo.listByProject(projectId);
+      expect(fetched[0].segments).toEqual(segments);
+    });
+
+    it("returns undefined segments for rows where column is null (legacy rows)", async () => {
+      await repo.create({ projectId, role: "assistant", content: "legacy" });
+      const fetched = await repo.listByProject(projectId);
+      expect(fetched[0].segments).toBeUndefined();
+    });
+  });
 });

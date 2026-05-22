@@ -269,7 +269,12 @@ describe("AgentSession", () => {
       });
       await triggerEvent({ type: "agent_end", messages: [] });
 
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Hello world");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "Hello world",
+        undefined,
+        [{ type: "text", content: "Hello world" }],
+      );
     });
 
     it("sends MESSAGE_DONE on agent_end", async () => {
@@ -290,7 +295,13 @@ describe("AgentSession", () => {
       await triggerEvent({ type: "agent_end", messages: [] });
       // flush at chunk 5 + final update on agent_end
       expect(messageService.updateMessage).toHaveBeenCalledTimes(2);
-      expect(messageService.updateMessage).toHaveBeenNthCalledWith(1, expect.any(String), "01234");
+      expect(messageService.updateMessage).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        "01234",
+        undefined,
+        [{ type: "text", content: "01234" }],
+      );
     });
 
     it("does not persist empty assistant content on agent_end", async () => {
@@ -316,7 +327,12 @@ describe("AgentSession", () => {
       });
       await triggerEvent({ type: "agent_end", messages: [] });
 
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Second");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "Second",
+        undefined,
+        [{ type: "text", content: "Second" }],
+      );
     });
 
     it("ignores non-text_delta message_update events", async () => {
@@ -864,7 +880,12 @@ describe("AgentSession", () => {
 
       expect(messageService.addMessage).toHaveBeenCalledTimes(2); // 1 user + 1 assistant placeholder
       expect(messageService.updateMessage).toHaveBeenCalledTimes(1);
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "answer");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "answer",
+        undefined,
+        [{ type: "text", content: "answer" }],
+      );
     });
 
     it("resets dedup guard for the next turn", async () => {
@@ -885,7 +906,12 @@ describe("AgentSession", () => {
       await triggerEvent({ type: "agent_end", messages: [] });
 
       expect(messageService.updateMessage).toHaveBeenCalledTimes(1);
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "B");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "B",
+        undefined,
+        [{ type: "text", content: "B" }],
+      );
     });
   });
 
@@ -922,7 +948,12 @@ describe("AgentSession", () => {
       });
       session.abort();
 
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Partial");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "Partial",
+        undefined,
+        [{ type: "text", content: "Partial" }],
+      );
       expect(eventBus.emit).toHaveBeenCalledWith(
         expect.objectContaining({ type: "agent:done", payload: { projectId: "p-1" } }),
       );
@@ -967,7 +998,12 @@ describe("AgentSession", () => {
       // The catch handler is fire-and-forget (void), so we need to wait a tick
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(messageService.updateMessage).toHaveBeenCalledWith(expect.any(String), "Partial");
+      expect(messageService.updateMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        "Partial",
+        undefined,
+        [{ type: "text", content: "Partial" }],
+      );
       expect(consoleSpy).toHaveBeenCalledWith(
         "[AgentSession] failed to finalize partial message:",
         expect.any(Error),

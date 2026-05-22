@@ -1,5 +1,5 @@
 import { inject, injectable } from "tsyringe";
-import type { Message, MessageRole, ToolCallRecord } from "../../shared/types";
+import type { Message, MessageRole, MessageSegment, ToolCallRecord } from "../../shared/types";
 import { MESSAGE_REPO_TOKEN } from "../di/tokens";
 import type { IMessageRepository } from "../repositories/IMessageRepository";
 
@@ -18,8 +18,13 @@ export class MessageService {
     return this.repo.create(data);
   }
 
-  async updateMessage(id: string, content: string, toolCalls?: ToolCallRecord[]): Promise<void> {
-    return this.repo.updateContent(id, content, toolCalls);
+  async updateMessage(
+    id: string,
+    content: string,
+    toolCalls?: ToolCallRecord[],
+    segments?: MessageSegment[],
+  ): Promise<void> {
+    return this.repo.updateContent(id, content, toolCalls, segments);
   }
 
   async deleteMessage(id: string): Promise<void> {

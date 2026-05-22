@@ -1,6 +1,6 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { inject, injectable } from "tsyringe";
-import type { Message, MessageRole, ToolCallRecord } from "../../../shared/types";
+import type { Message, MessageRole, MessageSegment, ToolCallRecord } from "../../../shared/types";
 import type { DrizzleDB } from "../../db/client";
 import { messages } from "../../db/schema";
 import { CLOCK_TOKEN, DB_TOKEN } from "../../di/tokens";
@@ -25,6 +25,7 @@ export class DrizzleMessageRepository
       content: data.content,
       createdAt: this.now(),
       toolCalls: data.toolCalls,
+      segments: data.segments,
     };
     await this.db.insert(messages).values({
       id: message.id,
@@ -32,17 +33,24 @@ export class DrizzleMessageRepository
       role: message.role,
       content: message.content,
       toolCalls: data.toolCalls ? JSON.stringify(data.toolCalls) : null,
+      segments: data.segments ? JSON.stringify(data.segments) : null,
       createdAt: message.createdAt,
     });
     return message;
   }
 
-  async updateContent(id: string, content: string, toolCalls?: ToolCallRecord[]): Promise<void> {
+  async updateContent(
+    id: string,
+    content: string,
+    toolCalls?: ToolCallRecord[],
+    segments?: MessageSegment[],
+  ): Promise<void> {
     await this.db
       .update(messages)
       .set({
         content,
         ...(toolCalls !== undefined ? { toolCalls: JSON.stringify(toolCalls) } : {}),
+        ...(segments !== undefined ? { segments: JSON.stringify(segments) } : {}),
       })
       .where(eq(messages.id, id));
   }
@@ -78,5 +86,6 @@ export class DrizzleMessageRepository
     content: row.content,
     createdAt: row.createdAt,
     toolCalls: row.toolCalls ? (JSON.parse(row.toolCalls) as ToolCallRecord[]) : undefined,
+    segments: row.segments ? (JSON.parse(row.segments) as MessageSegment[]) : undefined,
   });
 }

@@ -157,4 +157,11 @@ export async function runMigrations(db: DrizzleDB): Promise<void> {
   } catch (err) {
     if (!isDuplicateColumnError(err)) throw err;
   }
+
+  // Run 22: add segments to messages — idempotent
+  try {
+    await db.run(sql`ALTER TABLE messages ADD COLUMN segments TEXT`);
+  } catch (err) {
+    if (!isDuplicateColumnError(err)) throw err;
+  }
 }

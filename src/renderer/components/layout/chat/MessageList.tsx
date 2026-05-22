@@ -62,7 +62,12 @@ export default function MessageList({ messages, streamingSegments, processing }:
     lastUserIndex >= 0
       ? messages.filter((m, i) => {
           if (i <= lastUserIndex) return true;
-          if (m.role === "assistant" && m.content.trim() === "") return false;
+          if (
+            m.role === "assistant" &&
+            m.content.trim() === "" &&
+            (!m.segments || m.segments.length === 0)
+          )
+            return false;
           if (processing && m.role === "assistant") return false;
           return true;
         })
@@ -105,51 +110,90 @@ export default function MessageList({ messages, streamingSegments, processing }:
           gap: 18,
         }}
       >
-        {displayMessages.map((msg) => (
-          <div
-            key={msg.id}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-              maxWidth: 640,
-              marginLeft: msg.role === "user" ? "auto" : undefined,
-            }}
-          >
-            {msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                {msg.toolCalls.map((tc) => (
-                  <ActivityPill
-                    key={tc.toolCallId}
-                    toolCallId={tc.toolCallId}
-                    toolName={tc.toolName}
-                    description={tc.description}
-                    status={tc.status}
-                  />
-                ))}
-              </div>
-            )}
+        {displayMessages.map((msg) => {
+          const isAssistant = msg.role === "assistant";
+          const useSegments = isAssistant && msg.segments && msg.segments.length > 0;
+
+          return (
             <div
+              key={msg.id}
               style={{
-                padding: "12px 16px",
-                borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                background: msg.role === "user" ? "var(--accent)" : "var(--surface)",
-                color: msg.role === "user" ? "var(--ink-on-accent)" : "var(--ink)",
-                border: msg.role === "user" ? "none" : "1px solid var(--line)",
-                fontSize: 13.5,
-                lineHeight: 1.55,
+                display: "flex",
+                flexDirection: "column",
+                gap: useSegments ? 8 : 4,
+                maxWidth: 640,
+                marginLeft: msg.role === "user" ? "auto" : undefined,
               }}
             >
-              {msg.role === "user" ? (
-                <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                  {msg.content}
-                </span>
+              {useSegments ? (
+                msg.segments?.map((seg, i) =>
+                  seg.type === "text" ? (
+                    <div
+                      // biome-ignore lint/suspicious/noArrayIndexKey: segments are immutable post-commit
+                      key={`${msg.id}-seg-${i}`}
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: "14px 14px 14px 4px",
+                        background: "var(--surface)",
+                        border: "1px solid var(--line)",
+                        color: "var(--ink)",
+                        fontSize: 13.5,
+                        lineHeight: 1.55,
+                      }}
+                    >
+                      <MarkdownRenderer content={seg.content} />
+                    </div>
+                  ) : (
+                    <ActivityPill
+                      // biome-ignore lint/suspicious/noArrayIndexKey: segments are immutable post-commit
+                      key={`${msg.id}-seg-${i}`}
+                      toolCallId={seg.toolCallId}
+                      toolName={seg.toolName}
+                      description={seg.description}
+                      status={seg.status}
+                    />
+                  ),
+                )
               ) : (
-                <MarkdownRenderer content={msg.content} />
+                <>
+                  {isAssistant && msg.toolCalls && msg.toolCalls.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {msg.toolCalls.map((tc) => (
+                        <ActivityPill
+                          key={tc.toolCallId}
+                          toolCallId={tc.toolCallId}
+                          toolName={tc.toolName}
+                          description={tc.description}
+                          status={tc.status}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      borderRadius:
+                        msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                      background: msg.role === "user" ? "var(--accent)" : "var(--surface)",
+                      color: msg.role === "user" ? "var(--ink-on-accent)" : "var(--ink)",
+                      border: msg.role === "user" ? "none" : "1px solid var(--line)",
+                      fontSize: 13.5,
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    {msg.role === "user" ? (
+                      <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                        {msg.content}
+                      </span>
+                    ) : (
+                      <MarkdownRenderer content={msg.content} />
+                    )}
+                  </div>
+                </>
               )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {streamingSegments.length > 0 && (
           <div
@@ -170,6 +214,7 @@ export default function MessageList({ messages, streamingSegments, processing }:
                     borderRadius: "14px 14px 14px 4px",
                     background: "var(--surface)",
                     border: "1px solid var(--line)",
+                    color: "var(--ink)",
                     fontSize: 13.5,
                     lineHeight: 1.55,
                   }}

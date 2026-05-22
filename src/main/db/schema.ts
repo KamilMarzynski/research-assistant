@@ -24,6 +24,7 @@ export const messages = sqliteTable("messages", {
   role: text("role", { enum: ["user", "assistant", "system"] }).notNull(),
   content: text("content").notNull(),
   toolCalls: text("tool_calls"),
+  segments: text("segments"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 });
 
