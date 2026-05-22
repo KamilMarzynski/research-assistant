@@ -438,6 +438,10 @@ change, the researcher will write the updated version directly with
 write_file (path-jail will gate). Reading them is good. Updating them
 is core to how this app learns the user.
 
+## File tools
+
+\`read_file\` returns JSON with \`sha256\`. Reuse that exact value as \`write_file.expected_hash\` — do not compute hashes via \`safe_bash\`.
+
 ## Error handling
 
 - If a tool returns "Approval required", explain what path was blocked and ask the user if they want to allow it.
