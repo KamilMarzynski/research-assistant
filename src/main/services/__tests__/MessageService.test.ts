@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Message } from "../../../shared/types";
+import type { Message, MessageSegment } from "../../../shared/types";
 import type { IMessageRepository } from "../../repositories/IMessageRepository";
 import { MessageService } from "../MessageService";
 
@@ -75,6 +75,16 @@ describe("MessageService", () => {
 
       expect(repo.getRecent).toHaveBeenCalledWith("proj-1", 5);
       expect(result).toEqual(msgs);
+    });
+  });
+
+  describe("updateMessage", () => {
+    it("passes segments to repo.updateContent", async () => {
+      const repo = { updateContent: vi.fn() } as unknown as IMessageRepository;
+      const service = new MessageService(repo);
+      const segments: MessageSegment[] = [{ type: "text", content: "hi" }];
+      await service.updateMessage("id-1", "hi", undefined, segments);
+      expect(repo.updateContent).toHaveBeenCalledWith("id-1", "hi", undefined, segments);
     });
   });
 
