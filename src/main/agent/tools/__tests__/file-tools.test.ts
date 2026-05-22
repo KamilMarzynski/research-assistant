@@ -145,7 +145,7 @@ describe("read_file JSON envelope", () => {
     await writeFile(target, "a\nb\nc", "utf-8");
     const tool = createReadTool();
     const result = await tool.execute("id", { path: target });
-    const parsed = JSON.parse(result.content[0].text);
+    const parsed = JSON.parse(getText(result));
     expect(parsed).toEqual({
       path: target,
       mimeType: "text/plain",
@@ -158,7 +158,7 @@ describe("read_file JSON envelope", () => {
       hint: null,
       content: "a\nb\nc",
     });
-    expect(JSON.stringify(result.details)).toBe(result.content[0].text);
+    expect(getText(result)).toBe(JSON.stringify(result.details, null, 2));
   });
 
   it("truncates when file exceeds maxLines", async () => {
@@ -167,7 +167,7 @@ describe("read_file JSON envelope", () => {
     await writeFile(target, lines.join("\n"), "utf-8");
     const tool = createReadTool();
     const result = await tool.execute("id", { path: target, maxLines: 100 });
-    const parsed = JSON.parse(result.content[0].text);
+    const parsed = JSON.parse(getText(result));
     expect(parsed.truncated).toBe(true);
     expect(parsed.startLine).toBe(1);
     expect(parsed.endLine).toBe(100);
@@ -180,7 +180,7 @@ describe("read_file JSON envelope", () => {
     await writeFile(target, "1\n2\n3\n4\n5", "utf-8");
     const tool = createReadTool();
     const result = await tool.execute("id", { path: target, startLine: 99 });
-    const parsed = JSON.parse(result.content[0].text);
+    const parsed = JSON.parse(getText(result));
     expect(parsed.startLine).toBeNull();
     expect(parsed.endLine).toBeNull();
     expect(parsed.linesReturned).toBe(0);
@@ -194,7 +194,7 @@ describe("read_file JSON envelope", () => {
     await writeFile(target, pngMagic);
     const tool = createReadTool();
     const result = await tool.execute("id", { path: target });
-    const parsed = JSON.parse(result.content[0].text);
+    const parsed = JSON.parse(getText(result));
     expect(parsed.isBinary).toBe(true);
     expect(parsed.content).toBeNull();
     expect(parsed.mimeType).toBe("image/png");
@@ -206,7 +206,7 @@ describe("read_file JSON envelope", () => {
     await writeFile(target, "", "utf-8");
     const tool = createReadTool();
     const result = await tool.execute("id", { path: target });
-    const parsed = JSON.parse(result.content[0].text);
+    const parsed = JSON.parse(getText(result));
     expect(parsed.totalLines).toBe(0);
     expect(parsed.startLine).toBeNull();
     expect(parsed.endLine).toBeNull();
@@ -223,14 +223,14 @@ describe("read_file JSON envelope", () => {
     const fullHash = createHash("sha256").update(fullBuffer).digest("hex");
     const tool = createReadTool();
     const result = await tool.execute("id", { path: target, maxLines: 10 });
-    const parsed = JSON.parse(result.content[0].text);
+    const parsed = JSON.parse(getText(result));
     expect(parsed.sha256).toBe(fullHash);
   });
 
   async function readHash(target: string) {
     const readTool = createReadTool();
     const readResult = await readTool.execute("id", { path: target });
-    const envelope = JSON.parse(readResult.content[0].text);
+    const envelope = JSON.parse(getText(readResult));
     return envelope.sha256;
   }
 

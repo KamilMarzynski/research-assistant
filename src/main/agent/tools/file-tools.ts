@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { basename, dirname, extname } from "node:path";
+import { dirname, extname } from "node:path";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import { Type } from "@sinclair/typebox";
 import type { AllowlistService } from "../../services/AllowlistService";
@@ -10,13 +10,17 @@ import { enterPathApprovalGate } from "../extensions/path-approval";
 import type { PathJail } from "../path-jail";
 
 export type SmartReadResult = {
-  content: string;
+  path: string;
   mimeType: string;
+  sha256: string;
+  totalLines: number;
+  startLine: number | null;
+  endLine: number | null;
+  linesReturned: number;
   truncated: boolean;
   hint: string | null;
-  totalLines: number;
-  lineCount: number;
-  fileHash: string;
+  content: string | null;
+  isBinary?: true;
 };
 
 const MAX_BYTES = 500 * 1024;
@@ -40,6 +44,7 @@ function getMimeType(ext: string): string {
     yml: "text/yaml",
     sql: "text/x-sql",
     txt: "text/plain",
+    png: "image/png",
   };
   return map[ext.toLowerCase()] ?? "application/octet-stream";
 }
@@ -53,7 +58,7 @@ function isBinaryMimeType(mime: string): boolean {
   return false;
 }
 
-function sha256(content: string): string {
+function hashString(content: string): string {
   return createHash("sha256").update(content, "utf-8").digest("hex");
 }
 
@@ -141,6 +146,9 @@ export function createReadFileTool(
             );
             if (!approved) {
               const feedback = denyReason ? ` ${denyReason}` : "";
+              const deniedExt = extname(err.path).slice(1);
+              const deniedMimeType = getMimeType(deniedExt);
+              const deniedIsBinary = isBinaryMimeType(deniedMimeType);
               return {
                 content: [
                   {
@@ -149,13 +157,17 @@ export function createReadFileTool(
                   },
                 ],
                 details: {
-                  content: "",
-                  mimeType: "text/plain",
+                  path: err.path,
+                  mimeType: deniedIsBinary ? deniedMimeType : "text/plain",
+                  sha256: "",
+                  totalLines: 0,
+                  startLine: null,
+                  endLine: null,
+                  linesReturned: 0,
                   truncated: false,
                   hint: null,
-                  totalLines: 0,
-                  lineCount: 0,
-                  fileHash: "",
+                  content: deniedIsBinary ? null : "",
+                  isBinary: deniedIsBinary ? true : undefined,
                 },
               };
             }
@@ -166,24 +178,28 @@ export function createReadFileTool(
         }
       }
       const buffer = await readFile(resolved);
-      const fileHash = createHash("sha256").update(buffer).digest("hex");
+      const sha256 = createHash("sha256").update(buffer).digest("hex");
 
       const ext = extname(resolved).slice(1);
       const mimeType = getMimeType(ext);
 
       if (isBinaryMimeType(mimeType)) {
-        const placeholder = `[Binary file: ${resolved} (${mimeType})]`;
+        const payload: SmartReadResult = {
+          path: resolved,
+          mimeType,
+          sha256,
+          isBinary: true,
+          totalLines: 0,
+          startLine: null,
+          endLine: null,
+          linesReturned: 0,
+          truncated: false,
+          hint: `Binary file (${mimeType}). Cannot read as text.`,
+          content: null,
+        };
         return {
-          content: [{ type: "text" as const, text: placeholder }],
-          details: {
-            content: placeholder,
-            mimeType,
-            truncated: false,
-            hint: `Binary file (${mimeType}). Cannot read as text.`,
-            totalLines: 0,
-            lineCount: 0,
-            fileHash,
-          },
+          content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
+          details: payload,
         };
       }
 
@@ -211,8 +227,8 @@ export function createReadFileTool(
       } else if (totalLines > mLines && selectedLines.length > 0) {
         truncated = true;
         hint = `Returned lines ${sLine}-${sLine + selectedLines.length - 1} of ${totalLines}. Use startLine=${sLine + selectedLines.length} to read more.`;
-      } else if (sLine > totalLines) {
-        hint = `File has ${totalLines} lines. startLine exceeds total.`;
+      } else if (sLine > totalLines && totalLines > 0) {
+        hint = `File has ${totalLines} lines. startLine ${sLine} exceeds total.`;
       }
 
       if (compressionService) {
@@ -224,25 +240,39 @@ export function createReadFileTool(
         }
       }
 
-      const lineCount = content === "" ? 0 : content.split("\n").length;
-      const fileName = basename(resolved);
+      const linesReturned = content === "" ? 0 : content.split("\n").length;
+
+      let startLineResult: number | null;
+      let endLineResult: number | null;
+
+      if (totalLines === 0) {
+        startLineResult = null;
+        endLineResult = null;
+        hint = null;
+      } else if (sLine > totalLines) {
+        startLineResult = null;
+        endLineResult = null;
+      } else {
+        startLineResult = sLine;
+        endLineResult = sLine + linesReturned - 1;
+      }
+
+      const payload: SmartReadResult = {
+        path: resolved,
+        mimeType,
+        sha256,
+        totalLines,
+        startLine: startLineResult,
+        endLine: endLineResult,
+        linesReturned,
+        truncated,
+        hint,
+        content,
+      };
 
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Read ${lineCount} lines of ${fileName} (${mimeType}). Total: ${totalLines.toLocaleString()} lines.`,
-          },
-        ],
-        details: {
-          content,
-          mimeType,
-          truncated,
-          hint,
-          totalLines,
-          lineCount,
-          fileHash,
-        },
+        content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
+        details: payload,
       };
     },
   };
@@ -373,7 +403,7 @@ export function createWriteFileTool(
 
       // File exists
       const existingContent = await readFile(resolved, "utf-8");
-      const currentHash = sha256(existingContent);
+      const currentHash = hashString(existingContent);
 
       if (expected_hash === undefined) {
         return {
