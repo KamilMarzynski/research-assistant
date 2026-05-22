@@ -158,7 +158,7 @@ describe("read_file JSON envelope", () => {
       hint: null,
       content: "a\nb\nc",
     });
-    expect(result.details).toBe(parsed);
+    expect(JSON.stringify(result.details)).toBe(result.content[0].text);
   });
 
   it("truncates when file exceeds maxLines", async () => {
@@ -227,15 +227,14 @@ describe("read_file JSON envelope", () => {
     expect(parsed.sha256).toBe(fullHash);
   });
 
-  it("sha256 round-trips into write_file", async () => {
-    const target = join(tempDir, "roundtrip.txt");
-    await writeFile(target, "original line 1\noriginal line 2\noriginal line 3", "utf-8");
-
+  async function readHash(target: string) {
     const readTool = createReadTool();
     const readResult = await readTool.execute("id", { path: target });
     const envelope = JSON.parse(readResult.content[0].text);
-    const fileHash = envelope.sha256;
+    return envelope.sha256;
+  }
 
+  function createWriteTool() {
     const writeJail = {
       projectId: "p1",
       validate: vi.fn((p: string) => {
@@ -245,7 +244,7 @@ describe("read_file JSON envelope", () => {
       }),
     } as unknown as PathJail;
 
-    const writeTool = createWriteFileTool(
+    return createWriteFileTool(
       writeJail,
       tempDir,
       undefined,
@@ -253,6 +252,14 @@ describe("read_file JSON envelope", () => {
       allowlistService,
       vi.fn().mockResolvedValue(true),
     );
+  }
+
+  it("write_file succeeds using sha256 from read_file", async () => {
+    const target = join(tempDir, "roundtrip.txt");
+    await writeFile(target, "original line 1\noriginal line 2\noriginal line 3", "utf-8");
+
+    const fileHash = await readHash(target);
+    const writeTool = createWriteTool();
 
     const writeResult = await writeTool.execute("id", {
       path: target,
@@ -263,6 +270,14 @@ describe("read_file JSON envelope", () => {
       expected_hash: fileHash,
     });
     expect(getText(writeResult)).toContain("Edited:");
+  });
+
+  it("write_file rejects when expected_hash is stale", async () => {
+    const target = join(tempDir, "roundtrip.txt");
+    await writeFile(target, "original line 1\noriginal line 2\noriginal line 3", "utf-8");
+
+    const fileHash = await readHash(target);
+    const writeTool = createWriteTool();
 
     await writeFile(target, "mutated content\nline 2\nline 3", "utf-8");
 
