@@ -113,9 +113,9 @@ export function createReadFileTool(
     name: "read_file",
     label: "Read file",
     description:
-      "Read the contents of a file. Read before answering any question about file contents — do not guess. " +
-      "Supports smart pagination (startLine/maxLines) and returns a SHA-256 hash for write conflict detection. " +
-      "Use userProjectDir when exploring the user's project.",
+      "Read a file. Returns a JSON object with `path`, `mimeType`, `sha256`, `totalLines`, `startLine`, `endLine`, `linesReturned`, `truncated`, `hint`, `content`. " +
+      "Use `sha256` directly as `expected_hash` when calling `write_file`. Paginate with `startLine`/`maxLines`; check `truncated` and follow `hint` to read more. " +
+      "Use `userProjectDir` when exploring the user's project. Always read before editing — never compute hashes via `safe_bash`.",
     parameters: readFileParameters,
     execute: async (
       _id,
@@ -410,7 +410,7 @@ export function createWriteFileTool(
           content: [
             {
               type: "text" as const,
-              text: "expected_hash is required when writing an existing file. Re-read file and retry with the hash returned by read_file.",
+              text: "expected_hash is required when writing an existing file. Re-read file and retry with the sha256 returned by read_file.",
             },
           ],
           details: null,
@@ -422,7 +422,7 @@ export function createWriteFileTool(
           content: [
             {
               type: "text" as const,
-              text: "File changed since last read. Re-read file and retry with the hash returned by read_file.",
+              text: "File changed since last read. Re-read file and retry with the sha256 returned by read_file.",
             },
           ],
           details: null,
