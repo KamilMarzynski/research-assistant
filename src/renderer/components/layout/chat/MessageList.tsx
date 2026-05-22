@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-// biome-ignore lint/correctness/noUnusedImports: spec requirement — MessageSegment must be imported even if not directly referenced
-import type { Message, MessageSegment } from "../../../../shared/types";
+import type { Message } from "../../../../shared/types";
 import type { StreamSegment } from "../../../contexts/StreamStateContext";
 import ActivityPill from "../../shared/ActivityPill";
 import MarkdownRenderer from "../../shared/MarkdownRenderer";
@@ -63,7 +62,12 @@ export default function MessageList({ messages, streamingSegments, processing }:
     lastUserIndex >= 0
       ? messages.filter((m, i) => {
           if (i <= lastUserIndex) return true;
-          if (m.role === "assistant" && m.content.trim() === "") return false;
+          if (
+            m.role === "assistant" &&
+            m.content.trim() === "" &&
+            (!m.segments || m.segments.length === 0)
+          )
+            return false;
           if (processing && m.role === "assistant") return false;
           return true;
         })
@@ -132,6 +136,7 @@ export default function MessageList({ messages, streamingSegments, processing }:
                         borderRadius: "14px 14px 14px 4px",
                         background: "var(--surface)",
                         border: "1px solid var(--line)",
+                        color: "var(--ink)",
                         fontSize: 13.5,
                         lineHeight: 1.55,
                       }}
@@ -209,6 +214,7 @@ export default function MessageList({ messages, streamingSegments, processing }:
                     borderRadius: "14px 14px 14px 4px",
                     background: "var(--surface)",
                     border: "1px solid var(--line)",
+                    color: "var(--ink)",
                     fontSize: 13.5,
                     lineHeight: 1.55,
                   }}
