@@ -233,4 +233,14 @@ describe("createExecuteCodeTool", () => {
       }),
     );
   });
+
+  it("has executionMode set to sequential", () => {
+    const jail = { validate: (p: string) => p } as unknown as PathJail;
+    const tool = createExecuteCodeTool(jail, {
+      projectId: "p1",
+      auditLogPath: join(tempDir, "audit.log"),
+      allowlistService: new AllowlistService(),
+    });
+    expect(tool.executionMode).toBe("sequential");
+  });
 });

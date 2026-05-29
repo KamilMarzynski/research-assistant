@@ -66,17 +66,17 @@ describe("researcherPrompt", () => {
     expect(out).toContain("config.md");
   });
 
-  it("contains the update-over-create rule with list_skills + read_skill steps", () => {
+  it("contains the update-over-create rule with <available_skills> + read_skill steps", () => {
     const out = researcherPrompt(dirs, "/out", undefined, brief);
     expect(out).toContain("## Update over create");
-    expect(out).toContain("list_skills");
+    expect(out).toContain("<available_skills>");
     expect(out).toContain("read_skill");
   });
 
-  it("contains the format-and-delivery deferral", () => {
+  it("instructs researcher not to attempt format conversion", () => {
     const out = researcherPrompt(dirs, "/out", undefined, brief);
-    expect(out).toContain("A finisher agent runs after you");
-    expect(out).toContain("prioritize content correctness over final format");
+    expect(out).toContain("DO NOT attempt format conversion");
+    expect(out).toContain("Never spend cycles on conversion");
   });
 
   it("uses the new ### Files changed handoff format", () => {

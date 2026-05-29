@@ -46,8 +46,6 @@ export class AgentSession {
       lastUserContent: "",
       currentTurnId: 0,
       savedForTurn: 0,
-      processing: false,
-      pendingFollowUp: null as string | null,
       pendingSkillDeltas: [] as Array<{ skillName: string; summary: string }>,
       pendingToolDescriptions: new Map<string, string>(),
       pendingToolCalls: [],

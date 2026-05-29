@@ -13,7 +13,7 @@ const mockAgent = {
   prompt: vi.fn().mockResolvedValue(undefined),
   abort: vi.fn(),
   followUp: vi.fn(),
-  state: { tools: [], systemPrompt: "", messages: [] },
+  state: { tools: [], systemPrompt: "", messages: [], isStreaming: false },
 };
 
 vi.mock("@mariozechner/pi-agent-core", () => ({
@@ -176,12 +176,15 @@ describe("AgentSession", () => {
 
     it("rejects concurrent send() calls while processing", async () => {
       mockAgent.prompt.mockImplementation(async () => {
-        // simulate a long-running prompt
+        mockAgent.state.isStreaming = true;
         await new Promise((resolve) => setTimeout(resolve, 50));
+        mockAgent.state.isStreaming = false;
       });
 
       const first = session.send("first");
-      // immediately try a second send while first is still processing
+      while (mockAgent.prompt.mock.calls.length === 0) {
+        await new Promise((r) => setTimeout(r, 1));
+      }
       await expect(session.send("second")).rejects.toThrow("already processing");
       await first;
     });
@@ -382,7 +385,14 @@ describe("AgentSession", () => {
 
   describe("isProcessing()", () => {
     it("returns false when idle", () => {
+      mockAgent.state.isStreaming = false;
       expect(session.isProcessing()).toBe(false);
+    });
+
+    it("returns true while agent is streaming", () => {
+      mockAgent.state.isStreaming = true;
+      expect(session.isProcessing()).toBe(true);
+      mockAgent.state.isStreaming = false;
     });
 
     it("returns true while send() is running", async () => {
@@ -390,6 +400,7 @@ describe("AgentSession", () => {
       mockAgent.prompt.mockImplementationOnce(
         () =>
           new Promise<void>((resolve) => {
+            mockAgent.state.isStreaming = true;
             resolvePrompt = resolve;
           }),
       );
@@ -399,6 +410,7 @@ describe("AgentSession", () => {
       }
       expect(session.isProcessing()).toBe(true);
       resolvePrompt?.();
+      mockAgent.state.isStreaming = false;
       await sendPromise;
       expect(session.isProcessing()).toBe(false);
     });
@@ -560,52 +572,18 @@ describe("AgentSession", () => {
   });
 
   describe("queueFollowUp", () => {
-    it("calls agent.prompt with the message", async () => {
+    it("delegates to agent.followUp() with the message", async () => {
       await session.queueFollowUp("Research complete: found 5 files.");
-      expect(mockAgent.prompt).toHaveBeenCalledWith("Research complete: found 5 files.");
-    });
-
-    it("throws when followUp fails", async () => {
-      mockAgent.prompt.mockRejectedValueOnce(new Error("network error"));
-      await expect(session.queueFollowUp("follow-up")).rejects.toThrow("network error");
-    });
-
-    it("defers followUp while send() is processing and runs it after send completes", async () => {
-      mockAgent.prompt.mockImplementationOnce(async () => {
-        // While prompt is running, queue a follow-up
-        await session.queueFollowUp("deferred follow-up");
+      expect(mockAgent.followUp).toHaveBeenCalledWith({
+        role: "user",
+        content: "Research complete: found 5 files.",
+        timestamp: expect.any(Number),
       });
-
-      await session.send("hello");
-      // agent.prompt called twice: once for "hello", once for the deferred follow-up
-      expect(mockAgent.prompt).toHaveBeenCalledTimes(2);
-      expect(mockAgent.prompt).toHaveBeenLastCalledWith("deferred follow-up");
     });
 
-    it("defers followUp when another followUp is in progress", async () => {
-      let resolveFollowUp: (() => void) | undefined;
-      mockAgent.prompt.mockImplementationOnce(
-        () =>
-          new Promise<void>((resolve) => {
-            resolveFollowUp = resolve;
-          }),
-      );
-
-      const firstPromise = session.queueFollowUp("first");
-      // immediately queue a second follow-up while first is still processing
-      const secondPromise = session.queueFollowUp("second");
-
-      expect(mockAgent.prompt).toHaveBeenCalledTimes(1);
-      expect(mockAgent.prompt).toHaveBeenCalledWith("first");
-
-      // resolve the first followUp
-      resolveFollowUp?.();
-      await firstPromise;
-      await secondPromise;
-
-      // second should now have run too
-      expect(mockAgent.prompt).toHaveBeenCalledTimes(2);
-      expect(mockAgent.prompt).toHaveBeenLastCalledWith("second");
+    it("does not call agent.prompt directly", async () => {
+      await session.queueFollowUp("follow-up");
+      expect(mockAgent.prompt).not.toHaveBeenCalled();
     });
   });
 
@@ -1206,6 +1184,77 @@ describe("AgentSession", () => {
         effectiveContextWindow: 128000,
         source: "pi-ai",
       },
+    });
+  });
+
+  describe("Agent constructor sessionId", () => {
+    it("passes sessionId to Agent constructor", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      const lastCall = mocked(Agent).mock.calls.at(-1);
+      const options = lastCall?.[0] as { sessionId?: string };
+      expect(options.sessionId).toBeDefined();
+      expect(typeof options.sessionId).toBe("string");
+    });
+  });
+
+  describe("Agent constructor afterToolCall", () => {
+    it("compresses large text tool outputs", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      const lastCall = mocked(Agent).mock.calls.at(-1);
+      const options = lastCall?.[0] as {
+        afterToolCall?: (ctx: {
+          isError: boolean;
+          result: { content: Array<{ type: string; text?: string }> };
+        }) => Promise<{ content?: Array<{ type: string; text?: string }> } | undefined>;
+      };
+      expect(options.afterToolCall).toBeDefined();
+
+      const longText = "x".repeat(25_000);
+      const result = await options.afterToolCall?.({
+        isError: false,
+        result: { content: [{ type: "text", text: longText }] },
+      });
+      expect(result).toBeDefined();
+      expect(result?.content?.[0]).toBeDefined();
+      if (result?.content?.[0] && "text" in result.content[0]) {
+        const textContent = result.content[0] as { text: string };
+        expect(textContent.text.length).toBeLessThan(longText.length);
+        expect(textContent.text).toContain("truncated");
+      }
+    });
+
+    it("does not compress small text outputs", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      const lastCall = mocked(Agent).mock.calls.at(-1);
+      const options = lastCall?.[0] as {
+        afterToolCall?: (ctx: {
+          isError: boolean;
+          result: { content: Array<{ type: string; text?: string }> };
+        }) => Promise<{ content?: Array<{ type: string; text?: string }> } | undefined>;
+      };
+      const shortText = "short output";
+      const result = await options.afterToolCall?.({
+        isError: false,
+        result: { content: [{ type: "text", text: shortText }] },
+      });
+      expect(result).toBeUndefined();
+    });
+
+    it("does not compress error tool outputs", async () => {
+      const { Agent } = await import("@mariozechner/pi-agent-core");
+      const lastCall = mocked(Agent).mock.calls.at(-1);
+      const options = lastCall?.[0] as {
+        afterToolCall?: (ctx: {
+          isError: boolean;
+          result: { content: Array<{ type: string; text?: string }> };
+        }) => Promise<{ content?: Array<{ type: string; text?: string }> } | undefined>;
+      };
+      const longText = "x".repeat(25_000);
+      const result = await options.afterToolCall?.({
+        isError: true,
+        result: { content: [{ type: "text", text: longText }] },
+      });
+      expect(result).toBeUndefined();
     });
   });
 });

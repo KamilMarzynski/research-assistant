@@ -33,6 +33,13 @@ export type AgentProgressEvent =
       toolCallId: string;
       toolName: string;
       isError: boolean;
+    }
+  | {
+      kind: "tool_call_update";
+      projectId: string;
+      toolCallId: string;
+      toolName: string;
+      partialResult: unknown;
     };
 
 /** Discriminated union covering every webContents.send() call from main → renderer.

@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { Agent } from "@mariozechner/pi-agent-core";
+import { Agent, type AgentMessage, type AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { EventBus } from "../event-bus";
 import { addPendingPathApproval } from "../ipc/command-handlers";
 import type { AllowlistService } from "../services/AllowlistService";
@@ -192,6 +192,7 @@ export class MessagePipeline {
       getDefaultContextWindow();
 
     this.agent = new Agent({
+      sessionId: this.state.sessionId,
       initialState: {
         systemPrompt,
         model: createModel({ provider: options.provider, metadata: options.resolvedModelMetadata }),
@@ -211,14 +212,36 @@ export class MessagePipeline {
         this.state.pendingToolDescriptions.set(ctx.toolCall.id, description);
         return undefined;
       },
+      afterToolCall: async (ctx) => {
+        if (ctx.isError) return undefined;
+        const THRESHOLD = 20_000;
+        let changed = false;
+        const compressed: AgentToolResult<unknown>["content"] = [];
+        for (const block of ctx.result.content) {
+          if (block.type === "text" && block.text && block.text.length > THRESHOLD) {
+            try {
+              const result = await compressionService.compress("after_tool_call", block.text, [
+                { tool: "after_tool_call", thresholdChars: THRESHOLD, strategy: "truncate" },
+              ]);
+              compressed.push({ type: "text", text: result.content });
+              changed = true;
+            } catch {
+              compressed.push(block);
+            }
+          } else {
+            compressed.push(block);
+          }
+        }
+        if (!changed) return undefined;
+        return { content: compressed };
+      },
     });
   }
 
   async send(content: string): Promise<void> {
-    if (this.state.processing) {
+    if (this.agent.state.isStreaming) {
       throw new Error("Agent is already processing a message. Please wait for the response.");
     }
-    this.state.processing = true;
     this.state.currentTurnId++;
     this.state.savedForTurn = 0;
 
@@ -300,48 +323,11 @@ export class MessagePipeline {
     } catch (err) {
       this.tracer.endTurn({ error: String(err) });
       throw err;
-    } finally {
-      this.state.processing = false;
-      const pending = this.state.pendingFollowUp;
-      this.state.pendingFollowUp = null;
-      if (pending !== null) {
-        await this.queueFollowUp(pending);
-      }
     }
   }
 
   async queueFollowUp(content: string): Promise<void> {
-    if (this.state.processing) {
-      this.state.pendingFollowUp = content;
-      return;
-    }
-    try {
-      this.state.processing = true;
-      this.state.currentTurnId++;
-      this.state.savedForTurn = 0;
-      this.state.lastUserContent = content;
-
-      void this.tracer.startTurn(
-        { role: "user", content },
-        {
-          turnNumber: this.state.currentTurnId,
-          projectId: this.projectId,
-          followUp: true,
-        },
-      );
-
-      await this.agent.prompt(content);
-    } catch (err) {
-      console.error("[AgentSession] followUp failed:", err);
-      throw err;
-    } finally {
-      this.state.processing = false;
-      const pending = this.state.pendingFollowUp;
-      this.state.pendingFollowUp = null;
-      if (pending !== null) {
-        await this.queueFollowUp(pending);
-      }
-    }
+    this.agent.followUp({ role: "user", content, timestamp: Date.now() } as AgentMessage);
   }
 
   abort(): void {
@@ -369,7 +355,6 @@ export class MessagePipeline {
     this.state.lastUserContent = "";
     this.state.streamChunkCount = 0;
     this.state.segmentLog = [];
-    this.state.processing = false;
 
     this.eventBus.emit({ type: "agent:done", payload: { projectId: this.projectId } });
   }
@@ -383,6 +368,6 @@ export class MessagePipeline {
   }
 
   isProcessing(): boolean {
-    return this.state.processing;
+    return this.agent.state.isStreaming;
   }
 }

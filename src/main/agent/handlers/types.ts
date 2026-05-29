@@ -15,8 +15,6 @@ export interface SessionState {
   lastUserContent: string;
   currentTurnId: number;
   savedForTurn: number;
-  processing: boolean;
-  pendingFollowUp: string | null;
   pendingSkillDeltas: Array<{ skillName: string; summary: string }>;
   pendingToolDescriptions: Map<string, string>;
   pendingToolCalls: PendingToolCall[];

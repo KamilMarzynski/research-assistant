@@ -14,8 +14,6 @@ function makeCtx(overrides: Partial<HandlerContext> = {}): HandlerContext {
       lastUserContent: "",
       currentTurnId: 0,
       savedForTurn: 0,
-      processing: false,
-      pendingFollowUp: null,
       pendingSkillDeltas: [],
       pendingToolCalls: [],
       skillRouterReady: false,
@@ -312,5 +310,76 @@ describe("handleStreamChunk — segmentLog", () => {
       ctx,
     );
     expect(ctx.state.segmentLog[0]).toMatchObject({ type: "activity", status: "error" });
+  });
+});
+
+describe("handleStreamChunk — tool_execution_update", () => {
+  it("emits agent:tool_update on tool_execution_update", async () => {
+    const ctx = makeCtx();
+    await handleStreamChunk(
+      {
+        type: "tool_execution_update",
+        toolCallId: "tc-1",
+        toolName: "execute_code",
+        args: {},
+        partialResult: { stdout: "partial output" },
+      } as never,
+      ctx,
+    );
+    expect(ctx.eventBus.emit).toHaveBeenCalledWith({
+      type: "agent:tool_update",
+      payload: {
+        projectId: "proj-1",
+        toolCallId: "tc-1",
+        toolName: "execute_code",
+        partialResult: { stdout: "partial output" },
+      },
+    });
+  });
+
+  it("emits multiple tool_update events for streaming progress", async () => {
+    const ctx = makeCtx();
+    await handleStreamChunk(
+      {
+        type: "tool_execution_update",
+        toolCallId: "tc-1",
+        toolName: "safe_bash",
+        args: {},
+        partialResult: { stdout: "line1" },
+      } as never,
+      ctx,
+    );
+    await handleStreamChunk(
+      {
+        type: "tool_execution_update",
+        toolCallId: "tc-1",
+        toolName: "safe_bash",
+        args: {},
+        partialResult: { stdout: "line2" },
+      } as never,
+      ctx,
+    );
+    expect(ctx.eventBus.emit).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not modify pendingToolCalls on tool_execution_update", async () => {
+    const ctx = makeCtx();
+    ctx.state.pendingToolCalls.push({
+      toolCallId: "tc-1",
+      toolName: "execute_code",
+      description: "Running code",
+      status: "running",
+    });
+    await handleStreamChunk(
+      {
+        type: "tool_execution_update",
+        toolCallId: "tc-1",
+        toolName: "execute_code",
+        args: {},
+        partialResult: { stdout: "progress" },
+      } as never,
+      ctx,
+    );
+    expect(ctx.state.pendingToolCalls[0].status).toBe("running");
   });
 });

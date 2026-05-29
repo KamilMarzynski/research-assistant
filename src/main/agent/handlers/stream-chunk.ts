@@ -85,5 +85,18 @@ export async function handleStreamChunk(event: AgentEvent, ctx: HandlerContext):
       );
       if (seg && seg.type === "activity") seg.status = "error";
     }
+    return;
+  }
+
+  if (event.type === "tool_execution_update") {
+    ctx.eventBus.emit({
+      type: "agent:tool_update",
+      payload: {
+        projectId: ctx.projectId,
+        toolCallId: event.toolCallId,
+        toolName: event.toolName,
+        partialResult: event.partialResult,
+      },
+    });
   }
 }

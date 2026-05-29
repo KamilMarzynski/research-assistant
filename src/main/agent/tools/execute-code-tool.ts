@@ -25,6 +25,7 @@ export function createExecuteCodeTool(
   return {
     name: "execute_code",
     label: "Execute code in sandbox",
+    executionMode: "sequential",
     description:
       "Execute code in an isolated Docker container with no access to host environment variables. " +
       "Use for isolated, untrusted, or data-processing code (Python scripts, analysis, one-off computations). " +

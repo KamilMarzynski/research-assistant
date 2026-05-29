@@ -113,4 +113,17 @@ export function registerEventForwarders(
       },
     });
   });
+
+  eventBus.on("agent:tool_update", (payload) => {
+    emitPush(win, {
+      type: "AGENT_PROGRESS",
+      event: {
+        kind: "tool_call_update",
+        projectId: payload.projectId,
+        toolCallId: payload.toolCallId,
+        toolName: payload.toolName,
+        partialResult: payload.partialResult,
+      },
+    });
+  });
 }

@@ -81,6 +81,15 @@ type AppEvent =
       };
     }
   | {
+      type: "agent:tool_update";
+      payload: {
+        projectId: string;
+        toolCallId: string;
+        toolName: string;
+        partialResult: unknown;
+      };
+    }
+  | {
       type: "research:summary_ready";
       payload: { projectId: string; text: string; movedFiles: string[] };
     };

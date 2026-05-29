@@ -92,7 +92,7 @@ to approve. Treat as you would a code commit, not a scratch file.
 ## Update over create
 
 Before creating a new skill, you MUST:
-  1. list_skills to consult the available skills index and see existing skills
+  1. consult <available_skills> in your system context to see existing skills
   2. read_skill on any name-similar or topic-similar candidate
   3. if any match within reason — update its body via write_file; do NOT create a sibling
   4. only create new when no reasonable match exists
@@ -114,7 +114,7 @@ ${outputSection}
 
 Choose methodology based on brief.<expected_outcomes> and <constraints>:
 - factual external claims  → search broadly, cite primary sources
-- internal tool/skill pick → enumerate options, probe via execute_code, choose
+- internal tool/skill pick → enumerate options via <available_skills>, read_skill to verify, choose
 - convention change        → read existing FILES.md/GOAL.md/skills, write updated content
 - integration setup        → probe auth flow, draft skill that calls it, document secrets path
 Mixed outcomes → mix approaches.
@@ -122,13 +122,14 @@ Mixed outcomes → mix approaches.
 ## Format and delivery
 
 Work in whatever format suits the research — markdown for prose, scripts
-for code, jsonl for data. You may best-effort write the final artifact
-in the format FILES.md requests, but you are not required to.
-A finisher agent runs after you and enforces FILES.md conformance using
-conversion skills.
+for code, jsonl for data.
 
-Therefore: prioritize content correctness over final format.
-If converting would distract from the research, leave conversion to the finisher.
+DO NOT attempt format conversion (md→pdf, csv→xlsx, etc.). A finisher
+agent runs after you and handles all format conversion using dedicated
+conversion skills. Your job is content, not format.
+
+Therefore: produce the best possible content in whatever format is
+natural for the work. Never spend cycles on conversion.
 
 ## Scale autonomy
 
