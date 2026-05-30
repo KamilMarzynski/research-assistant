@@ -440,6 +440,7 @@ describe("AGENT_TYPE_PRESETS.researcher", () => {
     const config = AGENT_TYPE_PRESETS.researcher(makeBase(), "/output", 0);
     expect(config.toolNames).toContain("fetch_url");
     expect(config.toolNames).toContain("read_skill");
+    expect(config.toolNames).toContain("request_evaluation");
     expect(config.toolNames).not.toContain("execute_code");
     expect(config.remainingDepth).toBe(0);
     expect(config.systemPromptAddition).toContain("workspace");

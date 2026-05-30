@@ -202,6 +202,7 @@ export const AGENT_TYPE_PRESETS: Record<AgentType, PresetBuilder> = {
         "fetch_url",
         "web_search",
         "read_skill",
+        "request_evaluation",
       ],
       systemPromptAddition: researcherPrompt(dirs, outputPath, base.filesMdContent, base.brief),
       remainingDepth: 0,
