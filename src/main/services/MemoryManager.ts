@@ -6,7 +6,8 @@ import { USER_DATA_PATH_TOKEN } from "../di/tokens";
 
 export interface MemoryContext {
   summary: string;
-  recentMessages: Array<{ role: "user" | "assistant"; content: string }>;
+  historyMessages: Array<{ role: "user" | "assistant"; content: string }>;
+  hasObservations: boolean;
 }
 
 function extractTextContent(content: unknown): string {
@@ -125,17 +126,17 @@ export class MemoryManager implements IMemoryManager {
 
       const summary = ctx.systemMessage ?? "";
 
-      const recentMessages = ctx.messages
+      const historyMessages = ctx.messages
         .filter((m) => m.role === "user" || m.role === "assistant")
         .map((m) => ({
           role: m.role as "user" | "assistant",
           content: extractTextContent(m.content),
         }));
 
-      return { summary, recentMessages };
+      return { summary, historyMessages, hasObservations: ctx.hasObservations === true };
     } catch (err) {
       console.error("[MemoryManager] buildContext failed — returning empty context:", err);
-      return { summary: "", recentMessages: [] };
+      return { summary: "", historyMessages: [], hasObservations: false };
     }
   }
 
