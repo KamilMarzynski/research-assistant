@@ -42,12 +42,32 @@ const COMMANDS: Record<DockerSandboxInput["language"], string[]> = {
 
 const TIMEOUT_MS = 60_000;
 
+async function ensureImage(docker: Docker, image: string): Promise<void> {
+  try {
+    await docker.getImage(image).inspect();
+  } catch {
+    await new Promise<void>((resolve, reject) => {
+      docker.pull(image, {}, (err, stream) => {
+        if (err) return reject(err);
+        if (!stream) return reject(new Error(`Failed to pull image: ${image}`));
+        docker.modem.followProgress(stream, (finishErr) => {
+          if (finishErr) return reject(finishErr);
+          resolve();
+        });
+      });
+    });
+  }
+}
+
 export async function runExecuteCode(input: DockerSandboxInput): Promise<DockerSandboxOutput> {
   const docker = new Docker();
   let tmpDir: string | null = null;
   let container: Docker.Container | null = null;
 
   try {
+    const image = IMAGES[input.language];
+    await ensureImage(docker, image);
+
     tmpDir = await mkdtemp(join(tmpdir(), "ra-docker-"));
     const outputDir = join(tmpDir, "output");
     await mkdir(outputDir, { recursive: true });
@@ -61,7 +81,7 @@ export async function runExecuteCode(input: DockerSandboxInput): Promise<DockerS
     await writeFile(join(tmpDir, ENTRY_FILES[input.language]), input.code, "utf-8");
 
     container = await docker.createContainer({
-      Image: IMAGES[input.language],
+      Image: image,
       Cmd: COMMANDS[input.language],
       Tty: false,
       HostConfig: {

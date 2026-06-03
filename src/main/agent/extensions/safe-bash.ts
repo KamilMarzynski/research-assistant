@@ -197,6 +197,7 @@ const DANGEROUS_COMMANDS = [
     category: "destructive" as const,
   },
   { pattern: /\bdd\b/, key: "dd", reason: "Raw disk I/O.", category: "destructive" as const },
+  { pattern: /\brm\b/, key: "rm", reason: "File deletion.", category: "destructive" as const },
   {
     pattern: /\bcurl\b/,
     key: "curl",

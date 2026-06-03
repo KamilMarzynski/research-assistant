@@ -11,9 +11,17 @@ const mockContainer = {
 };
 
 const mockCreateContainer = vi.fn();
+const mockGetImage = vi.fn();
+const mockPull = vi.fn();
+const mockFollowProgress = vi.fn();
 
 function MockDockerConstructor() {
-  return { createContainer: mockCreateContainer };
+  return {
+    createContainer: mockCreateContainer,
+    getImage: mockGetImage,
+    pull: mockPull,
+    modem: { followProgress: mockFollowProgress },
+  };
 }
 
 vi.mock("dockerode", () => {
@@ -34,6 +42,8 @@ describe("runExecuteCode", () => {
     mockContainer.stop.mockResolvedValue(undefined);
     mockContainer.remove.mockResolvedValue(undefined);
     mockCreateContainer.mockResolvedValue(mockContainer);
+    mockGetImage.mockReturnValue({ inspect: vi.fn().mockResolvedValue(undefined) });
+    mockFollowProgress.mockImplementation((_stream: unknown, cb: (err?: Error) => void) => cb());
   });
 
   afterEach(async () => {
@@ -96,7 +106,12 @@ describe("runExecuteCode", () => {
   });
 
   it("returns error string when Docker unavailable — does not throw", async () => {
-    mockCreateContainer.mockRejectedValue(new Error("Cannot connect to Docker daemon"));
+    mockGetImage.mockReturnValue({
+      inspect: vi.fn().mockRejectedValue(new Error("Cannot connect to Docker daemon")),
+    });
+    mockPull.mockImplementation((_image: string, _opts: unknown, cb: (err: Error) => void) =>
+      cb(new Error("Cannot connect to Docker daemon")),
+    );
     const result = await runExecuteCode({ code: 'print("hi")', language: "python" });
     expect(result.error).toContain("Cannot connect to Docker daemon");
     expect(result.stdout).toBe("");
@@ -141,5 +156,55 @@ describe("runExecuteCode", () => {
       workspaceFiles: [{ name: "data.csv", sourcePath: sourceFile }],
     });
     expect(mockCreateContainer).toHaveBeenCalled();
+  });
+
+  it("pulls image when not cached locally", async () => {
+    mockGetImage.mockReturnValue({
+      inspect: vi.fn().mockRejectedValue(new Error("not found")),
+    });
+    mockPull.mockImplementation(
+      (_image: string, _opts: unknown, cb: (err: Error | null, stream?: unknown) => void) =>
+        cb(null, {}),
+    );
+    await runExecuteCode({ code: 'print("hi")', language: "python" });
+    expect(mockPull).toHaveBeenCalledWith("python:3.11-slim", {}, expect.any(Function));
+    expect(mockCreateContainer).toHaveBeenCalled();
+  });
+
+  it("returns error when pull fails", async () => {
+    mockGetImage.mockReturnValue({
+      inspect: vi.fn().mockRejectedValue(new Error("not found")),
+    });
+    mockPull.mockImplementation((_image: string, _opts: unknown, cb: (err: Error) => void) =>
+      cb(new Error("pull failed")),
+    );
+    const result = await runExecuteCode({ code: 'print("hi")', language: "python" });
+    expect(result.error).toBe("pull failed");
+  });
+
+  it("returns error when pull returns no stream", async () => {
+    mockGetImage.mockReturnValue({
+      inspect: vi.fn().mockRejectedValue(new Error("not found")),
+    });
+    mockPull.mockImplementation((_image: string, _opts: unknown, cb: (err: Error | null) => void) =>
+      cb(null),
+    );
+    const result = await runExecuteCode({ code: 'print("hi")', language: "python" });
+    expect(result.error).toContain("Failed to pull image");
+  });
+
+  it("returns error when followProgress fails", async () => {
+    mockGetImage.mockReturnValue({
+      inspect: vi.fn().mockRejectedValue(new Error("not found")),
+    });
+    mockPull.mockImplementation(
+      (_image: string, _opts: unknown, cb: (err: Error | null, stream?: unknown) => void) =>
+        cb(null, {}),
+    );
+    mockFollowProgress.mockImplementation((_stream: unknown, cb: (err: Error) => void) =>
+      cb(new Error("download failed")),
+    );
+    const result = await runExecuteCode({ code: 'print("hi")', language: "python" });
+    expect(result.error).toBe("download failed");
   });
 });

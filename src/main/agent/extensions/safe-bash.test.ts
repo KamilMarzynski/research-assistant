@@ -15,11 +15,11 @@ import {
 let testCounter = 0;
 
 describe("checkBlocklist", () => {
-  it("returns matching entry for rm (not in allowlist)", () => {
+  it("returns destructive entry for rm", () => {
     const entry = checkBlocklist("rm -rf /tmp/test");
     expect(entry).not.toBeNull();
-    expect(entry?.key).toBe("unknown_binary");
-    expect(entry?.reason).toContain("not in the allowed list");
+    expect(entry?.key).toBe("rm");
+    expect(entry?.category).toBe("destructive");
   });
 
   it("returns matching entry for sudo", () => {
