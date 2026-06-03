@@ -302,24 +302,22 @@ describe("AgentTracer", () => {
     expect(genSpan.update).toHaveBeenCalledWith(
       expect.objectContaining({
         output: [{ type: "text", text: "done" }],
-        metadata: expect.objectContaining({
-          model: "gpt-4",
-          provider: "openrouter",
-          usageDetails: {
-            promptTokens: 10,
-            completionTokens: 20,
-            totalTokens: 30,
-            cacheReadTokens: 5,
-            cacheWriteTokens: 2,
-          },
-          costDetails: {
-            input: 0.01,
-            output: 0.02,
-            total: 0.03,
-            cacheRead: 0.005,
-            cacheWrite: 0.002,
-          },
-        }),
+        model: "gpt-4",
+        metadata: { provider: "openrouter" },
+        usageDetails: {
+          promptTokens: 10,
+          completionTokens: 20,
+          totalTokens: 30,
+          cacheReadTokens: 5,
+          cacheWriteTokens: 2,
+        },
+        costDetails: {
+          input: 0.01,
+          output: 0.02,
+          total: 0.03,
+          cacheRead: 0.005,
+          cacheWrite: 0.002,
+        },
       }),
     );
     expect(genSpan.end).toHaveBeenCalled();

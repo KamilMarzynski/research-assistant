@@ -133,7 +133,8 @@ export class AgentTracer {
             messages: agent.state.messages,
             systemPrompt: agent.state.systemPrompt,
           },
-          metadata: { model: this.provider.model, provider: this.provider.type },
+          model: this.provider.model,
+          metadata: { provider: this.provider.type },
           parentSpanContext: { traceId: this.turnTraceId, spanId: this.turnSpanId },
         })) ?? null;
     } else if (event.type === "message_end") {
@@ -159,28 +160,26 @@ export class AgentTracer {
 
       this.activeGenerationSpan.update({
         output: event.message?.content,
-        metadata: {
-          model: this.provider.model,
-          provider: this.provider.type,
-          ...(usage
-            ? {
-                usageDetails: {
-                  promptTokens: usage.input,
-                  completionTokens: usage.output,
-                  totalTokens: usage.totalTokens,
-                  cacheReadTokens: usage.cacheRead,
-                  cacheWriteTokens: usage.cacheWrite,
-                },
-                costDetails: {
-                  input: usage.cost.input,
-                  output: usage.cost.output,
-                  total: usage.cost.total,
-                  cacheRead: usage.cost.cacheRead,
-                  cacheWrite: usage.cost.cacheWrite,
-                },
-              }
-            : {}),
-        },
+        model: this.provider.model,
+        metadata: { provider: this.provider.type },
+        ...(usage
+          ? {
+              usageDetails: {
+                promptTokens: usage.input,
+                completionTokens: usage.output,
+                totalTokens: usage.totalTokens,
+                cacheReadTokens: usage.cacheRead,
+                cacheWriteTokens: usage.cacheWrite,
+              },
+              costDetails: {
+                input: usage.cost.input,
+                output: usage.cost.output,
+                total: usage.cost.total,
+                cacheRead: usage.cost.cacheRead,
+                cacheWrite: usage.cost.cacheWrite,
+              },
+            }
+          : {}),
       });
       this.activeGenerationSpan.end();
       this.activeGenerationSpan = null;

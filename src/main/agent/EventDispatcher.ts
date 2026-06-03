@@ -27,10 +27,13 @@ export function subscribeEvents(options: EventDispatcherOptions): () => void {
   const unsubscribeMain = agent.subscribe(async (event: AgentEvent) => {
     try {
       await handleStreamChunk(event, ctx);
+
+      const finalContent = event.type === "agent_end" ? state.assistantContent : "";
+
       await handleTurnCompletion(event, ctx);
 
       if (event.type === "agent_end") {
-        tracer.endTurn({ role: "assistant", content: state.assistantContent });
+        tracer.endTurn({ role: "assistant", content: finalContent });
       }
     } catch (err) {
       console.error("[AgentSession] subscriber error:", err);

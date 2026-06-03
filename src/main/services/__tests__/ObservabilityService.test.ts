@@ -103,5 +103,62 @@ describe("ObservabilityService", () => {
       const result = await service.startObservation("test");
       expect(result).toBeNull();
     });
+
+    it("forwards generation attrs (model, usageDetails, costDetails, modelParameters) at top level", async () => {
+      process.env.LANGFUSE_PUBLIC_KEY = "pk";
+      process.env.LANGFUSE_SECRET_KEY = "sk";
+      const tracing = await import("@langfuse/tracing");
+      const startObsMock = tracing.startObservation as unknown as ReturnType<typeof vi.fn>;
+      startObsMock.mockClear();
+
+      const service = new ObservabilityService(createMockSettings(true));
+      const span = await service.startObservation("llm-generation", {
+        asType: "generation",
+        input: { prompt: "hi" },
+        metadata: { provider: "openrouter" },
+        model: "gpt-4",
+        modelParameters: { temperature: 0.5 },
+        usageDetails: { promptTokens: 10, completionTokens: 20, totalTokens: 30 },
+        costDetails: { input: 0.01, output: 0.02, total: 0.03 },
+      });
+
+      expect(span).not.toBeNull();
+      expect(startObsMock).toHaveBeenCalledWith(
+        "llm-generation",
+        expect.objectContaining({
+          input: { prompt: "hi" },
+          metadata: { provider: "openrouter" },
+          model: "gpt-4",
+          modelParameters: { temperature: 0.5 },
+          usageDetails: { promptTokens: 10, completionTokens: 20, totalTokens: 30 },
+          costDetails: { input: 0.01, output: 0.02, total: 0.03 },
+        }),
+        expect.objectContaining({ asType: "generation" }),
+      );
+    });
+
+    it("update wrapper forwards payload to underlying span", async () => {
+      process.env.LANGFUSE_PUBLIC_KEY = "pk";
+      process.env.LANGFUSE_SECRET_KEY = "sk";
+      const tracing = await import("@langfuse/tracing");
+      const underlyingUpdate = vi.fn();
+      (tracing.startObservation as unknown as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+        update: underlyingUpdate,
+        end: vi.fn(),
+        id: "span-xyz",
+        traceId: "trace-xyz",
+      });
+
+      const service = new ObservabilityService(createMockSettings(true));
+      const span = await service.startObservation("test");
+      span?.update({ output: "result", usageDetails: { totalTokens: 5 } });
+
+      expect(underlyingUpdate).toHaveBeenCalledWith({
+        output: "result",
+        usageDetails: { totalTokens: 5 },
+      });
+      expect(span?.traceId).toBe("trace-xyz");
+      expect(span?.spanId).toBe("span-xyz");
+    });
   });
 });

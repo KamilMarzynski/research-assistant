@@ -16,6 +16,10 @@ export interface ObserveOptions {
   metadata?: Record<string, unknown>;
   traceId?: string;
   sessionId?: string;
+  model?: string;
+  modelParameters?: Record<string, string | number>;
+  usageDetails?: Record<string, number>;
+  costDetails?: Record<string, number>;
 }
 
 @injectable()
@@ -161,6 +165,11 @@ export class ObservabilityService {
       const attributes: Record<string, unknown> = {};
       if (options?.input !== undefined) attributes.input = options.input;
       if (options?.metadata !== undefined) attributes.metadata = options.metadata;
+      if (options?.model !== undefined) attributes.model = options.model;
+      if (options?.modelParameters !== undefined)
+        attributes.modelParameters = options.modelParameters;
+      if (options?.usageDetails !== undefined) attributes.usageDetails = options.usageDetails;
+      if (options?.costDetails !== undefined) attributes.costDetails = options.costDetails;
 
       const span = typedStartObservation(name, attributes, {
         asType: options?.asType ?? "span",
