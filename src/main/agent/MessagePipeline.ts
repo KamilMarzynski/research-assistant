@@ -11,6 +11,7 @@ import type { MessageService } from "../services/MessageService";
 import type { ObservabilityService } from "../services/ObservabilityService";
 import type { ResearchService } from "../services/ResearchService";
 import { AgentTracer } from "./AgentTracer";
+import { toAgentMessages } from "./agent-message-mapper";
 import { CompressionService } from "./CompressionService";
 import { buildSystemContext } from "./context";
 import type { SessionState } from "./handlers/types";
@@ -94,11 +95,7 @@ export class MessagePipeline {
       systemContext: options.systemContext,
     });
 
-    const initialMessages = options.initialMemoryContext.recentMessages.map((m) => ({
-      role: m.role,
-      content: m.role === "assistant" ? [{ type: "text" as const, text: m.content }] : m.content,
-      timestamp: Date.now(),
-    })) as import("@mariozechner/pi-agent-core").AgentMessage[];
+    const initialMessages = toAgentMessages(options.initialMemoryContext.historyMessages);
 
     const compressionService = new CompressionService(
       join(this.homePath, "projects", options.slug, "workspace", ".compressed"),
