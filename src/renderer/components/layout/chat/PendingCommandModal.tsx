@@ -2,9 +2,11 @@ import type { BlockedCommandPayload } from "../../../../shared/ipc-types";
 import ReviewDialog from "./ReviewDialog";
 
 function categoryChipClass(category: string): string {
+  // Red only for truly destructive operations — mkfs, dd, rm -rf.
+  // Privilege escalation and everything else (exfiltration, persistence,
+  // unsafe_operator, unknown_binary) get amber — blocked, not dangerous.
   if (category === "destructive") return "chip chip--danger";
-  if (category === "privilege_escalation") return "chip chip--warn";
-  return "chip";
+  return "chip chip--warn";
 }
 
 interface PendingCommandModalProps {

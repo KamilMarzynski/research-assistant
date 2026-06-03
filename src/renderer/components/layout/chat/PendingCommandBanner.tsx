@@ -13,6 +13,31 @@ interface Props {
   projects: Project[];
 }
 
+function categoryLevel(category: string): "danger" | "warn" {
+  // Only destructive commands and privilege escalation warrant a red banner.
+  // Everything else (exfiltration, persistence, unsafe_operator, unknown_binary)
+  // is an allowlist gate — the command is blocked, not genuinely dangerous.
+  if (category === "destructive" || category === "privilege_escalation") {
+    return "danger";
+  }
+  return "warn";
+}
+
+const LEVEL_STYLES = {
+  danger: {
+    bg: "var(--danger-soft)",
+    border: "oklch(0.82 0.07 25)",
+    iconColor: "var(--danger)",
+    chipClass: "chip chip--danger",
+  },
+  warn: {
+    bg: "var(--warn-soft)",
+    border: "oklch(0.82 0.06 75)",
+    iconColor: "var(--warn)",
+    chipClass: "chip chip--warn",
+  },
+} as const;
+
 export default function PendingCommandBanner({ activeProjectId, projects }: Props) {
   const { items, remove, clearWhere } = usePendingItems<BlockedCommandPayload>({
     channel: IPC.BASH_BLOCKED,
@@ -51,40 +76,44 @@ export default function PendingCommandBanner({ activeProjectId, projects }: Prop
 
   return (
     <>
-      {items.map((cmd) => (
-        <div
-          key={cmd.commandId}
-          data-testid={`pending-command-banner-${cmd.key}`}
-          style={{
-            borderRadius: "var(--r-md)",
-            background: "var(--danger-soft)",
-            border: "1px solid oklch(0.82 0.07 25)",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "8px 12px",
-          }}
-        >
-          <IconAlert size={14} strokeColor="var(--danger)" />
-          <span className="chip chip--danger">destructive</span>
-          <span style={{ flex: 1, fontSize: 12, color: "var(--ink-2)" }}>
-            {cmd.projectId !== activeProjectId && (
-              <span style={{ color: "var(--ink-3)", marginRight: 6 }}>
-                [{projects.find((p) => p.id === cmd.projectId)?.name ?? "background"}]
-              </span>
-            )}
-            Blocked command: <strong>{cmd.command}</strong> — {cmd.reason}
-          </span>
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            data-testid={`review-command-btn-${cmd.key}`}
-            onClick={() => setSelected(cmd)}
+      {items.map((cmd) => {
+        const level = categoryLevel(cmd.category);
+        const style = LEVEL_STYLES[level];
+        return (
+          <div
+            key={cmd.commandId}
+            data-testid={`pending-command-banner-${cmd.key}`}
+            style={{
+              borderRadius: "var(--r-md)",
+              background: style.bg,
+              border: `1px solid ${style.border}`,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 12px",
+            }}
           >
-            Review
-          </button>
-        </div>
-      ))}
+            <IconAlert size={14} strokeColor={style.iconColor} />
+            <span className={style.chipClass}>{cmd.category.replace("_", " ")}</span>
+            <span style={{ flex: 1, fontSize: 12, color: "var(--ink-2)" }}>
+              {cmd.projectId !== activeProjectId && (
+                <span style={{ color: "var(--ink-3)", marginRight: 6 }}>
+                  [{projects.find((p) => p.id === cmd.projectId)?.name ?? "background"}]
+                </span>
+              )}
+              Blocked command: <strong>{cmd.command}</strong> — {cmd.reason}
+            </span>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              data-testid={`review-command-btn-${cmd.key}`}
+              onClick={() => setSelected(cmd)}
+            >
+              Review
+            </button>
+          </div>
+        );
+      })}
       {selected && (
         <PendingCommandModal
           command={selected}
