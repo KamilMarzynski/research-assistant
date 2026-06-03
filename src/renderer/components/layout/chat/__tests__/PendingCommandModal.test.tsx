@@ -3,8 +3,8 @@
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import PendingCommandModal from "../PendingCommandModal";
 import type { BlockedCommandPayload } from "../../../../../shared/ipc-types";
+import PendingCommandModal from "../PendingCommandModal";
 
 function makeCommand(overrides: Partial<BlockedCommandPayload> = {}): BlockedCommandPayload {
   return {

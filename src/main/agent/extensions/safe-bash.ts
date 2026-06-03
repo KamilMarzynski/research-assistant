@@ -321,19 +321,34 @@ function extractBinary(command: string): string | null {
   const cleaned = stripRedirects(command).trim();
   if (!cleaned) return null;
 
-  // Remove leading variable assignments (FOO=bar VAR=val)
-  const withoutVars = cleaned.replace(/^\s*\w+=\S+\s+/, "").trim();
+  // Strip ALL leading variable assignments (FOO=bar VAR=val)
+  let withoutVars = cleaned;
+  let prev = "";
+  while (prev !== withoutVars) {
+    prev = withoutVars;
+    withoutVars = withoutVars.replace(/^\s*\w+=\S+\s*/, "").trim();
+  }
   if (!withoutVars) return null;
 
-  // Take the first word
-  const match = withoutVars.match(/^(\S+)/);
-  if (!match) return null;
+  // Tokenize and skip env/VAR=val passthroughs to find the real binary
+  const tokens = tokenize(withoutVars);
+  if (tokens.length === 0) return null;
 
-  const binary = match[1];
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i];
+    if (token === "env" || /^\w+=/.test(token)) {
+      i++;
+      continue;
+    }
+    break;
+  }
+
+  // All tokens were env/VAR=val — fall back to first token
+  const binary = i < tokens.length ? tokens[i] : tokens[0];
 
   // Strip path prefix
-  const basename = binary.split("/").pop() ?? binary;
-  return basename;
+  return binary.split("/").pop() ?? binary;
 }
 
 export function checkCommand(command: string): BlockedResult | null {
@@ -429,7 +444,10 @@ interface BlockedCommandPromise {
   timer: ReturnType<typeof setTimeout>;
 }
 
-const blockedPromises = new Map<string, BlockedCommandPromise>();
+/** Per-project blocked promises: projectId -> commandId -> deferred. */
+const blockedPromises = new Map<string, Map<string, BlockedCommandPromise>>();
+/** Reverse index for O(1) commandId -> projectId lookup during resolution. */
+const commandProjectIndex = new Map<string, string>();
 /** Per-project session allowlist: projectId -> set of hashed commands. */
 const sessionAllowlistByProject = new Map<string, Set<string>>();
 
@@ -575,13 +593,19 @@ function enterApprovalGate(opts: SafeBashOptions, result: BlockedResult): Promis
     const commandId = randomUUID();
 
     const timer = setTimeout(() => {
-      blockedPromises.delete(commandId);
+      blockedPromises.get(opts.projectId)?.delete(commandId);
+      commandProjectIndex.delete(commandId);
       reject(
         new BlockedCommandError(`Approval timed out. ${result.reason}`, commandId, result.category),
       );
     }, 300_000);
 
-    blockedPromises.set(commandId, {
+    let projectMap = blockedPromises.get(opts.projectId);
+    if (!projectMap) {
+      projectMap = new Map();
+      blockedPromises.set(opts.projectId, projectMap);
+    }
+    projectMap.set(commandId, {
       commandId,
       options: opts,
       blockedResult: result,
@@ -589,6 +613,7 @@ function enterApprovalGate(opts: SafeBashOptions, result: BlockedResult): Promis
       reject,
       timer,
     });
+    commandProjectIndex.set(commandId, opts.projectId);
 
     if (opts.emitBlocked) {
       opts.emitBlocked({
@@ -611,11 +636,19 @@ export function resolveBlockedCommand(
   projectId?: string,
   denyReason?: string,
 ): void {
-  const deferred = blockedPromises.get(commandId);
+  const resolvedProjectId = projectId ?? commandProjectIndex.get(commandId);
+  if (!resolvedProjectId) return;
+
+  const projectMap = blockedPromises.get(resolvedProjectId);
+  if (!projectMap) return;
+
+  const deferred = projectMap.get(commandId);
   if (!deferred) return;
 
   clearTimeout(deferred.timer);
-  blockedPromises.delete(commandId);
+  projectMap.delete(commandId);
+  commandProjectIndex.delete(commandId);
+  if (projectMap.size === 0) blockedPromises.delete(resolvedProjectId);
 
   if (action === "deny") {
     const msg = denyReason
@@ -637,9 +670,10 @@ export function resolvePendingBlockedCommandsForProject(
   projectId: string,
   action: "approve_once" | "approve_session" = "approve_once",
 ): number {
-  const commandIds = Array.from(blockedPromises.entries())
-    .filter(([, deferred]) => deferred.options.projectId === projectId)
-    .map(([commandId]) => commandId);
+  const projectMap = blockedPromises.get(projectId);
+  if (!projectMap) return 0;
+
+  const commandIds = Array.from(projectMap.keys());
 
   for (const commandId of commandIds) {
     resolveBlockedCommand(commandId, action, projectId);

@@ -31,16 +31,18 @@ function mockIpc() {
   return { emit };
 }
 
-function makePayload(overrides: Partial<{
-  commandId: string;
-  command: string;
-  reason: string;
-  category: string;
-  key: string;
-  projectId: string;
-  intent: string;
-  timestamp: string;
-}> = {}) {
+function makePayload(
+  overrides: Partial<{
+    commandId: string;
+    command: string;
+    reason: string;
+    category: string;
+    key: string;
+    projectId: string;
+    intent: string;
+    timestamp: string;
+  }> = {},
+) {
   return {
     commandId: overrides.commandId ?? `cmd-${Math.random().toString(36).slice(2)}`,
     command: overrides.command ?? "echo test",
@@ -155,10 +157,13 @@ describe("PendingCommandBanner", () => {
     render(<PendingCommandBanner activeProjectId="proj-1" projects={[]} />);
 
     act(() => {
-      emit("BASH_BLOCKED", makePayload({
-        command: "rm -rf /tmp/test",
-        reason: "Recursive delete.",
-      }));
+      emit(
+        "BASH_BLOCKED",
+        makePayload({
+          command: "rm -rf /tmp/test",
+          reason: "Recursive delete.",
+        }),
+      );
     });
 
     expect(await screen.findByText(/rm -rf \/tmp\/test/)).toBeInTheDocument();
@@ -183,8 +188,22 @@ describe("PendingCommandBanner", () => {
     render(<PendingCommandBanner activeProjectId="proj-1" projects={[]} />);
 
     act(() => {
-      emit("BASH_BLOCKED", makePayload({ commandId: "cmd-1", command: "curl api.example.com", category: "exfiltration" }));
-      emit("BASH_BLOCKED", makePayload({ commandId: "cmd-2", command: "sudo rm -rf /", category: "privilege_escalation" }));
+      emit(
+        "BASH_BLOCKED",
+        makePayload({
+          commandId: "cmd-1",
+          command: "curl api.example.com",
+          category: "exfiltration",
+        }),
+      );
+      emit(
+        "BASH_BLOCKED",
+        makePayload({
+          commandId: "cmd-2",
+          command: "sudo rm -rf /",
+          category: "privilege_escalation",
+        }),
+      );
     });
 
     expect(await screen.findByText(/curl api.example.com/)).toBeInTheDocument();

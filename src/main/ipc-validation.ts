@@ -35,7 +35,7 @@ export const SaveSettingsSchema = z
     webAccessEnabled: z.boolean().optional(),
     theme: z.enum(["light", "dark", "system"]).optional(),
   })
-  .passthrough();
+  .strict();
 
 export const CheckOllamaSchema = z.string();
 
