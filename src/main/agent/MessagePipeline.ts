@@ -104,6 +104,11 @@ export class MessagePipeline {
       join(this.homePath, "projects", options.slug, "workspace", ".compressed"),
     );
 
+    const shouldBypassApproval = options.approvalPolicyService
+      ? (projectId: string) =>
+          options.approvalPolicyService?.shouldBypass(projectId) ?? Promise.resolve(false)
+      : undefined;
+
     const tools = createAgentTools({
       projectId: options.projectId,
       slug: options.slug,
@@ -123,10 +128,7 @@ export class MessagePipeline {
       emitExecuteCodeApprovalRequired: (payload) => {
         options.eventBus.emit({ type: "execute_code:approval_required", payload });
       },
-      shouldBypassApproval: options.approvalPolicyService
-        ? (projectId) =>
-            options.approvalPolicyService?.shouldBypass(projectId) ?? Promise.resolve(false)
-        : undefined,
+      shouldBypassApproval,
       startResearchFn: (brief, deep) =>
         deep === true
           ? options.researchService.startOrchestratedResearch(
@@ -153,6 +155,7 @@ export class MessagePipeline {
         provider: options.provider,
         webAccessEnabled: options.webAccessEnabled,
         allowlistService: options.allowlistService,
+        shouldBypassApproval,
       }),
       saveMemoryFn: options.memoryFileService
         ? (category, title, content, scope) => {

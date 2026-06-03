@@ -195,6 +195,7 @@ describe("ResearchService", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskId).toBeTruthy();
@@ -216,6 +217,7 @@ describe("ResearchService", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -237,6 +239,7 @@ describe("ResearchService", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
     expect(taskPersistence.saveTask).toHaveBeenCalledWith(
@@ -264,6 +267,7 @@ describe("ResearchService", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     const { taskId } = await svc.startResearch(
       "p1",
@@ -298,6 +302,7 @@ describe("ResearchService", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -334,6 +339,7 @@ describe("ResearchService", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await expect(svc.startResearch("p1", "My Project", "research X", null)).rejects.toThrow(
       "No API key configured",
@@ -371,6 +377,7 @@ describe("ResearchService", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -400,6 +407,7 @@ describe("ResearchService", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -432,6 +440,7 @@ describe("ResearchService", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -463,6 +472,7 @@ describe("ResearchService", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -492,6 +502,7 @@ describe("ResearchService", () => {
       makeTaskPersistenceService() as never,
       finisher as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
 
@@ -547,6 +558,7 @@ describe("ResearchService", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       checkpointService as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     await svc.startResearch("p1", "My Project", "research X", null);
@@ -591,6 +603,7 @@ describe("ResearchService", () => {
         taskPersistence as never,
         finisherService as never,
         checkpointService as never,
+        { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
       );
       return { svc, checkpointService, taskPersistence, bus, finisherService };
     }
@@ -793,6 +806,7 @@ describe("ResearchService", () => {
         taskPersistence as never,
         makeResearchFinisherService() as never,
         checkpointService as never,
+        { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
       );
 
       checkpointService.read.mockResolvedValue({
@@ -1898,6 +1912,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -1926,6 +1941,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(expect.objectContaining({ remainingDepth: 5 }));
@@ -1947,6 +1963,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -1975,6 +1992,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startOrchestratedResearch("p1", "My Project", "deep research", null);
     expect(bus.emit).toHaveBeenCalledWith(expect.objectContaining({ type: "research:started" }));
@@ -1996,6 +2014,7 @@ describe("ResearchService – startOrchestratedResearch", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     const { taskId } = await svc.startOrchestratedResearch(
       "p1",
@@ -2036,6 +2055,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     await svc.startResearch("p1", "My Project", "query A", null);
@@ -2069,6 +2089,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -2103,6 +2124,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     await svc.startOrchestratedResearch("p1", "My Project", "deep query", null);
@@ -2131,6 +2153,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     await svc.startResearch("p1", "My Project", "query", null);
@@ -2158,6 +2181,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "research X", null);
     expect(createWorkerAgent).toHaveBeenCalledWith(
@@ -2187,6 +2211,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "query", null);
     const call = createWorkerAgent.mock.calls[0][0];
@@ -2218,6 +2243,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "query", null);
     const call = createWorkerAgent.mock.calls[0][0];
@@ -2249,6 +2275,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "query", null);
     const call = createWorkerAgent.mock.calls[0][0];
@@ -2281,6 +2308,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       checkpointService as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
     await svc.startResearch("p1", "My Project", "query", null);
     const call = createWorkerAgent.mock.calls[0][0];
@@ -2326,6 +2354,7 @@ describe("ResearchService – _runResearch internals", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
@@ -2376,6 +2405,7 @@ describe("ResearchService – _runResearch internals", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
@@ -2428,6 +2458,7 @@ describe("ResearchService – _runResearch internals", () => {
       taskPersistence as never,
       finisherService as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
@@ -2477,6 +2508,7 @@ describe("ResearchService – _runResearch internals", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     const { taskId } = await svc.startResearch("p1", "My Project", "research X", null);
@@ -2516,6 +2548,7 @@ describe("ResearchService – _runResearch internals", () => {
       makeTaskPersistenceService() as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     await svc.startResearch("p1", "My Project", "research X", null);
@@ -2559,6 +2592,7 @@ describe("ResearchService – _runResearch internals", () => {
       taskPersistence as never,
       makeResearchFinisherService() as never,
       makeCheckpointService() as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     await svc.startResearch("p1", "My Project", "research X", null);

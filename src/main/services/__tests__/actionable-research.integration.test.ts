@@ -198,6 +198,7 @@ Picked pandoc. Updated FILES.md, created skill.
       homeService as never,
       allowlistService as never,
       bus as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     const svc = new ResearchService(
@@ -210,6 +211,7 @@ Picked pandoc. Updated FILES.md, created skill.
       taskPersistence as never,
       finisherService as never,
       checkpointService as never,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
 
     const { taskId } = await svc.startResearch("p1", "P", brief, null, null);

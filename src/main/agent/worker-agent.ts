@@ -65,6 +65,7 @@ export interface WorkerAgentConfig {
   allowlistService: AllowlistService;
   observabilityService?: ObservabilityService;
   parentSpanContext?: { traceId: string; spanId: string };
+  shouldBypassApproval?: (projectId: string) => Promise<boolean>;
 }
 
 export interface WorkerAgent {
@@ -82,6 +83,7 @@ export interface EvaluatorBaseConfig {
   provider: ModelProvider;
   webAccessEnabled?: boolean;
   allowlistService: AllowlistService;
+  shouldBypassApproval?: (projectId: string) => Promise<boolean>;
 }
 
 const EvaluationCriterionSchema = z.object({
@@ -315,6 +317,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       emitBlocked: config.emitBlocked,
       emitApprovalRequired: config.emitApprovalRequired,
       emitExecuteCodeApprovalRequired: config.emitExecuteCodeApprovalRequired,
+      shouldBypassApproval: config.shouldBypassApproval,
     };
 
     const spawnAgentImpl = async (
@@ -385,6 +388,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
       provider,
       webAccessEnabled,
       allowlistService,
+      shouldBypassApproval: config.shouldBypassApproval,
     }),
     spawnAgentFn,
     spawnAgentsParallelFn,
@@ -392,6 +396,7 @@ export async function createWorkerAgent(config: WorkerAgentConfig): Promise<Work
     emitBlocked: config.emitBlocked,
     emitApprovalRequired: config.emitApprovalRequired,
     emitExecuteCodeApprovalRequired: config.emitExecuteCodeApprovalRequired,
+    shouldBypassApproval: config.shouldBypassApproval,
   });
 
   const resolvedModelMetadata = await modelMetadataService.getModelMetadata(provider);

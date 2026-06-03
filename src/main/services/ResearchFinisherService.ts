@@ -5,6 +5,7 @@ import type { ModelProvider } from "../agent/model-provider";
 import { AGENT_TYPE_PRESETS, createWorkerAgent } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
+import { ApprovalPolicyService } from "./ApprovalPolicyService";
 import { HomeService } from "./HomeService";
 import { MessageService } from "./MessageService";
 
@@ -42,6 +43,8 @@ export class ResearchFinisherService {
     @inject(HomeService) private readonly homeService: HomeService,
     @inject(AllowlistService) private readonly allowlistService: AllowlistService,
     @inject(EventBus) private readonly eventBus: EventBus,
+    @inject(ApprovalPolicyService)
+    private readonly approvalPolicyService: ApprovalPolicyService,
   ) {}
 
   finish(job: FinishJob): Promise<void> {
@@ -117,6 +120,8 @@ export class ResearchFinisherService {
         brief: job.brief,
         provider: job.provider,
         allowlistService: this.allowlistService,
+        shouldBypassApproval: (projectId: string) =>
+          this.approvalPolicyService.shouldBypass(projectId),
       },
       job.taskWorkspacePath,
       0,

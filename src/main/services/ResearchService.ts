@@ -13,6 +13,7 @@ import type { AgentType } from "../agent/tools";
 import { AGENT_TYPE_PRESETS, createWorkerAgent } from "../agent/worker-agent";
 import { EventBus } from "../event-bus";
 import { AllowlistService } from "./AllowlistService";
+import { ApprovalPolicyService } from "./ApprovalPolicyService";
 import type { ResearchCheckpoint } from "./CheckpointService";
 import { CheckpointService } from "./CheckpointService";
 import { HomeService } from "./HomeService";
@@ -49,6 +50,8 @@ export class ResearchService {
     private readonly finisherService: ResearchFinisherService,
     @inject(CheckpointService)
     private readonly checkpointService: CheckpointService,
+    @inject(ApprovalPolicyService)
+    private readonly approvalPolicyService: ApprovalPolicyService,
   ) {}
 
   async startResearch(
@@ -183,6 +186,8 @@ export class ResearchService {
       allowlistService: this.allowlistService,
       observabilityService: this.observabilityService,
       parentSpanContext,
+      shouldBypassApproval: (projectId: string) =>
+        this.approvalPolicyService.shouldBypass(projectId),
       onTurnEnd: (messages: AgentMessage[]) => {
         const newCheckpoint: ResearchCheckpoint = {
           taskId: task.taskId,
@@ -367,6 +372,8 @@ export class ResearchService {
       allowlistService: this.allowlistService,
       observabilityService: this.observabilityService,
       parentSpanContext,
+      shouldBypassApproval: (projectId: string) =>
+        this.approvalPolicyService.shouldBypass(projectId),
       onTurnEnd: (messages: AgentMessage[]) => {
         const checkpoint: ResearchCheckpoint = {
           taskId,

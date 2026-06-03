@@ -87,6 +87,7 @@ describe("ResearchFinisherService", () => {
       makeHomeService() as never,
       makeAllowlistService() as never,
       eventBus,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
   });
 
@@ -240,6 +241,7 @@ describe("ResearchFinisherService — brief plumbing", () => {
       makeHomeService() as never,
       makeAllowlistService() as never,
       eventBus,
+      { shouldBypass: vi.fn().mockResolvedValue(false) } as never,
     );
   });
 
