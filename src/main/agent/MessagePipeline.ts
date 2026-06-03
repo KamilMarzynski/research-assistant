@@ -269,6 +269,15 @@ export class MessagePipeline {
         if (newSystemPrompt !== this.agent.state.systemPrompt) {
           this.agent.state.systemPrompt = newSystemPrompt;
         }
+
+        // Once OM has compressed prior turns into observations, the raw messages
+        // they replaced live in libsql and are filtered out of getContext.messages
+        // via the lastObservedAt cursor. Adopt Mastra's filtered tail as the
+        // canonical Pi message history; otherwise we send summary + full raw
+        // backlog and double-pay tokens.
+        if (memoryContext.hasObservations) {
+          this.agent.state.messages = toAgentMessages(memoryContext.historyMessages);
+        }
       } catch (err) {
         console.error("[AgentSession] Failed to refresh system context:", err);
       }
