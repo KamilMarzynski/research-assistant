@@ -33,7 +33,9 @@ function makeCtx(
       getRecentContext: vi.fn().mockResolvedValue([]),
     } as unknown as HandlerContext["messageService"],
     memoryManager: {
-      buildContext: vi.fn().mockResolvedValue({ summary: "", recentMessages: [] }),
+      buildContext: vi
+        .fn()
+        .mockResolvedValue({ summary: "", historyMessages: [], hasObservations: false }),
       save: vi.fn().mockResolvedValue(undefined),
     } as unknown as HandlerContext["memoryManager"],
     state,

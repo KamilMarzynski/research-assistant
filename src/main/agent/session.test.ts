@@ -100,7 +100,9 @@ function makeResearchService() {
 
 function makeMemoryManager() {
   return {
-    buildContext: vi.fn().mockResolvedValue({ summary: "", recentMessages: [] }),
+    buildContext: vi
+      .fn()
+      .mockResolvedValue({ summary: "", historyMessages: [], hasObservations: false }),
     save: vi.fn().mockResolvedValue(undefined),
   };
 }
@@ -131,7 +133,7 @@ describe("AgentSession", () => {
       homeService: makeHomeService() as never,
       researchService: makeResearchService() as never,
       memoryManager: makeMemoryManager() as never,
-      initialMemoryContext: { summary: "", recentMessages: [] },
+      initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
       projectId: "p-1",
       slug: "test",
       projectName: "Test Project",
@@ -230,7 +232,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: makeMemoryManager() as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -435,7 +437,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: makeMemoryManager() as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -487,7 +489,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: makeMemoryManager() as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -513,7 +515,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: researchService as never,
         memoryManager: makeMemoryManager() as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -550,7 +552,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: makeMemoryManager() as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -596,7 +598,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: memoryManager as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -632,7 +634,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: memoryManager as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -662,7 +664,8 @@ describe("AgentSession", () => {
         memoryManager: makeMemoryManager() as never,
         initialMemoryContext: {
           summary: "Past context: user prefers TypeScript.",
-          recentMessages: [],
+          historyMessages: [],
+          hasObservations: false,
         },
         projectId: "p-1",
         slug: "test",
@@ -691,7 +694,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: memoryManager as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -728,10 +731,11 @@ describe("AgentSession", () => {
         memoryManager: makeMemoryManager() as never,
         initialMemoryContext: {
           summary: "",
-          recentMessages: [
+          historyMessages: [
             { role: "user", content: "Hello from last session" },
             { role: "assistant", content: "Hi there from last session" },
           ],
+          hasObservations: false,
         },
         projectId: "p-1",
         slug: "test",
@@ -772,10 +776,11 @@ describe("AgentSession", () => {
         memoryManager: makeMemoryManager() as never,
         initialMemoryContext: {
           summary: "",
-          recentMessages: [
+          historyMessages: [
             { role: "user", content: "Hello from last session" },
             { role: "assistant", content: "Hi there from last session" },
           ],
+          hasObservations: false,
         },
         projectId: "p-1",
         slug: "test",
@@ -806,7 +811,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: makeMemoryManager() as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -1021,11 +1026,13 @@ describe("AgentSession", () => {
       const memoryManager = makeMemoryManager();
       (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         summary: "stable summary",
-        recentMessages: [],
+        historyMessages: [],
+        hasObservations: false,
       });
       (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         summary: "stable summary",
-        recentMessages: [],
+        historyMessages: [],
+        hasObservations: false,
       });
 
       const localSession = new AgentSession({
@@ -1034,7 +1041,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: memoryManager as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -1064,11 +1071,13 @@ describe("AgentSession", () => {
       const memoryManager = makeMemoryManager();
       (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         summary: "first summary",
-        recentMessages: [],
+        historyMessages: [],
+        hasObservations: false,
       });
       (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         summary: "changed summary",
-        recentMessages: [],
+        historyMessages: [],
+        hasObservations: false,
       });
 
       const localSession = new AgentSession({
@@ -1077,7 +1086,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: memoryManager as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -1108,11 +1117,13 @@ describe("AgentSession", () => {
       const memoryManager = makeMemoryManager();
       (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         summary: "stable summary",
-        recentMessages: [],
+        historyMessages: [],
+        hasObservations: false,
       });
       (memoryManager.buildContext as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         summary: "stable summary",
-        recentMessages: [],
+        historyMessages: [],
+        hasObservations: false,
       });
 
       const localSession = new AgentSession({
@@ -1121,7 +1132,7 @@ describe("AgentSession", () => {
         homeService: makeHomeService() as never,
         researchService: makeResearchService() as never,
         memoryManager: memoryManager as never,
-        initialMemoryContext: { summary: "", recentMessages: [] },
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
         projectId: "p-1",
         slug: "test",
         projectName: "Test",
@@ -1156,7 +1167,7 @@ describe("AgentSession", () => {
       homeService: makeHomeService() as never,
       researchService: makeResearchService() as never,
       memoryManager: makeMemoryManager() as never,
-      initialMemoryContext: { summary: "", recentMessages: [] },
+      initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
       projectId: "p-1",
       slug: "test",
       projectName: "Test Project",
@@ -1255,6 +1266,123 @@ describe("AgentSession", () => {
         result: { content: [{ type: "text", text: longText }] },
       });
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe("send() history sync (Option C)", () => {
+    it("resets mockAgent.state.messages from historyMessages when hasObservations is true", async () => {
+      const memoryManager = {
+        buildContext: vi.fn().mockResolvedValue({
+          summary: "Summary from OM.",
+          historyMessages: [
+            { role: "user", content: "kept-user" },
+            { role: "assistant", content: "kept-assistant" },
+          ],
+          hasObservations: true,
+        }),
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const localSession = new AgentSession({
+        eventBus,
+        messageService: messageService as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: memoryManager as never,
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
+        projectId: "p-1",
+        slug: "test",
+        projectName: "Test Project",
+        folderPath: null,
+        projectPath: null,
+        provider: {
+          type: "openrouter",
+          apiKey: "sk-or-test",
+          model: "anthropic/claude-sonnet-4-6",
+        },
+        systemContext: "",
+        allowlistService: new AllowlistService() as never,
+        observabilityService: makeObservabilityService() as never,
+      });
+
+      // Seed stale Pi state to prove the reset overwrites it.
+      mockAgent.state.messages.length = 0;
+      mockAgent.state.messages.push(
+        { role: "user", content: "stale-1", timestamp: 1 } as never,
+        { role: "assistant", content: [{ type: "text", text: "stale-2" }], timestamp: 2 } as never,
+      );
+
+      await localSession.send("new question");
+
+      // After reset, kept history is at the head, stale entries are gone.
+      expect(mockAgent.state.messages[0]).toMatchObject({
+        role: "user",
+        content: "kept-user",
+      });
+      expect(mockAgent.state.messages[1]).toMatchObject({
+        role: "assistant",
+        content: [{ type: "text", text: "kept-assistant" }],
+      });
+      expect(
+        mockAgent.state.messages.some(
+          (m: { content: unknown }) =>
+            (typeof m.content === "string" && m.content === "stale-1") ||
+            (Array.isArray(m.content) &&
+              (m.content as Array<{ text?: string }>).some((p) => p.text === "stale-2")),
+        ),
+      ).toBe(false);
+    });
+
+    it("leaves mockAgent.state.messages untouched when hasObservations is false", async () => {
+      const memoryManager = {
+        buildContext: vi.fn().mockResolvedValue({
+          summary: "",
+          historyMessages: [{ role: "user", content: "ignored-when-no-obs" }],
+          hasObservations: false,
+        }),
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const localSession = new AgentSession({
+        eventBus,
+        messageService: messageService as never,
+        homeService: makeHomeService() as never,
+        researchService: makeResearchService() as never,
+        memoryManager: memoryManager as never,
+        initialMemoryContext: { summary: "", historyMessages: [], hasObservations: false },
+        projectId: "p-1",
+        slug: "test",
+        projectName: "Test Project",
+        folderPath: null,
+        projectPath: null,
+        provider: {
+          type: "openrouter",
+          apiKey: "sk-or-test",
+          model: "anthropic/claude-sonnet-4-6",
+        },
+        systemContext: "",
+        allowlistService: new AllowlistService() as never,
+        observabilityService: makeObservabilityService() as never,
+      });
+
+      mockAgent.state.messages.length = 0;
+      mockAgent.state.messages.push({ role: "user", content: "kept-stale", timestamp: 1 } as never);
+
+      await localSession.send("new question");
+
+      // Stale entry still present — no reset happened.
+      expect(
+        mockAgent.state.messages.some(
+          (m: { content: unknown }) => typeof m.content === "string" && m.content === "kept-stale",
+        ),
+      ).toBe(true);
+      // And the historyMessages from buildContext were NOT pasted in.
+      expect(
+        mockAgent.state.messages.some(
+          (m: { content: unknown }) =>
+            typeof m.content === "string" && m.content === "ignored-when-no-obs",
+        ),
+      ).toBe(false);
     });
   });
 });

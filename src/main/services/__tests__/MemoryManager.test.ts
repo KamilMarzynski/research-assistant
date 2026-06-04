@@ -110,7 +110,7 @@ describe("MemoryManager", () => {
     it("returns empty context on first use", async () => {
       const ctx = await manager.buildContext("proj-1");
 
-      expect(ctx).toEqual({ summary: "", recentMessages: [] });
+      expect(ctx).toEqual({ summary: "", historyMessages: [], hasObservations: false });
     });
 
     it("returns summary from getContext systemMessage", async () => {
@@ -143,7 +143,7 @@ describe("MemoryManager", () => {
 
       const ctx = await manager.buildContext("proj-1");
 
-      expect(ctx.recentMessages).toEqual([
+      expect(ctx.historyMessages).toEqual([
         { role: "assistant", content: "Hello from assistant" },
         { role: "user", content: "Hello from user" },
       ]);
@@ -165,8 +165,8 @@ describe("MemoryManager", () => {
 
       const ctx = await manager.buildContext("proj-1");
 
-      expect(ctx.recentMessages).toHaveLength(2);
-      expect(ctx.recentMessages.every((m) => m.role === "user" || m.role === "assistant")).toBe(
+      expect(ctx.historyMessages).toHaveLength(2);
+      expect(ctx.historyMessages.every((m) => m.role === "user" || m.role === "assistant")).toBe(
         true,
       );
     });
@@ -187,7 +187,7 @@ describe("MemoryManager", () => {
 
       const ctx = await manager.buildContext("proj-1");
 
-      expect(ctx).toEqual({ summary: "", recentMessages: [] });
+      expect(ctx).toEqual({ summary: "", historyMessages: [], hasObservations: false });
     });
 
     it("extracts content correctly when messages have plain string content", async () => {
@@ -219,7 +219,7 @@ describe("MemoryManager", () => {
 
       const ctx = await manager.buildContext("proj-1");
 
-      expect(ctx.recentMessages).toEqual([
+      expect(ctx.historyMessages).toEqual([
         { role: "assistant", content: "plain reply" },
         { role: "user", content: "plain string content" },
       ]);
@@ -246,7 +246,7 @@ describe("MemoryManager", () => {
 
       const ctx = await manager.buildContext("proj-1");
 
-      expect(ctx.recentMessages[0].content).toBe('{"format":3,"parts":[]}');
+      expect(ctx.historyMessages[0].content).toBe('{"format":3,"parts":[]}');
     });
 
     it("filters out non-text parts from v2 content", async () => {
@@ -278,7 +278,7 @@ describe("MemoryManager", () => {
 
       const ctx = await manager.buildContext("proj-1");
 
-      expect(ctx.recentMessages[0].content).toBe("hello world");
+      expect(ctx.historyMessages[0].content).toBe("hello world");
     });
 
     it("uses empty summary when systemMessage is null", async () => {
@@ -294,6 +294,29 @@ describe("MemoryManager", () => {
       const ctx = await manager.buildContext("proj-1");
 
       expect(ctx.summary).toBe("");
+    });
+
+    it("returns hasObservations=true when getContext reports observations", async () => {
+      mockMemory.getContext.mockResolvedValue({
+        systemMessage: "Prior work summary.",
+        messages: [],
+        hasObservations: true,
+        omRecord: { activeObservations: "Prior work summary." },
+        continuationMessage: undefined,
+        otherThreadsContext: undefined,
+      });
+
+      const ctx = await manager.buildContext("proj-1");
+
+      expect(ctx.hasObservations).toBe(true);
+      expect(ctx.summary).toBe("Prior work summary.");
+    });
+
+    it("returns hasObservations=false when getContext reports no observations", async () => {
+      // beforeEach default already sets hasObservations: false
+      const ctx = await manager.buildContext("proj-1");
+
+      expect(ctx.hasObservations).toBe(false);
     });
   });
 
@@ -423,12 +446,12 @@ describe("MemoryManager", () => {
       mockLibSQLStoreInstance.init.mockRejectedValueOnce(new Error("DB locked"));
 
       const ctx1 = await manager.buildContext("proj-1");
-      expect(ctx1).toEqual({ summary: "", recentMessages: [] });
+      expect(ctx1).toEqual({ summary: "", historyMessages: [], hasObservations: false });
 
       mockLibSQLStoreInstance.init.mockResolvedValue(undefined);
 
       const ctx2 = await manager.buildContext("proj-1");
-      expect(ctx2).toEqual({ summary: "", recentMessages: [] });
+      expect(ctx2).toEqual({ summary: "", historyMessages: [], hasObservations: false });
     });
   });
 });

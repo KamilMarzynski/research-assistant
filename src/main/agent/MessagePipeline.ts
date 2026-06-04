@@ -11,6 +11,7 @@ import type { MessageService } from "../services/MessageService";
 import type { ObservabilityService } from "../services/ObservabilityService";
 import type { ResearchService } from "../services/ResearchService";
 import { AgentTracer } from "./AgentTracer";
+import { toAgentMessages } from "./agent-message-mapper";
 import { CompressionService } from "./CompressionService";
 import { buildSystemContext } from "./context";
 import type { SessionState } from "./handlers/types";
@@ -94,11 +95,7 @@ export class MessagePipeline {
       systemContext: options.systemContext,
     });
 
-    const initialMessages = options.initialMemoryContext.recentMessages.map((m) => ({
-      role: m.role,
-      content: m.role === "assistant" ? [{ type: "text" as const, text: m.content }] : m.content,
-      timestamp: Date.now(),
-    })) as import("@mariozechner/pi-agent-core").AgentMessage[];
+    const initialMessages = toAgentMessages(options.initialMemoryContext.historyMessages);
 
     const compressionService = new CompressionService(
       join(this.homePath, "projects", options.slug, "workspace", ".compressed"),
@@ -271,6 +268,15 @@ export class MessagePipeline {
 
         if (newSystemPrompt !== this.agent.state.systemPrompt) {
           this.agent.state.systemPrompt = newSystemPrompt;
+        }
+
+        // Once OM has compressed prior turns into observations, the raw messages
+        // they replaced live in libsql and are filtered out of getContext.messages
+        // via the lastObservedAt cursor. Adopt Mastra's filtered tail as the
+        // canonical Pi message history; otherwise we send summary + full raw
+        // backlog and double-pay tokens.
+        if (memoryContext.hasObservations) {
+          this.agent.state.messages = toAgentMessages(memoryContext.historyMessages);
         }
       } catch (err) {
         console.error("[AgentSession] Failed to refresh system context:", err);
